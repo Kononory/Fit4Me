@@ -219,7 +219,7 @@ function dragEnd() {
     if (dr.target && dr.target !== dr.node) {
       swapNodes(tree, dr.node, dr.target);
       rebuildTree();
-      saveLocal(tree); // auto-save locally on swap
+      saveLocal(tree);
     }
     dr.ghost?.remove();
     svgl.classList.remove('dimmed');
@@ -228,10 +228,13 @@ function dragEnd() {
       e.classList.remove('nd-source', 'nd-dim', 'nd-target');
     });
     document.body.style.cursor = '';
+    // Only re-render after an actual drag (same as original).
+    // For plain clicks, render() must NOT run here — it would remove all
+    // .nd elements before the click event fires, swallowing the click.
+    render();
   }
   dr.node = dr.el = dr.ghost = dr.target = null;
   dr.on = false;
-  render();
 }
 
 document.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
@@ -356,9 +359,12 @@ function startEdit(el: HTMLElement, n: TreeNode) {
 
 rebuildTree();
 
-const p28Node  = allNodes.find(n => n.id === 'p28')!;
-const daysNode = allNodes.find(n => n.id === 'days')!;
-const retention = mountRetentionWidget(cnv, p28Node, daysNode, nodeState);
+const retention = mountRetentionWidget(
+  cnv,
+  () => allNodes.find(n => n.id === 'p28')!,
+  () => allNodes.find(n => n.id === 'days')!,
+  nodeState,
+);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 

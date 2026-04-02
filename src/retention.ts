@@ -83,8 +83,8 @@ function buildRetentionSVG(): SVGSVGElement {
 
 export function mountRetentionWidget(
   canvas: HTMLElement,
-  p28Node: TreeNode,
-  daysNode: TreeNode,
+  getP28Node: () => TreeNode,
+  getDaysNode: () => TreeNode,
   getSelectionState: (n: TreeNode) => 'act' | 'dim' | 'par' | 'def',
 ): { update: () => void } {
   let hideTimer = 0;
@@ -121,15 +121,17 @@ export function mountRetentionWidget(
   popup.addEventListener('mouseleave', () => { popup.style.display = 'none'; });
 
   function update() {
-    const mx = (p28Node.x! + NW + daysNode.x!) / 2;
-    const my = (centerY(p28Node) + centerY(daysNode)) / 2;
+    const p28  = getP28Node();
+    const days = getDaysNode();
+    const mx = (p28.x! + NW + days.x!) / 2;
+    const my = (centerY(p28) + centerY(days)) / 2;
     marker.style.left = (mx - 11) + 'px';
     marker.style.top  = (my - 11) + 'px';
     popup.style.left  = (mx + 18) + 'px';
     popup.style.top   = (my - 104) + 'px';
 
     marker.classList.remove('mk-act', 'mk-dim');
-    const st = getSelectionState(p28Node);
+    const st = getSelectionState(p28);
     if (st === 'act') marker.classList.add('mk-act');
     if (st === 'dim') marker.classList.add('mk-dim');
   }

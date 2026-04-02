@@ -12,10 +12,13 @@ create table if not exists public.flowchart_trees (
 alter table public.flowchart_trees enable row level security;
 
 -- Allow service-role (used by the API routes) to read and write freely.
-create policy "service role full access"
-  on public.flowchart_trees
-  as permissive
-  for all
-  to service_role
-  using (true)
-  with check (true);
+do $$ begin
+  create policy "service role full access"
+    on public.flowchart_trees
+    as permissive
+    for all
+    to service_role
+    using (true)
+    with check (true);
+exception when duplicate_object then null;
+end $$;
