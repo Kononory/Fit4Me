@@ -356,9 +356,12 @@ function startEdit(el: HTMLElement, n: TreeNode) {
 
 rebuildTree();
 
-const p28Node  = allNodes.find(n => n.id === 'p28')!;
-const daysNode = allNodes.find(n => n.id === 'days')!;
-const retention = mountRetentionWidget(cnv, p28Node, daysNode, nodeState);
+const retention = mountRetentionWidget(
+  cnv,
+  () => allNodes.find(n => n.id === 'p28')!,
+  () => allNodes.find(n => n.id === 'days')!,
+  nodeState,
+);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
