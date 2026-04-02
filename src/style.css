@@ -1,0 +1,167 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #F2F1ED;
+  font-family: 'Space Mono', monospace;
+  overflow: hidden;
+}
+
+#app { width: 100%; height: 100%; }
+
+/* ── Hint bar ──────────────────────────────────────────────────── */
+#hint {
+  position: fixed; bottom: 18px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px; color: #AEADA8; letter-spacing: 0.1em;
+  text-transform: uppercase; pointer-events: none; z-index: 99; white-space: nowrap;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
+#toolbar {
+  position: fixed; top: 12px; right: 16px;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 100;
+}
+
+#toolbar button {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  background: #1A1A1A; color: #F5F4F0;
+  border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 5px 10px; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#toolbar button:hover:not(:disabled) {
+  background: #fff; color: #1A1A1A;
+}
+
+#toolbar button:disabled {
+  opacity: 0.45; cursor: default;
+}
+
+#toolbar button#tb-reset {
+  background: transparent; color: #9A9995; border-color: #BCBBB7;
+}
+
+#toolbar button#tb-reset:hover {
+  background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A;
+}
+
+#tb-status {
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* ── Viewport & canvas ──────────────────────────────────────────── */
+#vp  { width: 100%; height: 100%; overflow: auto; }
+#cnv { position: relative; }
+
+svg#svgl, svg#drag-ov {
+  position: absolute; top: 0; left: 0; pointer-events: none;
+}
+svg#svgl    { transition: opacity 0.18s; z-index: 1; }
+svg#drag-ov { z-index: 6; }
+svg#svgl.dimmed { opacity: 0.08; }
+
+/* ── Nodes ──────────────────────────────────────────────────────── */
+.nd {
+  position: absolute;
+  border: 1.5px solid #1A1A1A; border-radius: 2px;
+  font-size: 10.5px; line-height: 1.3;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 9px;
+  background: #fff; color: #1A1A1A;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  cursor: grab; user-select: none; z-index: 2;
+}
+.nd:active { cursor: grabbing; }
+.sub { font-size: 8.5px; opacity: 0.48; margin-top: 1px; }
+
+/* Type variants */
+.t-root { font-weight: 700; font-size: 12px; border-width: 2px; cursor: default; }
+.t-nav  { border-style: dashed; border-color: #9A9995; color: #555450; background: #F8F7F4; font-size: 10px; cursor: default; }
+.t-tab  { font-weight: 700; }
+
+/* Branch selection states */
+.s-active  { background: #1A1A1A !important; color: #F5F4F0 !important; border-color: #1A1A1A !important; border-style: solid !important; }
+.s-active .sub { opacity: 0.32; }
+.s-partial { border-color: #9A9995 !important; color: #777472 !important; background: #F8F7F4 !important; }
+.s-dim     { background: #F2F1ED !important; border-color: #DEDDDA !important; color: #BFBEBB !important; }
+
+/* ── Drag states ────────────────────────────────────────────────── */
+.nd-source {
+  opacity: 0.12 !important;
+  border: 1.5px dashed #BCBBB7 !important;
+  background: #F2F1ED !important;
+  color: transparent !important;
+  transition: none !important;
+  pointer-events: none !important;
+}
+.nd-source .sub { color: transparent !important; }
+
+.nd-dim {
+  opacity: 0.14 !important;
+  border-color: #E2E1DC !important;
+  color: #E2E1DC !important;
+  background: #F5F4F0 !important;
+  transition: none !important;
+  pointer-events: none !important;
+}
+.nd-dim .sub { opacity: 0 !important; }
+
+.nd-target {
+  background: #1A1A1A !important;
+  color: #FAFAF8 !important;
+  border: 2px solid #1A1A1A !important;
+  opacity: 1 !important;
+  transition: none !important;
+  pointer-events: none !important;
+  z-index: 8 !important;
+}
+.nd-target .sub { opacity: 0.38 !important; color: #FAFAF8 !important; }
+
+/* ── Drag ghost ─────────────────────────────────────────────────── */
+#ghost {
+  position: fixed; pointer-events: none; z-index: 1000;
+  border: 1.5px solid #1A1A1A; border-radius: 2px;
+  background: #fff; color: #1A1A1A;
+  font-family: 'Space Mono', monospace; font-size: 10.5px; line-height: 1.3;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 9px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+  transform: rotate(2deg) scale(1.04);
+  opacity: 0.92; white-space: nowrap; min-height: 36px;
+}
+#ghost .g-lbl { font-size: 10.5px; }
+#ghost .g-sub { font-size: 8px; opacity: 0.55; margin-top: 2px; display: none; }
+#ghost.has-target .g-sub { display: block; }
+
+/* ── Inline edit ────────────────────────────────────────────────── */
+.nd-input {
+  background: transparent; border: none; outline: none;
+  font-family: inherit; font-size: inherit; font-weight: inherit;
+  color: inherit; width: 100%; padding: 0; cursor: text;
+}
+
+/* ── Retention marker ───────────────────────────────────────────── */
+#ret-marker {
+  position: absolute; z-index: 7;
+  width: 22px; height: 22px;
+  background: #fff; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  color: #1A1A1A;
+}
+#ret-marker:hover  { background: #1A1A1A; color: #fff; }
+#ret-marker.mk-act { background: #1A1A1A; color: #fff; }
+#ret-marker.mk-dim { background: #F2F1ED; border-color: #DEDDDA; color: #CCC; pointer-events: none; }
+
+/* ── Retention popup ────────────────────────────────────────────── */
+#ret-popup {
+  position: absolute; z-index: 50;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 12px 12px 11px; width: 272px;
+  display: none; pointer-events: auto;
+}
