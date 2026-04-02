@@ -1,19 +1,23 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import { createClient } from '@supabase/supabase-js';
 
-const TREE_KEY = 'fit4me:tree';
+const supabase = createClient(
+  process.env['SUPABASE_URL']!,
+  process.env['SUPABASE_SERVICE_ROLE_KEY']!,
+);
+
+const ROW_ID = 'default';
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
-  try {
-    const raw = await kv.get<string>(TREE_KEY);
-    if (!raw) {
-      return res.status(404).json({ error: 'No saved tree found' });
-    }
+  const { data, error } = await supabase
+    .from('flowchart_trees')
+    .select('tree, saved_at')
+    .eq('id', ROW_ID)
+    .single();
 
-    const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return res.status(200).json(payload);
-  } catch (err) {
-    console.error('[load]', err);
-    return res.status(500).json({ error: 'Failed to load' });
+  if (error || !data) {
+    return res.status(404).json({ error: 'No saved tree found' });
   }
+
+  return res.status(200).json({ tree: data.tree, savedAt: data.saved_at });
 }
