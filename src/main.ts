@@ -70,16 +70,17 @@ const dragOv = document.getElementById('drag-ov') as unknown as SVGSVGElement;
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
-const { setSaving, setSaved } = mountToolbar({
+const { setSaving, setSaved, setResetEnabled } = mountToolbar({
   onSave: async () => {
     setSaving(true);
     saveFlowsLocal(flows);
-    const err = await saveFlowRemote(getActive());
+    const errs = (await Promise.all(flows.map(f => saveFlowRemote(f)))).filter(Boolean);
     setSaving(false);
-    setSaved(err);
+    setSaved(errs.length > 0 ? (errs[0] ?? 'Unknown error') : null);
   },
   onReset: () => {
     const active = getActive();
+    if (active.id !== DEFAULT_FLOW.id) return;
     active.tree = cloneTree(DEFAULT_TREE);
     saveFlowsLocal(flows);
     rebuildTree();
@@ -89,10 +90,13 @@ const { setSaving, setSaved } = mountToolbar({
 
 // ── Flow tabs ─────────────────────────────────────────────────────────────────
 
+setResetEnabled(activeId === DEFAULT_FLOW.id);
+
 const tabs = mountFlowTabs(flows, activeId, {
   onSwitch(id) {
     activeId = id;
     saveActiveLocal(id);
+    setResetEnabled(id === DEFAULT_FLOW.id);
     sel = null; selNodeId = null;
     rebuildTree();
     render();
@@ -108,6 +112,7 @@ const tabs = mountFlowTabs(flows, activeId, {
     if (activeId === id) activeId = flows[0].id;
     saveFlowsLocal(flows);
     saveActiveLocal(activeId);
+    setResetEnabled(activeId === DEFAULT_FLOW.id);
     tabs.setFlows(flows);
     tabs.setActive(activeId);
     sel = null; selNodeId = null;
@@ -119,6 +124,8 @@ const tabs = mountFlowTabs(flows, activeId, {
     activeId = flow.id;
     saveFlowsLocal(flows);
     saveActiveLocal(activeId);
+    saveFlowRemote(flow);
+    setResetEnabled(false);
     tabs.setFlows(flows);
     tabs.setActive(activeId);
     sel = null; selNodeId = null;
@@ -130,6 +137,8 @@ const tabs = mountFlowTabs(flows, activeId, {
     activeId = flow.id;
     saveFlowsLocal(flows);
     saveActiveLocal(activeId);
+    saveFlowRemote(flow);
+    setResetEnabled(false);
     tabs.setFlows(flows);
     tabs.setActive(activeId);
     sel = null; selNodeId = null;

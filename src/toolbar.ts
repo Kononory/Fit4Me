@@ -5,6 +5,7 @@ export function mountToolbar(opts: {
 }): {
   setSaving: (v: boolean) => void;
   setSaved: (err: string | null) => void;
+  setResetEnabled: (v: boolean) => void;
 } {
   const bar = document.createElement('div');
   bar.id = 'toolbar';
@@ -44,5 +45,9 @@ export function mountToolbar(opts: {
     hideTimer = window.setTimeout(() => { statusEl.textContent = ''; }, 6000);
   }
 
-  return { setSaving, setSaved };
+  function setResetEnabled(v: boolean) {
+    resetBtn.disabled = !v;
+  }
+
+  return { setSaving, setSaved, setResetEnabled };
 }
