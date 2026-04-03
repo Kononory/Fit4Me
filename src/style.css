@@ -87,7 +87,7 @@ svg#svgl.dimmed { opacity: 0.08; }
 .s-active  { background: #1A1A1A !important; color: #F5F4F0 !important; border-color: #1A1A1A !important; border-style: solid !important; }
 .s-active .sub { opacity: 0.32; }
 .s-partial { border-color: #9A9995 !important; color: #777472 !important; background: #F8F7F4 !important; }
-.s-dim     { background: #F2F1ED !important; border-color: #DEDDDA !important; color: #BFBEBB !important; }
+.s-dim     { opacity: 0.28 !important; }
 
 /* ── Drag states ────────────────────────────────────────────────── */
 .nd-source {
