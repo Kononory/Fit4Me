@@ -233,6 +233,29 @@ svg#svgl.dimmed { opacity: 0.08; }
 #ghost .g-sub { font-size: 8px; opacity: 0.55; margin-top: 2px; display: none; }
 #ghost.has-target .g-sub { display: block; }
 
+/* ── Node handles (add / delete) ───────────────────────────────── */
+.nd-handle {
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 1.5px solid currentColor; border-radius: 2px;
+  background: #FEFCF8;
+  font-size: 12px; line-height: 15px; text-align: center;
+  cursor: pointer; opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+  z-index: 20; user-select: none;
+}
+.nd:hover .nd-handle { opacity: 1; }
+.nd-handle-add {
+  bottom: -10px; right: -10px;
+  color: #1A1A1A;
+}
+.nd-handle-add:hover { background: #1A1A1A; color: #fff; }
+.nd-handle-del {
+  top: -10px; right: -10px;
+  color: #B52B1E;
+}
+.nd-handle-del:hover { background: #B52B1E; color: #fff; border-color: #B52B1E; }
+
 /* ── Inline edit ────────────────────────────────────────────────── */
 .nd-input {
   background: transparent; border: none; outline: none;

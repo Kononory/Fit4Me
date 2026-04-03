@@ -39,9 +39,10 @@ export interface DragState {
   el: HTMLElement | null;
   ghost: HTMLElement | null;
   target: TreeNode | null;
-  sx: number;
-  sy: number;
+  sx: number; sy: number;
+  cx: number; cy: number;   // current cursor in canvas coords (connect mode)
   on: boolean;
+  mode: 'swap' | 'connect';
 }
 
 export interface SavePayload {
