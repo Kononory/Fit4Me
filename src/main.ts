@@ -388,16 +388,89 @@ function renderSVG() {
   const NS = 'http://www.w3.org/2000/svg';
   for (const [f, t] of allEdges) {
     const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
+    const lx = mx, ly = (y1 + y2) / 2; // label midpoint
     const es = edgeState(f, t);
     const stroke = es === 'act' ? '#1A1A1A' : es === 'dim' ? '#E0DFD9' : '#ABABAA';
     const sw     = es === 'act' ? 1.5 : 1;
-    const path   = document.createElementNS(NS, 'path');
-    path.setAttribute('d',            `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`);
-    path.setAttribute('fill',         'none');
-    path.setAttribute('stroke',       stroke);
-    path.setAttribute('stroke-width', String(sw));
+    const d      = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
+
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', stroke); path.setAttribute('stroke-width', String(sw));
     svgl.appendChild(path);
+
+    // Wider invisible hit area for click
+    const hit = document.createElementNS(NS, 'path');
+    hit.setAttribute('d', d); hit.setAttribute('fill', 'none');
+    hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '14');
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startEdgeEdit(t, lx, ly);
+    });
+    svgl.appendChild(hit);
+
+    // Edge label (stored on child node)
+    if (t.edgeLabel) {
+      const tw = t.edgeLabel.length * 6.5 + 10;
+      const bg = document.createElementNS(NS, 'rect');
+      bg.setAttribute('x', String(lx - tw / 2)); bg.setAttribute('y', String(ly - 9));
+      bg.setAttribute('width', String(tw)); bg.setAttribute('height', '14');
+      bg.setAttribute('rx', '3'); bg.setAttribute('fill', '#FEFCF8');
+      bg.setAttribute('stroke', '#BCBBB7'); bg.setAttribute('stroke-width', '0.8');
+      svgl.appendChild(bg);
+      const txt = document.createElementNS(NS, 'text');
+      txt.setAttribute('x', String(lx)); txt.setAttribute('y', String(ly + 4));
+      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', '#5A5955');
+      txt.setAttribute('font-size', '10'); txt.setAttribute('font-family', 'LatteraMonoLL,Space Mono,monospace');
+      txt.textContent = t.edgeLabel;
+      svgl.appendChild(txt);
+    } else {
+      // Subtle + hint on hover — drawn as a tiny circle with + only when edge hovered
+      const hint = document.createElementNS(NS, 'circle');
+      hint.setAttribute('cx', String(lx)); hint.setAttribute('cy', String(ly));
+      hint.setAttribute('r', '5'); hint.setAttribute('fill', '#FEFCF8');
+      hint.setAttribute('stroke', '#BCBBB7'); hint.setAttribute('stroke-width', '0.8');
+      hint.setAttribute('opacity', '0'); hint.style.transition = 'opacity 0.15s';
+      hit.addEventListener('mouseenter', () => { hint.setAttribute('opacity', '1'); });
+      hit.addEventListener('mouseleave', () => { hint.setAttribute('opacity', '0'); });
+      svgl.appendChild(hint);
+      const plusTxt = document.createElementNS(NS, 'text');
+      plusTxt.setAttribute('x', String(lx)); plusTxt.setAttribute('y', String(ly + 4));
+      plusTxt.setAttribute('text-anchor', 'middle'); plusTxt.setAttribute('fill', '#BCBBB7');
+      plusTxt.setAttribute('font-size', '9'); plusTxt.setAttribute('pointer-events', 'none');
+      plusTxt.setAttribute('opacity', '0'); plusTxt.style.transition = 'opacity 0.15s';
+      hit.addEventListener('mouseenter', () => { plusTxt.setAttribute('opacity', '1'); });
+      hit.addEventListener('mouseleave', () => { plusTxt.setAttribute('opacity', '0'); });
+      plusTxt.textContent = '+';
+      svgl.appendChild(plusTxt);
+    }
   }
+}
+
+function startEdgeEdit(toNode: TreeNode, lx: number, ly: number) {
+  const rect = cnv.getBoundingClientRect();
+  const inp  = document.createElement('input');
+  inp.className  = 'edge-label-input';
+  inp.value      = toNode.edgeLabel ?? '';
+  inp.placeholder = 'add note…';
+  inp.style.left = (rect.left + lx - vp.scrollLeft - 50) + 'px';
+  inp.style.top  = (rect.top  + ly - vp.scrollTop  - 11) + 'px';
+  document.body.appendChild(inp);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const v = inp.value.trim();
+    toNode.edgeLabel = v || undefined;
+    inp.remove();
+    saveFlowsLocal(flows);
+    render();
+  };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter')  { e.preventDefault(); inp.removeEventListener('blur', commit); commit(); }
+    if (e.key === 'Escape') { inp.removeEventListener('blur', commit); inp.remove(); render(); }
+  });
 }
 
 // ── Render nodes ──────────────────────────────────────────────────────────────

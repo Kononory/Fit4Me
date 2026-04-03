@@ -5,6 +5,7 @@ export interface TreeNode {
   id: string;
   label: string;
   sublabel?: string;
+  edgeLabel?: string;   // label shown on the incoming branch line
   type?: NodeType;
   b?: BranchId;
   c?: TreeNode[];
