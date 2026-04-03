@@ -228,6 +228,84 @@ svg#svgl.dimmed { opacity: 0.08; }
   color: inherit; width: 100%; padding: 0; cursor: text;
 }
 
+/* ── New-flow modals ────────────────────────────────────────────── */
+.ft-modal-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(26,26,26,0.42);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ft-modal-card {
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 20px; width: 268px;
+  font-family: 'Space Mono', monospace;
+}
+
+.ft-modal-title {
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #1A1A1A; margin-bottom: 14px;
+}
+
+.ft-modal-options { display: flex; flex-direction: column; gap: 6px; }
+
+.ft-modal-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  background: #F5F4F0; border: 1.5px solid #DEDDDA; border-radius: 2px;
+  padding: 11px 13px; cursor: pointer; text-align: left;
+  font-family: inherit; transition: background 0.12s, border-color 0.12s;
+  width: 100%;
+}
+.ft-modal-opt:hover { background: #1A1A1A; border-color: #1A1A1A; }
+
+.ft-opt-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #1A1A1A;
+  transition: color 0.12s;
+}
+.ft-modal-opt:hover .ft-opt-label { color: #F5F4F0; }
+
+.ft-opt-desc {
+  font-size: 8.5px; color: #9A9995; letter-spacing: 0.03em; transition: color 0.12s;
+}
+.ft-modal-opt:hover .ft-opt-desc { color: rgba(245,244,240,0.5); }
+
+/* Text input variant */
+.ft-modal-text { width: 440px; }
+
+.ft-modal-hint {
+  font-size: 8px; color: #9A9995; letter-spacing: 0.05em;
+  line-height: 1.6; margin-bottom: 10px;
+}
+.ft-modal-hint b { color: #777472; }
+
+.ft-modal-textarea {
+  width: 100%; height: 196px;
+  background: #F5F4F0; border: 1.5px solid #DEDDDA; border-radius: 2px;
+  font-family: 'Space Mono', monospace; font-size: 9.5px; line-height: 1.65;
+  padding: 10px; resize: vertical; outline: none; color: #1A1A1A;
+  transition: border-color 0.12s;
+}
+.ft-modal-textarea:focus { border-color: #1A1A1A; }
+.ft-modal-textarea::placeholder { color: #BCBBB7; }
+
+.ft-modal-actions {
+  display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;
+}
+
+.ft-modal-btn {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-radius: 2px; padding: 6px 12px; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.ft-modal-btn-cancel {
+  background: transparent; color: #9A9995; border: 1.5px solid #DEDDDA;
+}
+.ft-modal-btn-cancel:hover { background: #EEEDE9; color: #1A1A1A; border-color: #BCBBB7; }
+.ft-modal-btn-create {
+  background: #1A1A1A; color: #F5F4F0; border: 1.5px solid #1A1A1A;
+}
+.ft-modal-btn-create:hover { background: #fff; color: #1A1A1A; }
+
 /* ── Retention marker ───────────────────────────────────────────── */
 #ret-marker {
   position: absolute; z-index: 7;
