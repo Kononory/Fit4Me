@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env['SUPABASE_URL']!,
-  process.env['SUPABASE_SERVICE_ROLE_KEY']!,
-);
+const supabaseUrl = process.env['SUPABASE_URL'];
+const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('[save] Missing env vars: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+}
+
+const supabase = createClient(supabaseUrl ?? '', supabaseKey ?? '');
 
 const ROW_ID = 'default';
 
@@ -23,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .upsert({ id: ROW_ID, tree: payload.tree, saved_at: payload.savedAt });
 
   if (error) {
-    console.error('[save]', error);
+    console.error('[save] Supabase error:', error.message, error.details, error.hint);
     return res.status(500).json({ error: error.message });
   }
 
