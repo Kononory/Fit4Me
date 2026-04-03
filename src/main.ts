@@ -20,7 +20,8 @@ let tree: TreeNode = (() => {
 let allNodes: TreeNode[] = [];
 let allEdges: [TreeNode, TreeNode][] = [];
 
-let sel: string | null = null;
+let sel: string | null = null;       // selected branch id
+let selNodeId: string | null = null;  // selected node id
 let editing = false;
 let tapTimer = 0;
 let tapId: string | null = null;
@@ -90,13 +91,15 @@ function syncSize() {
 
 function nodeState(n: TreeNode): SelectionState {
   if (!sel) return 'def';
-  if (!n.b) return 'par';
-  return n.b === sel ? 'act' : 'dim';
+  if (n.id === selNodeId) return 'act';   // the tapped node → highlighted
+  if (!n.b) return 'par';                  // structural nodes (root, nav) → normal
+  return n.b === sel ? 'def' : 'dim';     // same branch → normal, other branch → dim
 }
 
 function edgeState(from: TreeNode, to: TreeNode): SelectionState {
+  if (!sel) return 'par';
   const fs = nodeState(from), ts = nodeState(to);
-  if (fs === 'act' && ts === 'act') return 'act';
+  if (fs === 'act' || ts === 'act') return 'act';  // edges touching selected node → dark
   if (fs === 'dim' || ts === 'dim') return 'dim';
   return 'par';
 }
@@ -313,7 +316,15 @@ function renderNodes() {
         tapId = n.id;
         tapTimer = window.setTimeout(() => {
           tapTimer = 0; tapId = null;
-          sel = n.b ? (sel === n.b ? null : n.b) : null;
+          if (n.b) {
+            if (sel === n.b && selNodeId === n.id) {
+              sel = null; selNodeId = null; // tap same node again → deselect
+            } else {
+              sel = n.b; selNodeId = n.id;
+            }
+          } else {
+            sel = null; selNodeId = null;
+          }
           render();
         }, 270);
       }
@@ -376,7 +387,7 @@ function render() {
 
 cnv.addEventListener('click', () => {
   if (editing || dr.on) return;
-  sel = null;
+  sel = null; selNodeId = null;
   render();
 });
 
