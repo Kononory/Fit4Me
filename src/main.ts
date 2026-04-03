@@ -55,9 +55,9 @@ const { setSaving, setSaved } = mountToolbar({
   onSave: async () => {
     setSaving(true);
     saveLocal(tree);
-    const ok = await saveRemote(tree);
+    const err = await saveRemote(tree);
     setSaving(false);
-    setSaved(ok);
+    setSaved(err);
   },
   onReset: () => {
     tree = cloneTree(DEFAULT_TREE);

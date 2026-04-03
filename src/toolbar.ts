@@ -4,7 +4,7 @@ export function mountToolbar(opts: {
   onReset: () => void;
 }): {
   setSaving: (v: boolean) => void;
-  setSaved: (cloudOk: boolean) => void;
+  setSaved: (err: string | null) => void;
 } {
   const bar = document.createElement('div');
   bar.id = 'toolbar';
@@ -31,16 +31,17 @@ export function mountToolbar(opts: {
     if (v) { clearTimeout(hideTimer); statusEl.textContent = ''; }
   }
 
-  function setSaved(cloudOk: boolean) {
+  // err is null on cloud success, or an error string on failure
+  function setSaved(err: string | null) {
     clearTimeout(hideTimer);
-    if (cloudOk) {
+    if (err === null) {
       statusEl.textContent = 'Saved to cloud ✓';
       statusEl.style.color = '#6B9B5E';
     } else {
-      statusEl.textContent = 'Saved locally · cloud unavailable';
+      statusEl.textContent = `Saved locally · ${err}`;
       statusEl.style.color = '#AEADA8';
     }
-    hideTimer = window.setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    hideTimer = window.setTimeout(() => { statusEl.textContent = ''; }, 6000);
   }
 
   return { setSaving, setSaved };

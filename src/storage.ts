@@ -21,8 +21,8 @@ export function loadLocal(): TreeNode | null {
   }
 }
 
-/** Save tree to the backend API. Returns true on success. */
-export async function saveRemote(tree: TreeNode): Promise<boolean> {
+/** Save tree to the backend API. Returns error string on failure, null on success. */
+export async function saveRemote(tree: TreeNode): Promise<string | null> {
   try {
     const payload: SavePayload = { tree: cloneTree(tree), savedAt: new Date().toISOString() };
     const res = await fetch('/api/save', {
@@ -30,9 +30,11 @@ export async function saveRemote(tree: TreeNode): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return null;
+    const body = await res.json().catch(() => ({}));
+    return body.error ?? `HTTP ${res.status}`;
+  } catch (e) {
+    return String(e);
   }
 }
 
