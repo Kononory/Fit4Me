@@ -1,10 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({
-  apiKey: process.env['Fit4Me_ANTHROPIC_API_KEY'] ?? '',
-});
-
 const SYSTEM = `You convert app flow descriptions into a structured outline format.
 
 Output ONLY the outline text — no explanation, no markdown fences, no preamble.
@@ -33,8 +29,13 @@ Fit4Me [root]
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  const apiKey = process.env['Fit4Me_ANTHROPIC_API_KEY'];
+  if (!apiKey) return res.status(500).json({ error: 'Fit4Me_ANTHROPIC_API_KEY not configured' });
+
   const { text } = (req.body ?? {}) as { text?: string };
   if (!text) return res.status(400).json({ error: 'Missing text' });
+
+  const client = new Anthropic({ apiKey });
 
   try {
     const message = await client.messages.create({
