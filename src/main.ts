@@ -5,7 +5,7 @@ import {
   doLayout, flattenTree, collectEdges, canvasSize,
   centerY, topY, NW, NH, RH, PAD,
 } from './layout';
-import { swapNodes, cloneTree } from './tree';
+import { swapNodes, cloneTree, addChildNode, removeNode, reparentNode } from './tree';
 import { mountRetentionWidget } from './retention';
 import {
   saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal,
@@ -47,7 +47,7 @@ let tapId: string | null = null;
 
 const dr: DragState = {
   node: null, el: null, ghost: null, target: null,
-  sx: 0, sy: 0, on: false,
+  sx: 0, sy: 0, cx: 0, cy: 0, on: false, mode: 'swap',
 };
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
@@ -191,7 +191,9 @@ function edgeState(from: TreeNode, to: TreeNode): SelectionState {
 
 // ── Drag ──────────────────────────────────────────────────────────────────────
 
-const canDrag = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
+const canDrag    = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
+const canConnect = (n: TreeNode) => n.type !== 'nav';
+const canBeChild = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
 
 function applyDragClasses() {
   cnv.querySelectorAll<HTMLElement>('.nd').forEach(el => {
@@ -200,12 +202,18 @@ function applyDragClasses() {
   });
 }
 
+function applyConnectClasses() {
+  cnv.querySelectorAll<HTMLElement>('.nd').forEach(el => {
+    if (el.dataset['nid'] === dr.node!.id) el.classList.add('nd-source');
+  });
+}
+
 function setTarget(next: TreeNode | null) {
   if (dr.target === next) return;
   if (dr.target) {
     const old = cnv.querySelector<HTMLElement>(`[data-nid="${dr.target.id}"]`);
     old?.classList.remove('nd-target');
-    old?.classList.add('nd-dim');
+    if (dr.mode === 'swap') old?.classList.add('nd-dim');
   }
   dr.target = next;
   if (dr.target) {
@@ -213,7 +221,7 @@ function setTarget(next: TreeNode | null) {
     el?.classList.remove('nd-dim');
     el?.classList.add('nd-target');
   }
-  if (dr.ghost) {
+  if (dr.mode === 'swap' && dr.ghost) {
     const sub = dr.ghost.querySelector<HTMLElement>('.g-sub')!;
     if (dr.target) { sub.textContent = '↕ ' + dr.target.label; dr.ghost.classList.add('has-target'); }
     else dr.ghost.classList.remove('has-target');
@@ -224,15 +232,30 @@ function setTarget(next: TreeNode | null) {
 function updateDragOverlay() {
   const NS = 'http://www.w3.org/2000/svg';
   dragOv.innerHTML = '';
-  if (!dr.on || !dr.target) return;
-  const x1 = dr.node!.x! + NW / 2, y1 = centerY(dr.node!);
-  const x2 = dr.target.x! + NW / 2, y2 = centerY(dr.target);
-  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  if (!dr.on) return;
   const mk = (tag: string, attrs: Record<string, string | number>, parent: SVGElement) => {
     const el = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
     parent.appendChild(el); return el;
   };
+
+  if (dr.mode === 'connect') {
+    // Rubber-band line from source right-edge to cursor
+    const x1 = dr.node!.x! + NW, y1 = centerY(dr.node!);
+    const x2 = dr.cx, y2 = dr.cy;
+    mk('line', { x1, y1, x2: dr.target ? dr.target.x! : x2, y2: dr.target ? centerY(dr.target) : y2,
+      stroke: '#1A1A1A', 'stroke-width': 1.5, 'stroke-dasharray': '6 3' }, dragOv);
+    mk('circle', { cx: x1, cy: y1, r: 3, fill: '#1A1A1A' }, dragOv);
+    mk('circle', { cx: dr.target ? dr.target.x! : x2, cy: dr.target ? centerY(dr.target) : y2, r: 4,
+      fill: dr.target ? '#1A1A1A' : '#BCBBB7', stroke: '#fff', 'stroke-width': 1.5 }, dragOv);
+    return;
+  }
+
+  // Swap overlay
+  if (!dr.target) return;
+  const x1 = dr.node!.x! + NW / 2, y1 = centerY(dr.node!);
+  const x2 = dr.target.x! + NW / 2, y2 = centerY(dr.target);
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   mk('line', { x1, y1, x2, y2, stroke: '#1A1A1A', 'stroke-width': 1.2, 'stroke-dasharray': '5 3', 'stroke-opacity': 0.35 }, dragOv);
   mk('circle', { cx: x1, cy: y1, r: 3.5, fill: '#ABABAA' }, dragOv);
   mk('circle', { cx: x2, cy: y2, r: 3.5, fill: '#1A1A1A' }, dragOv);
@@ -240,14 +263,15 @@ function updateDragOverlay() {
   const txt = document.createElementNS(NS, 'text');
   txt.setAttribute('x', String(mx)); txt.setAttribute('y', String(my + 5));
   txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', '#fff');
-  txt.setAttribute('font-size', '11'); txt.setAttribute('font-family', 'Space Mono,monospace');
+  txt.setAttribute('font-size', '11'); txt.setAttribute('font-family', 'LatteraMonoLL,Space Mono,monospace');
   txt.textContent = '⇄';
   dragOv.appendChild(txt);
 }
 
-function dragBegin(n: TreeNode, el: HTMLElement, cx: number, cy: number) {
-  if (!canDrag(n)) return;
-  dr.node = n; dr.el = el; dr.sx = cx; dr.sy = cy; dr.on = false;
+function dragBegin(n: TreeNode, el: HTMLElement, cx: number, cy: number, mode: 'swap' | 'connect' = 'swap') {
+  if (mode === 'swap' && !canDrag(n)) return;
+  if (mode === 'connect' && !canConnect(n)) return;
+  dr.node = n; dr.el = el; dr.sx = cx; dr.sy = cy; dr.on = false; dr.mode = mode;
 }
 
 function dragMove(cx: number, cy: number) {
@@ -255,51 +279,98 @@ function dragMove(cx: number, cy: number) {
   if (!dr.on && Math.hypot(cx - dr.sx, cy - dr.sy) > 8) {
     dr.on = true;
     clearTimeout(tapTimer); tapTimer = 0; tapId = null;
-    svgl.classList.add('dimmed');
-    applyDragClasses();
-    dr.ghost = document.createElement('div');
-    dr.ghost.id = 'ghost';
-    dr.ghost.innerHTML = `<span class="g-lbl">${dr.node.label}</span><span class="g-sub"></span>`;
-    dr.ghost.style.width = NW + 'px';
-    if (dr.el?.classList.contains('t-tab')) {
-      dr.ghost.querySelector<HTMLElement>('.g-lbl')!.style.fontWeight = '700';
+    if (dr.mode === 'swap') {
+      svgl.classList.add('dimmed');
+      applyDragClasses();
+      dr.ghost = document.createElement('div');
+      dr.ghost.id = 'ghost';
+      dr.ghost.innerHTML = `<span class="g-lbl">${dr.node.label}</span><span class="g-sub"></span>`;
+      dr.ghost.style.width = NW + 'px';
+      if (dr.el?.classList.contains('t-tab')) {
+        dr.ghost.querySelector<HTMLElement>('.g-lbl')!.style.fontWeight = '700';
+      }
+      document.body.appendChild(dr.ghost);
+    } else {
+      applyConnectClasses();
     }
-    document.body.appendChild(dr.ghost);
-    document.body.style.cursor = 'grabbing';
+    document.body.style.cursor = 'crosshair';
   }
   if (!dr.on) return;
-  dr.ghost!.style.left = (cx - NW / 2) + 'px';
-  dr.ghost!.style.top  = (cy - NH / 2) + 'px';
+
   const rect = cnv.getBoundingClientRect();
   const mx = cx - rect.left + vp.scrollLeft;
   const my = cy - rect.top  + vp.scrollTop;
-  let hit: TreeNode | null = null;
-  for (const n of allNodes) {
-    if (n === dr.node || !canDrag(n)) continue;
-    if (mx >= n.x! && mx <= n.x! + NW && my >= topY(n) && my <= topY(n) + NH) { hit = n; break; }
+  dr.cx = mx; dr.cy = my;
+
+  if (dr.mode === 'swap') {
+    dr.ghost!.style.left = (cx - NW / 2) + 'px';
+    dr.ghost!.style.top  = (cy - NH / 2) + 'px';
+    let hit: TreeNode | null = null;
+    for (const n of allNodes) {
+      if (n === dr.node || !canDrag(n)) continue;
+      if (mx >= n.x! && mx <= n.x! + NW && my >= topY(n) && my <= topY(n) + NH) { hit = n; break; }
+    }
+    setTarget(hit);
+  } else {
+    // connect mode: highlight valid targets
+    let hit: TreeNode | null = null;
+    for (const n of allNodes) {
+      if (n === dr.node || !canBeChild(n)) continue;
+      if (mx >= n.x! && mx <= n.x! + NW && my >= topY(n) && my <= topY(n) + NH) { hit = n; break; }
+    }
+    setTarget(hit);
+    updateDragOverlay();
   }
-  setTarget(hit);
 }
 
 function dragEnd() {
   if (!dr.node) return;
-  if (dr.on) {
-    if (dr.target && dr.target !== dr.node) {
-      swapNodes(getActive().tree, dr.node, dr.target);
-      rebuildTree();
-      saveFlowsLocal(flows);
-    }
-    dr.ghost?.remove();
-    svgl.classList.remove('dimmed');
-    dragOv.innerHTML = '';
-    cnv.querySelectorAll('.nd-source, .nd-dim, .nd-target').forEach(e => {
-      e.classList.remove('nd-source', 'nd-dim', 'nd-target');
-    });
-    document.body.style.cursor = '';
-    render();
-  }
+  const wasOn = dr.on;
+  const mode  = dr.mode;
+  const src   = dr.node;
+  const tgt   = dr.target;
+
+  // Cleanup visuals
+  dr.ghost?.remove();
+  svgl.classList.remove('dimmed');
+  dragOv.innerHTML = '';
+  cnv.querySelectorAll('.nd-source, .nd-dim, .nd-target').forEach(e => {
+    e.classList.remove('nd-source', 'nd-dim', 'nd-target');
+  });
+  document.body.style.cursor = '';
   dr.node = dr.el = dr.ghost = dr.target = null;
   dr.on = false;
+
+  if (mode === 'swap') {
+    if (wasOn && tgt && tgt !== src) {
+      swapNodes(getActive().tree, src, tgt);
+      rebuildTree(); saveFlowsLocal(flows); render();
+    }
+  } else {
+    // connect mode
+    if (!wasOn) {
+      // click on + handle → add new child
+      const newNode = addChildNode(src);
+      rebuildTree(); saveFlowsLocal(flows); render();
+      // auto-start editing the new node
+      requestAnimationFrame(() => {
+        const el = cnv.querySelector<HTMLElement>(`[data-nid="${newNode.id}"]`);
+        if (el) startEdit(el, newNode);
+      });
+    } else if (tgt) {
+      // dragged to an existing node → reparent tgt under src
+      reparentNode(getActive().tree, tgt.id, src.id);
+      rebuildTree(); saveFlowsLocal(flows); render();
+    } else {
+      // dragged to empty space → add new child
+      const newNode = addChildNode(src);
+      rebuildTree(); saveFlowsLocal(flows); render();
+      requestAnimationFrame(() => {
+        const el = cnv.querySelector<HTMLElement>(`[data-nid="${newNode.id}"]`);
+        if (el) startEdit(el, newNode);
+      });
+    }
+  }
 }
 
 document.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
@@ -348,6 +419,38 @@ function renderNodes() {
     el.style.left = n.x + 'px'; el.style.top = topY(n) + 'px';
     el.style.width = NW + 'px'; el.style.height = NH + 'px';
     el.innerHTML = `<span class="nd-lbl">${n.label}</span>${n.sublabel ? `<span class="sub">${n.sublabel}</span>` : ''}`;
+
+    // + handle (bottom-right): click → add child, drag → connect/reparent
+    if (canConnect(n)) {
+      const btnAdd = document.createElement('div');
+      btnAdd.className = 'nd-handle nd-handle-add';
+      btnAdd.textContent = '+';
+      btnAdd.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        dragBegin(n, el, e.clientX, e.clientY, 'connect');
+      });
+      btnAdd.addEventListener('click', e => e.stopPropagation());
+      el.appendChild(btnAdd);
+    }
+
+    // × handle (top-right): click → delete
+    if (n.type !== 'root' && n.type !== 'nav') {
+      const btnDel = document.createElement('div');
+      btnDel.className = 'nd-handle nd-handle-del';
+      btnDel.textContent = '×';
+      btnDel.addEventListener('click', e => {
+        e.stopPropagation();
+        const childCount = (n.c ?? []).length;
+        const msg = childCount > 0
+          ? `Delete "${n.label}" and its ${childCount} child block(s)?`
+          : `Delete "${n.label}"?`;
+        if (confirm(msg)) {
+          removeNode(getActive().tree, n.id);
+          rebuildTree(); saveFlowsLocal(flows); render();
+        }
+      });
+      el.appendChild(btnDel);
+    }
 
     el.addEventListener('mouseenter', () => { hintEl.style.opacity = '1'; });
     el.addEventListener('mouseleave', () => { hintEl.style.opacity = '0'; });
