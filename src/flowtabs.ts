@@ -31,7 +31,7 @@ function showNewDialog(cb: FlowTabsCallbacks): void {
       </button>
       <button class="ft-modal-opt" id="ft-opt-text">
         <span class="ft-opt-label">From text</span>
-        <span class="ft-opt-desc">Paste outline text to build structure</span>
+        <span class="ft-opt-desc">Describe in plain text, AI structures it</span>
       </button>
     </div>
   `;
@@ -64,15 +64,14 @@ function showTextInputDialog(cb: FlowTabsCallbacks): void {
   const card = document.createElement('div');
   card.className = 'ft-modal-card ft-modal-text';
   card.innerHTML = `
-    <div class="ft-modal-title">Paste Outline Text</div>
-    <div class="ft-modal-hint">Format: <b>Label [type:branch] | sublabel</b> · 2-space indent per level<br>Types: root · nav · tab · (none for screen)</div>
-    <textarea class="ft-modal-textarea" spellcheck="false" placeholder="Fit4Me [root]
-  Navigation [nav] | Tab 1 · Tab 2
-    Tab 1 [tab:plan]
-      Screen A
-      Screen B | subtitle
-    Tab 2 [tab:log]
-      Screen C"></textarea>
+    <div class="ft-modal-title">Describe Your Flow</div>
+    <div class="ft-modal-hint">Write anything — a rough description, a list of screens, bullet points. AI will structure it automatically.</div>
+    <textarea class="ft-modal-textarea" spellcheck="false" placeholder="e.g.
+
+App called MyApp with 3 tabs: Home, Search, Profile.
+Home shows a feed and a button to post.
+Search has a search bar and results list.
+Profile shows avatar, stats, settings and logout."></textarea>
     <div class="ft-modal-actions">
       <button class="ft-modal-btn ft-modal-btn-cancel">Cancel</button>
       <button class="ft-modal-btn ft-modal-btn-create">Create Flow</button>
@@ -88,26 +87,45 @@ function showTextInputDialog(cb: FlowTabsCallbacks): void {
 
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
-
   card.querySelector('.ft-modal-btn-cancel')!.addEventListener('click', close);
 
-  const submit = () => {
+  const setLoading = (on: boolean) => {
+    createBtn.disabled = on;
+    createBtn.textContent = on ? 'Parsing…' : 'Create Flow';
+    textarea.disabled = on;
+  };
+
+  const submit = async () => {
     const text = textarea.value.trim();
     if (!text) return;
+
+    setLoading(true);
+    hintEl.style.color = '';
+    hintEl.textContent = 'AI is reading your text…';
+
     try {
-      const tree = parseOutline(text);
+      const res  = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json() as { outline?: string; error?: string };
+      if (!res.ok || !data.outline) throw new Error(data.error ?? `HTTP ${res.status}`);
+
+      const tree = parseOutline(data.outline);
       const name = tree.label || 'New Flow';
       close();
       cb.onNew({ id: genId(), name, tree });
     } catch (e) {
-      hintEl.textContent = `Parse error: ${String(e)}`;
+      setLoading(false);
+      hintEl.textContent = `Error: ${String(e)}`;
       hintEl.style.color = '#B52B1E';
     }
   };
 
-  createBtn.addEventListener('click', submit);
+  createBtn.addEventListener('click', () => { void submit(); });
   textarea.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { void submit(); }
     e.stopPropagation();
   });
 
