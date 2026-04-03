@@ -93,12 +93,15 @@ html, body {
 .flow-footer-btn:hover { background: #EEEDE9; color: #1A1A1A; }
 .flow-footer-btn:last-child { border-bottom: none; }
 
-/* ── Hint bar ──────────────────────────────────────────────────── */
+/* ── Hint bar (hidden, shown on node hover via JS) ─────────────── */
 #hint {
-  position: fixed; bottom: 18px; left: calc(50% + 74px);
+  position: fixed; bottom: 22px; left: calc(50% + 74px);
   transform: translateX(-50%);
-  font-size: 9px; color: #AEADA8; letter-spacing: 0.1em;
+  font-size: 8.5px; color: #1A1A1A; letter-spacing: 0.09em;
   text-transform: uppercase; pointer-events: none; z-index: 99; white-space: nowrap;
+  background: #FEFCF8; border: 1px solid #E2E1DC; border-radius: 2px;
+  padding: 5px 12px;
+  opacity: 0; transition: opacity 0.18s;
 }
 
 /* ── Toolbar ────────────────────────────────────────────────────── */
@@ -141,32 +144,10 @@ html, body {
 #vp {
   width: calc(100% - 148px); height: 100%; overflow: auto; margin-left: 148px;
 
-  /* ── Grid background ── */
-  --bg:          #F2F1ED;
-  --dot:         #DEDDDA;   /* infill dots  */
-  --dot-size:    14px;
-  --line:        #E2E1DC;   /* grid lines   */
-  --grid:        280px;
-  --node-dot:    #BCBBB7;   /* junction dot */
-  --node-halo:   #F5F4F0;   /* halo ring    */
-  --node-border: #DEDDDA;   /* halo border  */
-
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at 1px 1px,
-      var(--node-dot)    0,          var(--node-dot)    2px,
-      var(--node-halo)   2px,        var(--node-halo)   6px,
-      var(--node-border) 6px,        var(--node-border) 7.5px,
-      transparent        7.5px),
-    linear-gradient(to right,  var(--line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--line) 1px, transparent 1px),
-    radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 1px);
-  background-size:
-    var(--grid)    var(--grid),
-    var(--grid)    var(--grid),
-    var(--grid)    var(--grid),
-    var(--dot-size) var(--dot-size);
-  background-position: 0 0;
+  /* Checkerboard: dots ↔ diagonal hatch, 280px grid, 560px tile */
+  background-color: #F2F1ED;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560'><defs><pattern id='dp' width='14' height='14' patternUnits='userSpaceOnUse'><circle cx='1' cy='1' r='1' fill='%23DEDDDA'/></pattern><pattern id='hp' width='8' height='8' patternUnits='userSpaceOnUse'><line x1='0' y1='8' x2='8' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/><line x1='-8' y1='8' x2='0' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/><line x1='8' y1='8' x2='16' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/></pattern></defs><rect width='280' height='280' fill='url(%23dp)'/><rect x='280' y='280' width='280' height='280' fill='url(%23dp)'/><rect x='280' y='0' width='280' height='280' fill='url(%23hp)'/><rect x='0' y='280' width='280' height='280' fill='url(%23hp)'/><line x1='0' y1='280' x2='560' y2='280' stroke='%23E2E1DC' stroke-width='0.5'/><line x1='280' y1='0' x2='280' y2='560' stroke='%23E2E1DC' stroke-width='0.5'/><circle cx='0' cy='0' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='0' cy='0' r='2' fill='%23BCBBB7'/><circle cx='280' cy='0' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='280' cy='0' r='2' fill='%23BCBBB7'/><circle cx='0' cy='280' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='0' cy='280' r='2' fill='%23BCBBB7'/><circle cx='280' cy='280' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='280' cy='280' r='2' fill='%23BCBBB7'/></svg>");
+  background-size: 560px 560px;
   background-repeat: repeat;
 }
 

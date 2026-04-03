@@ -54,7 +54,7 @@ const dr: DragState = {
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
-  <div id="hint">tap to select · drag to swap · double-click to rename · hover / for retention</div>
+  <div id="hint">tap to select · drag to swap · double-tap to rename</div>
   <div id="vp">
     <div id="cnv">
       <svg id="svgl"></svg>
@@ -63,8 +63,9 @@ app.innerHTML = `
   </div>
 `;
 
-const vp     = document.getElementById('vp')!;
-const cnv    = document.getElementById('cnv')!;
+const vp      = document.getElementById('vp')!;
+const cnv     = document.getElementById('cnv')!;
+const hintEl  = document.getElementById('hint')!;
 const svgl   = document.getElementById('svgl')   as unknown as SVGSVGElement;
 const dragOv = document.getElementById('drag-ov') as unknown as SVGSVGElement;
 
@@ -348,6 +349,8 @@ function renderNodes() {
     el.style.width = NW + 'px'; el.style.height = NH + 'px';
     el.innerHTML = `<span class="nd-lbl">${n.label}</span>${n.sublabel ? `<span class="sub">${n.sublabel}</span>` : ''}`;
 
+    el.addEventListener('mouseenter', () => { hintEl.style.opacity = '1'; });
+    el.addEventListener('mouseleave', () => { hintEl.style.opacity = '0'; });
     el.addEventListener('mousedown', e => {
       if (e.button !== 0) return; e.stopPropagation();
       dragBegin(n, el, e.clientX, e.clientY);
