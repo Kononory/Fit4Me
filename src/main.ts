@@ -1,5 +1,5 @@
 import './style.css';
-import type { TreeNode, DragState, SelectionState } from './types';
+import type { TreeNode, Flow, DragState, SelectionState } from './types';
 import { DEFAULT_TREE } from './data';
 import {
   doLayout, flattenTree, collectEdges, canvasSize,
@@ -7,21 +7,40 @@ import {
 } from './layout';
 import { swapNodes, cloneTree } from './tree';
 import { mountRetentionWidget } from './retention';
-import { saveLocal, loadLocal, saveRemote, loadRemote } from './storage';
+import {
+  saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal,
+  saveFlowRemote, loadFlowsRemote, deleteFlowRemote,
+} from './storage';
 import { mountToolbar } from './toolbar';
+import { mountFlowTabs, downloadFlowAsOutline } from './flowtabs';
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── Initial flows ─────────────────────────────────────────────────────────────
 
-let tree: TreeNode = (() => {
-  const local = loadLocal();
-  return local ? local : cloneTree(DEFAULT_TREE);
-})();
+const DEFAULT_FLOW: Flow = {
+  id: 'default',
+  name: 'Fit4Me',
+  tree: cloneTree(DEFAULT_TREE),
+};
+
+function initFlows(): { flows: Flow[]; activeId: string } {
+  const local = loadFlowsLocal();
+  if (local && local.length > 0) {
+    const activeId = loadActiveLocal() ?? local[0].id;
+    return { flows: local, activeId };
+  }
+  return { flows: [DEFAULT_FLOW], activeId: DEFAULT_FLOW.id };
+}
+
+let { flows, activeId } = initFlows();
+const getActive = (): Flow => flows.find(f => f.id === activeId) ?? flows[0];
+
+// ── Per-canvas state ──────────────────────────────────────────────────────────
 
 let allNodes: TreeNode[] = [];
 let allEdges: [TreeNode, TreeNode][] = [];
 
-let sel: string | null = null;       // selected branch id
-let selNodeId: string | null = null;  // selected node id
+let sel: string | null = null;
+let selNodeId: string | null = null;
 let editing = false;
 let tapTimer = 0;
 let tapId: string | null = null;
@@ -31,9 +50,9 @@ const dr: DragState = {
   sx: 0, sy: 0, on: false,
 };
 
-// ── DOM refs ──────────────────────────────────────────────────────────────────
+// ── DOM ───────────────────────────────────────────────────────────────────────
 
-const app   = document.getElementById('app')!;
+const app = document.getElementById('app')!;
 app.innerHTML = `
   <div id="hint">tap to select · drag to swap · double-click to rename · hover / for retention</div>
   <div id="vp">
@@ -44,35 +63,91 @@ app.innerHTML = `
   </div>
 `;
 
-const vp    = document.getElementById('vp')!;
-const cnv   = document.getElementById('cnv')!;
-const svgl  = document.getElementById('svgl') as unknown as SVGSVGElement;
-const dragOv= document.getElementById('drag-ov') as unknown as SVGSVGElement;
+const vp     = document.getElementById('vp')!;
+const cnv    = document.getElementById('cnv')!;
+const svgl   = document.getElementById('svgl')   as unknown as SVGSVGElement;
+const dragOv = document.getElementById('drag-ov') as unknown as SVGSVGElement;
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 const { setSaving, setSaved } = mountToolbar({
   onSave: async () => {
     setSaving(true);
-    saveLocal(tree);
-    const err = await saveRemote(tree);
+    saveFlowsLocal(flows);
+    const err = await saveFlowRemote(getActive());
     setSaving(false);
     setSaved(err);
   },
   onReset: () => {
-    tree = cloneTree(DEFAULT_TREE);
-    localStorage.removeItem('fit4me_tree_v1');
+    const active = getActive();
+    active.tree = cloneTree(DEFAULT_TREE);
+    saveFlowsLocal(flows);
     rebuildTree();
     render();
   },
 });
 
-// ── Layout helpers ────────────────────────────────────────────────────────────
+// ── Flow tabs ─────────────────────────────────────────────────────────────────
+
+const tabs = mountFlowTabs(flows, activeId, {
+  onSwitch(id) {
+    activeId = id;
+    saveActiveLocal(id);
+    sel = null; selNodeId = null;
+    rebuildTree();
+    render();
+    tabs.setActive(id);
+  },
+  onRename(id, name) {
+    const f = flows.find(f => f.id === id);
+    if (f) { f.name = name; saveFlowsLocal(flows); }
+  },
+  onDelete(id) {
+    flows = flows.filter(f => f.id !== id);
+    deleteFlowRemote(id);
+    if (activeId === id) activeId = flows[0].id;
+    saveFlowsLocal(flows);
+    saveActiveLocal(activeId);
+    tabs.setFlows(flows);
+    tabs.setActive(activeId);
+    sel = null; selNodeId = null;
+    rebuildTree();
+    render();
+  },
+  onImport(flow) {
+    flows.push(flow);
+    activeId = flow.id;
+    saveFlowsLocal(flows);
+    saveActiveLocal(activeId);
+    tabs.setFlows(flows);
+    tabs.setActive(activeId);
+    sel = null; selNodeId = null;
+    rebuildTree();
+    render();
+  },
+  onNew(flow) {
+    flows.push(flow);
+    activeId = flow.id;
+    saveFlowsLocal(flows);
+    saveActiveLocal(activeId);
+    tabs.setFlows(flows);
+    tabs.setActive(activeId);
+    sel = null; selNodeId = null;
+    rebuildTree();
+    render();
+  },
+  onExport(id) {
+    const f = flows.find(f => f.id === id);
+    if (f) downloadFlowAsOutline(f);
+  },
+});
+
+// ── Layout ────────────────────────────────────────────────────────────────────
 
 function rebuildTree() {
-  doLayout(tree, 0, 0);
-  allNodes  = flattenTree(tree);
-  allEdges  = collectEdges(tree);
+  doLayout(getActive().tree, 0, 0);
+  allNodes = flattenTree(getActive().tree);
+  allEdges = collectEdges(getActive().tree);
   syncSize();
 }
 
@@ -87,24 +162,24 @@ function syncSize() {
   }
 }
 
-// ── Selection helpers ─────────────────────────────────────────────────────────
+// ── Selection ─────────────────────────────────────────────────────────────────
 
 function nodeState(n: TreeNode): SelectionState {
   if (!sel) return 'def';
-  if (n.id === selNodeId) return 'act';   // the tapped node → highlighted
-  if (!n.b) return 'par';                  // structural nodes (root, nav) → normal
-  return n.b === sel ? 'def' : 'dim';     // same branch → normal, other branch → dim
+  if (n.id === selNodeId) return 'act';
+  if (!n.b) return 'par';
+  return n.b === sel ? 'def' : 'dim';
 }
 
 function edgeState(from: TreeNode, to: TreeNode): SelectionState {
   if (!sel) return 'par';
   const fs = nodeState(from), ts = nodeState(to);
-  if (fs === 'act' || ts === 'act') return 'act';  // edges touching selected node → dark
+  if (fs === 'act' || ts === 'act') return 'act';
   if (fs === 'dim' || ts === 'dim') return 'dim';
   return 'par';
 }
 
-// ── Drag helpers ──────────────────────────────────────────────────────────────
+// ── Drag ──────────────────────────────────────────────────────────────────────
 
 const canDrag = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
 
@@ -117,31 +192,22 @@ function applyDragClasses() {
 
 function setTarget(next: TreeNode | null) {
   if (dr.target === next) return;
-
   if (dr.target) {
     const old = cnv.querySelector<HTMLElement>(`[data-nid="${dr.target.id}"]`);
     old?.classList.remove('nd-target');
     old?.classList.add('nd-dim');
   }
-
   dr.target = next;
-
   if (dr.target) {
     const el = cnv.querySelector<HTMLElement>(`[data-nid="${dr.target.id}"]`);
     el?.classList.remove('nd-dim');
     el?.classList.add('nd-target');
   }
-
   if (dr.ghost) {
     const sub = dr.ghost.querySelector<HTMLElement>('.g-sub')!;
-    if (dr.target) {
-      sub.textContent = '↕ ' + dr.target.label;
-      dr.ghost.classList.add('has-target');
-    } else {
-      dr.ghost.classList.remove('has-target');
-    }
+    if (dr.target) { sub.textContent = '↕ ' + dr.target.label; dr.ghost.classList.add('has-target'); }
+    else dr.ghost.classList.remove('has-target');
   }
-
   updateDragOverlay();
 }
 
@@ -149,18 +215,14 @@ function updateDragOverlay() {
   const NS = 'http://www.w3.org/2000/svg';
   dragOv.innerHTML = '';
   if (!dr.on || !dr.target) return;
-
   const x1 = dr.node!.x! + NW / 2, y1 = centerY(dr.node!);
   const x2 = dr.target.x! + NW / 2, y2 = centerY(dr.target);
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-
   const mk = (tag: string, attrs: Record<string, string | number>, parent: SVGElement) => {
     const el = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
-    parent.appendChild(el);
-    return el;
+    parent.appendChild(el); return el;
   };
-
   mk('line', { x1, y1, x2, y2, stroke: '#1A1A1A', 'stroke-width': 1.2, 'stroke-dasharray': '5 3', 'stroke-opacity': 0.35 }, dragOv);
   mk('circle', { cx: x1, cy: y1, r: 3.5, fill: '#ABABAA' }, dragOv);
   mk('circle', { cx: x2, cy: y2, r: 3.5, fill: '#1A1A1A' }, dragOv);
@@ -185,7 +247,6 @@ function dragMove(cx: number, cy: number) {
     clearTimeout(tapTimer); tapTimer = 0; tapId = null;
     svgl.classList.add('dimmed');
     applyDragClasses();
-
     dr.ghost = document.createElement('div');
     dr.ghost.id = 'ghost';
     dr.ghost.innerHTML = `<span class="g-lbl">${dr.node.label}</span><span class="g-sub"></span>`;
@@ -197,21 +258,15 @@ function dragMove(cx: number, cy: number) {
     document.body.style.cursor = 'grabbing';
   }
   if (!dr.on) return;
-
   dr.ghost!.style.left = (cx - NW / 2) + 'px';
   dr.ghost!.style.top  = (cy - NH / 2) + 'px';
-
   const rect = cnv.getBoundingClientRect();
   const mx = cx - rect.left + vp.scrollLeft;
   const my = cy - rect.top  + vp.scrollTop;
-
   let hit: TreeNode | null = null;
   for (const n of allNodes) {
     if (n === dr.node || !canDrag(n)) continue;
-    if (mx >= n.x! && mx <= n.x! + NW && my >= topY(n) && my <= topY(n) + NH) {
-      hit = n;
-      break;
-    }
+    if (mx >= n.x! && mx <= n.x! + NW && my >= topY(n) && my <= topY(n) + NH) { hit = n; break; }
   }
   setTarget(hit);
 }
@@ -220,9 +275,9 @@ function dragEnd() {
   if (!dr.node) return;
   if (dr.on) {
     if (dr.target && dr.target !== dr.node) {
-      swapNodes(tree, dr.node, dr.target);
+      swapNodes(getActive().tree, dr.node, dr.target);
       rebuildTree();
-      saveLocal(tree);
+      saveFlowsLocal(flows);
     }
     dr.ghost?.remove();
     svgl.classList.remove('dimmed');
@@ -231,9 +286,6 @@ function dragEnd() {
       e.classList.remove('nd-source', 'nd-dim', 'nd-target');
     });
     document.body.style.cursor = '';
-    // Only re-render after an actual drag (same as original).
-    // For plain clicks, render() must NOT run here — it would remove all
-    // .nd elements before the click event fires, swallowing the click.
     render();
   }
   dr.node = dr.el = dr.ghost = dr.target = null;
@@ -243,22 +295,19 @@ function dragEnd() {
 document.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
 document.addEventListener('mouseup',   () => dragEnd());
 document.addEventListener('touchmove', e => {
-  const t = e.touches[0];
-  dragMove(t.clientX, t.clientY);
+  const t = e.touches[0]; dragMove(t.clientX, t.clientY);
   if (dr.on) e.preventDefault();
 }, { passive: false });
 document.addEventListener('touchend', () => dragEnd());
 
-// ── Render: edges ─────────────────────────────────────────────────────────────
+// ── Render edges ──────────────────────────────────────────────────────────────
 
 function renderSVG() {
   svgl.innerHTML = '';
   const NS = 'http://www.w3.org/2000/svg';
   for (const [f, t] of allEdges) {
-    const x1 = f.x! + NW, y1 = centerY(f);
-    const x2 = t.x!,       y2 = centerY(t);
-    const mx  = (x1 + x2) / 2;
-    const es  = edgeState(f, t);
+    const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
+    const es = edgeState(f, t);
     const stroke = es === 'act' ? '#1A1A1A' : es === 'dim' ? '#E0DFD9' : '#ABABAA';
     const sw     = es === 'act' ? 1.5 : 1;
     const path   = document.createElementNS(NS, 'path');
@@ -270,42 +319,33 @@ function renderSVG() {
   }
 }
 
-// ── Render: nodes ─────────────────────────────────────────────────────────────
+// ── Render nodes ──────────────────────────────────────────────────────────────
 
 function renderNodes() {
   if (editing) return;
   cnv.querySelectorAll('.nd').forEach(e => e.remove());
-
   for (const n of allNodes) {
     const el = document.createElement('div');
     el.className = 'nd';
     el.dataset['nid'] = n.id;
-
     if (n.type === 'root') el.classList.add('t-root');
     if (n.type === 'nav')  el.classList.add('t-nav');
     if (n.type === 'tab')  el.classList.add('t-tab');
-
     const st = nodeState(n);
     if (st === 'act') el.classList.add('s-active');
     else if (st === 'par') el.classList.add('s-partial');
     else if (st === 'dim') el.classList.add('s-dim');
-
-    el.style.left   = n.x + 'px';
-    el.style.top    = topY(n) + 'px';
-    el.style.width  = NW + 'px';
-    el.style.height = NH + 'px';
+    el.style.left = n.x + 'px'; el.style.top = topY(n) + 'px';
+    el.style.width = NW + 'px'; el.style.height = NH + 'px';
     el.innerHTML = `<span class="nd-lbl">${n.label}</span>${n.sublabel ? `<span class="sub">${n.sublabel}</span>` : ''}`;
 
     el.addEventListener('mousedown', e => {
-      if (e.button !== 0) return;
-      e.stopPropagation();
+      if (e.button !== 0) return; e.stopPropagation();
       dragBegin(n, el, e.clientX, e.clientY);
     });
     el.addEventListener('touchstart', e => {
-      const t = e.touches[0];
-      dragBegin(n, el, t.clientX, t.clientY);
+      const t = e.touches[0]; dragBegin(n, el, t.clientX, t.clientY);
     }, { passive: true });
-
     el.addEventListener('click', e => {
       e.stopPropagation();
       if (dr.on) return;
@@ -317,19 +357,13 @@ function renderNodes() {
         tapTimer = window.setTimeout(() => {
           tapTimer = 0; tapId = null;
           if (n.b) {
-            if (sel === n.b && selNodeId === n.id) {
-              sel = null; selNodeId = null; // tap same node again → deselect
-            } else {
-              sel = n.b; selNodeId = n.id;
-            }
-          } else {
-            sel = null; selNodeId = null;
-          }
+            if (sel === n.b && selNodeId === n.id) { sel = null; selNodeId = null; }
+            else { sel = n.b; selNodeId = n.id; }
+          } else { sel = null; selNodeId = null; }
           render();
         }, 270);
       }
     });
-
     cnv.appendChild(el);
   }
 }
@@ -338,26 +372,20 @@ function renderNodes() {
 
 function startEdit(el: HTMLElement, n: TreeNode) {
   editing = true;
-  const lbl  = el.querySelector<HTMLElement>('.nd-lbl')!;
+  const lbl = el.querySelector<HTMLElement>('.nd-lbl')!;
   const orig = n.label;
   const inp  = document.createElement('input');
-  inp.className = 'nd-input';
-  inp.value = n.label;
-  lbl.replaceWith(inp);
-  inp.focus();
-  inp.select();
-
+  inp.className = 'nd-input'; inp.value = n.label;
+  lbl.replaceWith(inp); inp.focus(); inp.select();
   inp.addEventListener('click',     e => e.stopPropagation());
   inp.addEventListener('mousedown', e => e.stopPropagation());
-
   const commit = () => {
     n.label = inp.value.trim() || orig;
     editing = false;
-    saveLocal(tree);
+    saveFlowsLocal(flows);
     render();
   };
   const cancel = () => { n.label = orig; editing = false; render(); };
-
   inp.addEventListener('blur', commit);
   inp.addEventListener('keydown', e => {
     e.stopPropagation();
@@ -370,19 +398,25 @@ function startEdit(el: HTMLElement, n: TreeNode) {
 
 rebuildTree();
 
-const retention = mountRetentionWidget(
-  cnv,
-  () => allNodes.find(n => n.id === 'p28')!,
-  () => allNodes.find(n => n.id === 'days')!,
-  nodeState,
-);
+// Retention only applies to the default Fit4Me flow
+const p28Node  = allNodes.find(n => n.id === 'p28');
+const daysNode = allNodes.find(n => n.id === 'days');
+let retention: { update: () => void } | null = null;
+if (p28Node && daysNode) {
+  retention = mountRetentionWidget(
+    cnv,
+    () => flattenTree(getActive().tree).find(n => n.id === 'p28') ?? p28Node,
+    () => flattenTree(getActive().tree).find(n => n.id === 'days') ?? daysNode,
+    nodeState,
+  );
+}
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
 function render() {
   renderSVG();
   renderNodes();
-  retention.update();
+  retention?.update();
 }
 
 cnv.addEventListener('click', () => {
@@ -393,17 +427,26 @@ cnv.addEventListener('click', () => {
 
 render();
 
-// Auto-center on load
 requestAnimationFrame(() => {
-  vp.scrollTop = Math.max(0, PAD + (tree.row ?? 0) * RH + RH / 2 - vp.clientHeight / 2);
+  vp.scrollTop = Math.max(0, PAD + (getActive().tree.row ?? 0) * RH + RH / 2 - vp.clientHeight / 2);
 });
 
-// ── Load remote tree on start ─────────────────────────────────────────────────
+// ── Load remote flows on start ────────────────────────────────────────────────
 
-loadRemote().then(remote => {
-  if (remote) {
-    tree = remote;
-    rebuildTree();
-    render();
-  }
+loadFlowsRemote().then(remote => {
+  if (!remote || remote.length === 0) return;
+  flows = remote;
+  // Try to restore the previously active flow; fall back to first
+  if (!flows.find(f => f.id === activeId)) activeId = flows[0].id;
+  saveFlowsLocal(flows);
+  saveActiveLocal(activeId);
+  tabs.setFlows(flows);
+  tabs.setActive(activeId);
+  rebuildTree();
+  render();
 });
+
+// Clear legacy single-flow localStorage key on first run
+if (localStorage.getItem('fit4me_tree_v1')) {
+  localStorage.removeItem('fit4me_tree_v1');
+}
