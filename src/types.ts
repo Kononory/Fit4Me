@@ -1,5 +1,5 @@
 export type NodeType = 'root' | 'nav' | 'tab' | 'leaf';
-export type BranchId = 'plan' | 'workouts' | 'secondary' | 'me' | 'more' | 'fasting';
+export type BranchId = string; // open-ended so imported flows can use any branch name
 
 export interface TreeNode {
   id: string;
@@ -12,6 +12,19 @@ export interface TreeNode {
   depth?: number;
   row?: number;
   x?: number;
+}
+
+export interface Flow {
+  id: string;
+  name: string;
+  tree: TreeNode;
+  savedAt?: string;
+}
+
+export interface FlowMeta {
+  id: string;
+  name: string;
+  savedAt?: string;
 }
 
 export interface RetentionPoint {
