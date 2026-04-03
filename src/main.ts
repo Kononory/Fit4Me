@@ -397,12 +397,14 @@ function renderSVG() {
     const path = document.createElementNS(NS, 'path');
     path.setAttribute('d', d); path.setAttribute('fill', 'none');
     path.setAttribute('stroke', stroke); path.setAttribute('stroke-width', String(sw));
+    path.setAttribute('pointer-events', 'none');
     svgl.appendChild(path);
 
     // Wider invisible hit area for click
     const hit = document.createElementNS(NS, 'path');
     hit.setAttribute('d', d); hit.setAttribute('fill', 'none');
-    hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '14');
+    hit.setAttribute('stroke', 'rgba(0,0,0,0)'); hit.setAttribute('stroke-width', '14');
+    hit.setAttribute('pointer-events', 'stroke');
     hit.style.cursor = 'pointer';
     hit.addEventListener('click', (e) => {
       e.stopPropagation();

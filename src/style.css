@@ -156,7 +156,7 @@ html, body {
 svg#svgl, svg#drag-ov {
   position: absolute; top: 0; left: 0; pointer-events: none;
 }
-svg#svgl    { transition: opacity 0.18s; z-index: 1; }
+svg#svgl    { transition: opacity 0.18s; z-index: 1; pointer-events: visiblePainted; }
 svg#drag-ov { z-index: 6; }
 svg#svgl.dimmed { opacity: 0.08; }
 
