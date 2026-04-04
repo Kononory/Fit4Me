@@ -930,62 +930,15 @@ function renderSVG() {
     }
     svgl.appendChild(path);
 
-    // ── Animated beam (MagicUI style) ───────────────────────────
-    // Only on edges whose source is the selected node or downstream of it
+    // ── Spring-bounce blink every 30 s ─────────────────────────────
     if (beamSourceIds.has(f.id)) {
-      const gradId  = `bg-${ei}`;
-      const beamW   = 35;           // short flash width
-      const gradY   = (y1 + y2) / 2;
-      const CYCLE   = 30;           // full cycle: 30 seconds
-      const SWEEP   = 0.9;          // beam sweeps in 0.9 s then hides
-      const sf      = (SWEEP / CYCLE).toFixed(5);   // fraction of cycle that's visible
-      const stagger = (ei * 0.18 % CYCLE).toFixed(2);
-
-      // linearGradient with SMIL animation on x1/x2
-      const grad = document.createElementNS(NS_SVG, 'linearGradient');
-      grad.setAttribute('id', gradId);
-      grad.setAttribute('gradientUnits', 'userSpaceOnUse');
-      grad.setAttribute('x1', String(x1 - beamW));
-      grad.setAttribute('y1', String(gradY));
-      grad.setAttribute('x2', String(x1));
-      grad.setAttribute('y2', String(gradY));
-
-      // Beam sweeps quickly, then gradient moves far off-screen for the rest of the 30s
-      const mkAnim = (attr: string, v0: number, v1: number) => {
-        const a = document.createElementNS(NS_SVG, 'animate');
-        a.setAttribute('attributeName', attr);
-        a.setAttribute('values',    `${v0};${v1};${v1 + 99999}`);
-        a.setAttribute('keyTimes',  `0;${sf};1`);
-        a.setAttribute('calcMode',  'linear');
-        a.setAttribute('dur',       `${CYCLE}s`);
-        a.setAttribute('repeatCount', 'indefinite');
-        a.setAttribute('begin',     stagger + 's');
-        return a;
-      };
-      grad.appendChild(mkAnim('x1', x1 - beamW, x2));
-      grad.appendChild(mkAnim('x2', x1,         x2 + beamW));
-
-      // Color stops: hard back edge → amber → violet → transparent front
-      for (const [off, col, op] of [
-        ['0%',    '#ffaa40', '0'],
-        ['0.01%', '#ffaa40', '1'],   // sharp back edge (MagicUI style)
-        ['32.5%', '#9c40ff', '1'],
-        ['100%',  '#9c40ff', '0'],
-      ] as const) {
-        const stop = document.createElementNS(NS_SVG, 'stop');
-        stop.setAttribute('offset', off); stop.setAttribute('stop-color', col); stop.setAttribute('stop-opacity', op);
-        grad.appendChild(stop);
-      }
-      defs.appendChild(grad);
-
-      // Overlay path using gradient as stroke
-      svgl.appendChild(svgEl('path', {
-        d, fill: 'none',
-        stroke: `url(#${gradId})`,
-        'stroke-width': String(sw + 2),
-        'stroke-linecap': 'round',
-        'pointer-events': 'none',
-      }));
+      const blink = svgEl('path', {
+        d, fill: 'none', stroke: '#ffaa40',
+        'stroke-linecap': 'round', 'pointer-events': 'none',
+      }) as SVGPathElement;
+      blink.classList.add('edge-blink');
+      blink.style.animationDelay = `${ei * 0.06}s`;
+      svgl.appendChild(blink);
     }
 
     // Wide hit area → picker
