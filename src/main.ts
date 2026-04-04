@@ -151,7 +151,7 @@ function openTextEdit() {
   footer.appendChild(applyBtn);
   panel.appendChild(footer);
 
-  vp.appendChild(panel);
+  document.body.appendChild(panel);
   requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
 
   ta.addEventListener('keydown', e => {
