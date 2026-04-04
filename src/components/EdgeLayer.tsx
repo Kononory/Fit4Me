@@ -107,17 +107,16 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           const gradId = `bg-${f.id}-${t.id}`;
           const beamW  = 35;
           const gradY  = (y1 + y2) / 2;
-          const dur    = (0.7 + (ei % 4) * 0.12).toFixed(2);
-          const begin  = (-(ei * 0.19 % parseFloat(dur))).toFixed(2);
+          const dur   = 0.7;
+          const begin = (ei * 0.06).toFixed(2); // stagger per edge
           return (
             <linearGradient key={gradId} id={gradId} gradientUnits="userSpaceOnUse"
               x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
-              <animate attributeName="x1" from={x1 - beamW} to={x2}        dur={`${dur}s`} repeatCount="indefinite" begin={`${begin}s`} />
-              <animate attributeName="x2" from={x1}         to={x2 + beamW} dur={`${dur}s`} repeatCount="indefinite" begin={`${begin}s`} />
-              <stop offset="0%"     stopColor="#ffaa40" stopOpacity="0" />
-              <stop offset="0.01%"  stopColor="#ffaa40" stopOpacity="1" />
-              <stop offset="32.5%"  stopColor="#9c40ff" stopOpacity="1" />
-              <stop offset="100%"   stopColor="#9c40ff" stopOpacity="0" />
+              <animate attributeName="x1" from={x1 - beamW} to={x2}         dur={`${dur}s`} repeatCount="1" begin={`${begin}s`} fill="freeze" />
+              <animate attributeName="x2" from={x1}         to={x2 + beamW} dur={`${dur}s`} repeatCount="1" begin={`${begin}s`} fill="freeze" />
+              <stop offset="0%"    stopColor="#ffaa40" stopOpacity="0" />
+              <stop offset="0.01%" stopColor="#ffaa40" stopOpacity="1" />
+              <stop offset="100%"  stopColor="#ffaa40" stopOpacity="0" />
             </linearGradient>
           );
         })}
