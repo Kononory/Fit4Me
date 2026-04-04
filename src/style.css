@@ -341,27 +341,73 @@ svg#svgl.dimmed { opacity: 0.08; }
 }
 .ft-modal-btn-create:hover { background: #fff; color: #1A1A1A; }
 
-/* ── Retention marker ───────────────────────────────────────────── */
+/* ── Retention marker (fixed corner) ────────────────────────────── */
 #ret-marker {
-  position: absolute; z-index: 7;
-  width: 22px; height: 22px;
-  background: #fff; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  position: fixed; z-index: 60;
+  right: 20px; bottom: 20px;
+  width: 26px; height: 26px;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; cursor: pointer;
+  font-size: 14px; cursor: pointer;
   transition: background 0.15s, color 0.15s;
-  color: #1A1A1A;
+  color: #1A1A1A; font-family: 'LatteraMonoLL','Space Mono',monospace;
 }
-#ret-marker:hover  { background: #1A1A1A; color: #fff; }
-#ret-marker.mk-act { background: #1A1A1A; color: #fff; }
-#ret-marker.mk-dim { background: #F2F1ED; border-color: #DEDDDA; color: #CCC; pointer-events: none; }
+#ret-marker:hover { background: #1A1A1A; color: #fff; }
 
 /* ── Retention popup ────────────────────────────────────────────── */
 #ret-popup {
-  position: absolute; z-index: 50;
+  position: fixed; z-index: 59;
+  right: 52px; bottom: 20px;
   background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
-  padding: 12px 12px 11px; width: 272px;
+  padding: 12px 12px 10px; width: 280px;
   display: none; pointer-events: auto;
+  max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
 }
+
+/* Summary line */
+.ret-summary {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; font-weight: 700; color: #B52B1E;
+  margin-top: 6px; letter-spacing: 0.02em;
+}
+.ret-divider {
+  border: none; border-top: 1px solid #EEEDE9; margin: 10px 0 8px;
+}
+
+/* Editable table */
+.ret-table { display: flex; flex-direction: column; gap: 3px; }
+.ret-row {
+  display: flex; align-items: center; gap: 4px;
+}
+.ret-inp {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: #1A1A1A; background: #F5F4F0;
+  border: 1px solid #DEDDDA; border-radius: 2px;
+  padding: 2px 4px; outline: none;
+}
+.ret-inp:focus { border-color: #1A1A1A; background: #fff; }
+.ret-inp-lbl { width: 52px; }
+.ret-inp-pct { width: 42px; text-align: right; }
+.ret-pct-unit { font-size: 9px; color: #AEADA8; flex-shrink: 0; }
+.ret-row-del {
+  background: none; border: none; color: #BCBBB7; cursor: pointer;
+  font-size: 12px; padding: 0 2px; line-height: 1;
+}
+.ret-row-del:hover { color: #B52B1E; }
+.ret-add-row {
+  margin-top: 4px; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: #5A5955; background: none;
+  border: 1px dashed #DEDDDA; border-radius: 2px; padding: 3px 6px;
+  cursor: pointer; text-align: left;
+}
+.ret-add-row:hover { border-color: #1A1A1A; color: #1A1A1A; }
+.ret-reset {
+  margin-top: 8px; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; color: #AEADA8; background: none; border: none;
+  cursor: pointer; padding: 0; text-decoration: underline;
+}
+.ret-reset:hover { color: #5A5955; }
 
 /* ── Edge label input ───────────────────────────────────────────── */
 .edge-label-input {

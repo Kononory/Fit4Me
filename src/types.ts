@@ -20,6 +20,7 @@ export interface Flow {
   id: string;
   name: string;
   tree: TreeNode;
+  retentionData?: RetentionPoint[]; // custom per-flow retention chart data
   savedAt?: string;
 }
 

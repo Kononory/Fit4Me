@@ -1,6 +1,6 @@
 import './style.css';
 import type { TreeNode, Flow, DragState, SelectionState } from './types';
-import { DEFAULT_TREE } from './data';
+import { DEFAULT_TREE, RETENTION_DATA } from './data';
 import {
   doLayout, flattenTree, collectEdges, canvasSize,
   centerY, topY, NW, NH, RH, PAD,
@@ -736,32 +736,24 @@ function startEdit(el: HTMLElement, n: TreeNode) {
   });
 }
 
-// ── Retention widget ──────────────────────────────────────────────────────────
+// ── Retention widget (available on all flows) ─────────────────────────────────
 
 rebuildTree();
 
-// Retention only applies to the default Fit4Me flow
-const p28Node  = allNodes.find(n => n.id === 'p28');
-const daysNode = allNodes.find(n => n.id === 'days');
-let retention: { update: () => void } | null = null;
-if (p28Node && daysNode) {
-  retention = mountRetentionWidget(
-    cnv,
-    () => flattenTree(getActive().tree).find(n => n.id === 'p28') ?? p28Node,
-    () => flattenTree(getActive().tree).find(n => n.id === 'days') ?? daysNode,
-    nodeState,
-  );
-}
+const retention = mountRetentionWidget(
+  () => getActive().retentionData ?? [...RETENTION_DATA],
+  (data) => {
+    getActive().retentionData = data;
+    saveFlowsLocal(flows);
+  },
+);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
 function render() {
   renderSVG();
   renderNodes();
-  const isDefault = activeId === DEFAULT_FLOW.id;
-  const retMarker = document.getElementById('ret-marker');
-  if (retMarker) retMarker.style.display = isDefault ? '' : 'none';
-  if (isDefault) retention?.update();
+  retention?.refresh();
 }
 
 // ── Canvas ripple ─────────────────────────────────────────────────────────────
