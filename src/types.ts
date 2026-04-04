@@ -5,6 +5,9 @@ export interface TreeNode {
   id: string;
   label: string;
   sublabel?: string;
+  edgeLabel?: string;   // label shown on the incoming branch line
+  edgeStatus?: 'up' | 'down' | 'ok' | 'warn'; // status icon on the incoming branch line
+  edgeRetention?: RetentionPoint[]; // analytics data on the incoming branch line
   type?: NodeType;
   b?: BranchId;
   c?: TreeNode[];
@@ -14,10 +17,20 @@ export interface TreeNode {
   x?: number;
 }
 
+export interface CrossEdge {
+  id: string;
+  fromId: string;   // source node id
+  toId: string;     // target node id
+  label?: string;
+  type: 'back' | 'ref'; // back=return arrow, ref=cross-reference
+}
+
 export interface Flow {
   id: string;
   name: string;
   tree: TreeNode;
+  crossEdges?: CrossEdge[];
+  retentionData?: RetentionPoint[]; // custom per-flow retention chart data
   savedAt?: string;
 }
 
@@ -39,9 +52,10 @@ export interface DragState {
   el: HTMLElement | null;
   ghost: HTMLElement | null;
   target: TreeNode | null;
-  sx: number;
-  sy: number;
+  sx: number; sy: number;
+  cx: number; cy: number;   // current cursor in canvas coords (connect mode)
   on: boolean;
+  mode: 'swap' | 'connect';
 }
 
 export interface SavePayload {

@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .upsert({ id: flowId, name: name ?? 'Untitled', tree, saved_at: savedAt ?? new Date().toISOString() });
 
   if (error) {
-    console.error('[save]', error.message);
+    console.error('[save] Supabase error:', error.message, error.details, error.hint);
     return res.status(500).json({ error: error.message });
   }
   return res.status(200).json({ ok: true });

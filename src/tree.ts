@@ -1,5 +1,56 @@
 import type { TreeNode } from './types';
 
+export function findNode(root: TreeNode, id: string): TreeNode | null {
+  if (root.id === id) return root;
+  for (const c of root.c ?? []) {
+    const f = findNode(c, id);
+    if (f) return f;
+  }
+  return null;
+}
+
+export function addChildNode(parent: TreeNode): TreeNode {
+  let b = parent.b;
+  if (!b) {
+    // Auto-assign next available branch letter to direct children of root-like nodes
+    const used = new Set((parent.c ?? []).map(n => n.b).filter(Boolean) as string[]);
+    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+      if (!used.has(letter)) { b = letter; break; }
+    }
+  }
+  const node: TreeNode = { id: `n-${Date.now()}`, label: 'New Block', b };
+  if (!parent.c) parent.c = [];
+  parent.c.push(node);
+  return node;
+}
+
+export function removeNode(root: TreeNode, nodeId: string): boolean {
+  if (!root.c) return false;
+  const i = root.c.findIndex(c => c.id === nodeId);
+  if (i !== -1) { root.c.splice(i, 1); if (!root.c.length) delete root.c; return true; }
+  return root.c.some(c => removeNode(c, nodeId));
+}
+
+export function reparentNode(root: TreeNode, nodeId: string, newParentId: string): boolean {
+  if (nodeId === newParentId) return false;
+  const mover = findNode(root, nodeId);
+  if (!mover) return false;
+  if (findNode(mover, newParentId)) return false; // would create cycle
+  let detached: TreeNode | null = null;
+  const detach = (n: TreeNode): boolean => {
+    if (!n.c) return false;
+    const i = n.c.findIndex(c => c.id === nodeId);
+    if (i !== -1) { [detached] = n.c.splice(i, 1); if (!n.c.length) delete n.c; return true; }
+    return n.c.some(c => detach(c));
+  };
+  if (!detach(root) || !detached) return false;
+  const newParent = findNode(root, newParentId);
+  if (!newParent) return false;
+  if (!newParent.c) newParent.c = [];
+  newParent.c.push(detached);
+  return true;
+}
+
 interface ParentRef {
   parent: TreeNode;
   index: number;

@@ -8,10 +8,110 @@ export interface FlowTabsCallbacks {
   onImport:  (flow: Flow) => void;
   onNew:     (flow: Flow) => void;
   onExport:  (id: string) => void;
+  onShare:   (id: string) => void;
 }
 
 function genId(): string {
   return `flow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// ── New-flow dialog ───────────────────────────────────────────────────────────
+
+function showNewDialog(cb: FlowTabsCallbacks): void {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ft-modal-backdrop';
+
+  const card = document.createElement('div');
+  card.className = 'ft-modal-card';
+  card.innerHTML = `
+    <div class="ft-modal-title">New Flow</div>
+    <div class="ft-modal-options">
+      <button class="ft-modal-opt" id="ft-opt-empty">
+        <span class="ft-opt-label">Empty</span>
+        <span class="ft-opt-desc">Blank starter template</span>
+      </button>
+      <button class="ft-modal-opt" id="ft-opt-text">
+        <span class="ft-opt-label">From text</span>
+        <span class="ft-opt-desc">Paste outline text to build structure</span>
+      </button>
+    </div>
+  `;
+
+  backdrop.appendChild(card);
+  document.body.appendChild(backdrop);
+
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+
+  card.querySelector('#ft-opt-empty')!.addEventListener('click', () => {
+    close();
+    const tree = parseOutline(BLANK_OUTLINE);
+    cb.onNew({ id: genId(), name: 'New Flow', tree });
+  });
+
+  card.querySelector('#ft-opt-text')!.addEventListener('click', () => {
+    close();
+    showTextInputDialog(cb);
+  });
+}
+
+function showTextInputDialog(cb: FlowTabsCallbacks): void {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ft-modal-backdrop';
+
+  const card = document.createElement('div');
+  card.className = 'ft-modal-card ft-modal-text';
+  card.innerHTML = `
+    <div class="ft-modal-title">Paste Outline Text</div>
+    <div class="ft-modal-hint">Format: <b>Label [type:branch] | sublabel</b> · 2-space indent per level<br>Types: root · nav · tab · (none for screen)</div>
+    <textarea class="ft-modal-textarea" spellcheck="false" placeholder="Fit4Me [root]
+  Navigation [nav] | Tab 1 · Tab 2
+    Tab 1 [tab:plan]
+      Screen A
+      Screen B | subtitle
+    Tab 2 [tab:log]
+      Screen C"></textarea>
+    <div class="ft-modal-actions">
+      <button class="ft-modal-btn ft-modal-btn-cancel">Cancel</button>
+      <button class="ft-modal-btn ft-modal-btn-create">Create Flow</button>
+    </div>
+  `;
+
+  backdrop.appendChild(card);
+  document.body.appendChild(backdrop);
+
+  const textarea  = card.querySelector<HTMLTextAreaElement>('.ft-modal-textarea')!;
+  const hintEl    = card.querySelector<HTMLElement>('.ft-modal-hint')!;
+  const createBtn = card.querySelector<HTMLButtonElement>('.ft-modal-btn-create')!;
+
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  card.querySelector('.ft-modal-btn-cancel')!.addEventListener('click', close);
+
+  const submit = () => {
+    const text = textarea.value.trim();
+    if (!text) return;
+    try {
+      const tree = parseOutline(text);
+      const name = tree.label || 'New Flow';
+      close();
+      cb.onNew({ id: genId(), name, tree });
+    } catch (e) {
+      hintEl.textContent = `Parse error: ${String(e)}`;
+      hintEl.style.color = '#B52B1E';
+    }
+  };
+
+  createBtn.addEventListener('click', submit);
+  textarea.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit();
+    e.stopPropagation();
+  });
+
+  requestAnimationFrame(() => textarea.focus());
 }
 
 export function mountFlowTabs(
@@ -73,12 +173,8 @@ export function mountFlowTabs(
   const btnNew = document.createElement('button');
   btnNew.className = 'flow-footer-btn';
   btnNew.innerHTML = '+ New';
-  btnNew.title = 'Create a blank flow';
-  btnNew.addEventListener('click', () => {
-    const tree = parseOutline(BLANK_OUTLINE);
-    const flow: Flow = { id: genId(), name: 'New Flow', tree };
-    cb.onNew(flow);
-  });
+  btnNew.title = 'Create a new flow';
+  btnNew.addEventListener('click', () => showNewDialog(cb));
   footer.appendChild(btnNew);
 
   sidebar.appendChild(footer);
@@ -110,6 +206,19 @@ export function mountFlowTabs(
         cb.onExport(flow.id);
       });
       tab.appendChild(btnExp);
+
+      // Share button
+      const btnShare = document.createElement('button');
+      btnShare.className = 'flow-tab-btn';
+      btnShare.title = 'Copy share link';
+      btnShare.textContent = '⎘';
+      btnShare.addEventListener('click', e => {
+        e.stopPropagation();
+        cb.onShare(flow.id);
+        btnShare.textContent = '✓';
+        setTimeout(() => { btnShare.textContent = '⎘'; }, 1800);
+      });
+      tab.appendChild(btnShare);
 
       // Delete button (only if more than 1 flow)
       if (currentFlows.length > 1) {

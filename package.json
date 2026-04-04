@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": { "node": "20.x" },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,6 +16,7 @@
     "vite": "^5.1.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
     "@supabase/supabase-js": "^2.43.0"
   }
 }
