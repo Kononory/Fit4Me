@@ -909,6 +909,7 @@ function renderSVG() {
   const mkDef = (html: string) => { const t = document.createElementNS(NS_SVG, 'g'); t.innerHTML = html; return t.firstElementChild!; };
   defs.appendChild(mkDef(`<marker id="arr-back" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#C8963C"/></marker>`));
   defs.appendChild(mkDef(`<marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ABABAA"/></marker>`));
+  defs.appendChild(mkDef(`<linearGradient id="beam-grad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a855f7" stop-opacity="0"/><stop offset="30%" stop-color="#a855f7"/><stop offset="60%" stop-color="#ec4899"/><stop offset="90%" stop-color="#f97316"/><stop offset="100%" stop-color="#f97316" stop-opacity="0"/></linearGradient>`));
   svgl.appendChild(defs);
 
   // ── Tree edges ─────────────────────────────────────────────────
@@ -930,15 +931,15 @@ function renderSVG() {
     }
     svgl.appendChild(path);
 
-    // ── Spring-bounce blink every 30 s ─────────────────────────────
+    // ── Traveling beam: short gradient segment sliding along edge ──
     if (beamSourceIds.has(f.id)) {
-      const blink = svgEl('path', {
-        d, fill: 'none', stroke: '#ffaa40',
-        'stroke-linecap': 'round', 'pointer-events': 'none',
+      const beam = svgEl('path', {
+        d, fill: 'none', stroke: 'url(#beam-grad)',
+        'stroke-width': 2.5, 'stroke-linecap': 'round', 'pointer-events': 'none',
       }) as SVGPathElement;
-      blink.classList.add('edge-blink');
-      blink.style.animationDelay = `${ei * 0.06}s`;
-      svgl.appendChild(blink);
+      beam.classList.add('beam-travel');
+      beam.style.animationDelay = `${ei * 0.18}s`;
+      svgl.appendChild(beam);
     }
 
     // Wide hit area → picker

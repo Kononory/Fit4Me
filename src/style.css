@@ -443,19 +443,17 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
-/* ── Edge pulse (1.5 s smooth fade-in/out, fires every 15 s) ─────── */
-/* 1500ms / 15000ms = 10% of cycle. Smooth sine-like pulse, no width change */
-@keyframes edge-blink {
-  0%    { stroke-opacity: 0; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
-  5%    { stroke-opacity: 0.9; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
-  10%   { stroke-opacity: 0; }
-  100%  { stroke-opacity: 0; }
+/* ── Traveling beam: 1.5 s slide every 15 s ─────────────────────── */
+/* Segment travels start → end in 10% of cycle, then resets silently */
+@keyframes beam-travel {
+  0%   { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  10%  { stroke-dashoffset: -2400; }
+  100% { stroke-dashoffset: -2400; }
 }
-.edge-blink {
-  animation: edge-blink 15s linear infinite;
-  stroke-opacity: 0;
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 4px #ffaa40);
+.beam-travel {
+  stroke-dasharray: 100 2400;
+  animation: beam-travel 15s linear infinite;
+  filter: drop-shadow(0 0 3px #a855f7);
 }
 
 
