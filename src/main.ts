@@ -1273,7 +1273,8 @@ function render() {
 }
 
 // ── Fluid cursor (WebGL Navier-Stokes) ────────────────────────────────────────
-fluidCursorFn();
+// Disabled: conflicts with interactive grid background when both run together
+// fluidCursorFn();
 
 cnv.addEventListener('click', () => {
   if (editing || dr.on) return;
