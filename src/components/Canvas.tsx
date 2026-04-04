@@ -23,7 +23,7 @@ export function Canvas({
   allNodes, allEdges, crossEdges, doAnim,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
 
@@ -94,6 +94,7 @@ export function Canvas({
         doAnim={doAnim}
         sel={sel}
         selNodeId={selNodeId}
+        selTick={selTick}
         cnvRef={cnvRef}
         onShowEdgePicker={onShowEdgePicker}
         onShowCrossEdgePicker={onShowCrossEdgePicker}

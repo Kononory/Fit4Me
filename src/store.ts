@@ -36,6 +36,7 @@ interface AppStore {
   // ── Selection ──────────────────────────────────────────────────────
   sel: string | null;       // selected branch id
   selNodeId: string | null; // selected node id
+  selTick: number;          // increments on every selection — use as animation key
   setSel: (sel: string | null) => void;
   setSelNodeId: (id: string | null) => void;
 
@@ -90,8 +91,9 @@ export const useStore = create<AppStore>((set, get) => {
     // ── Selection ────────────────────────────────────────────────────
     sel: null,
     selNodeId: null,
+    selTick: 0,
     setSel: (sel) => set({ sel }),
-    setSelNodeId: (selNodeId) => set({ selNodeId }),
+    setSelNodeId: (selNodeId) => set(s => ({ selNodeId, selTick: selNodeId ? s.selTick + 1 : s.selTick })),
 
     // ── Undo / Redo ──────────────────────────────────────────────────
     undoStacks: new Map(),

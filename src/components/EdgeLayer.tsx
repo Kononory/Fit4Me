@@ -21,6 +21,7 @@ interface Props {
   doAnim: boolean;
   sel: string | null;
   selNodeId: string | null;
+  selTick: number;
   cnvRef: React.RefObject<HTMLDivElement | null>;
   onShowEdgePicker: (toNode: TreeNode, lx: number, ly: number) => void;
   onShowCrossEdgePicker: (ce: CrossEdge, lx: number, ly: number) => void;
@@ -45,7 +46,7 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
   return { x: (r?.left ?? 0) + lx, y: (r?.top ?? 0) + ly };
 }
 
-export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
+export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, selTick, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
 
   const showChartPreview = useCallback((aData: RetentionPoint[], bx: number, ly: number) => {
@@ -141,7 +142,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           <g key={`${f.id}-${t.id}`}>
             {/* Inline defs — gradient co-located with its path, avoids url() resolution bugs */}
             {beamActive && (
-              <defs key={selNodeId}>
+              <defs key={selTick}>
                 <linearGradient id={gradId} gradientUnits="userSpaceOnUse"
                   x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
                   <animate attributeName="x1" from={x1 - beamW} to={x2}         dur="0.7s" repeatCount="1" begin={`${begin}s`} fill="remove" />
