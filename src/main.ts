@@ -14,8 +14,6 @@ import {
 import { mountToolbar } from './toolbar';
 import { mountFlowTabs, downloadFlowAsOutline } from './flowtabs';
 import { parseOutline, treeToOutline } from './parser';
-import fluidCursorFn from './fluid-cursor';
-
 // ── Share URL helpers ─────────────────────────────────────────────────────────
 
 function encodeFlow(flow: Flow): string {
