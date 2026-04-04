@@ -153,6 +153,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               key={selTick} forces remount on every selection → animation always restarts.
               pathLength="1" + dasharray/dashoffset sweeps a segment across the full path.
             */}
+            {/* beam disabled
             {beamActive && (
               <path
                 key={selTick}
@@ -167,7 +168,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
                 pointerEvents="none"
                 style={{ animation: `beam-sweep 0.7s ease-out ${delay} forwards` }}
               />
-            )}
+            )} */}
 
             {/* Hit area */}
             <path d={d} fill="none" stroke="rgba(0,0,0,0)" strokeWidth={14} pointerEvents="stroke"
