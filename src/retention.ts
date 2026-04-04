@@ -20,7 +20,7 @@ function mkText(text: string, attrs: Record<string, string | number>, parent: SV
   return el;
 }
 
-function buildChart(data: RetentionPoint[]): SVGSVGElement {
+export function buildChart(data: RetentionPoint[]): SVGSVGElement {
   const W = 248, H = 140, ml = 8, mr = 4, mt = 20, mb = 18;
   const cw = W - ml - mr, ch = H - mt - mb, cb = mt + ch;
   const n = data.length;

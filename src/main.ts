@@ -6,7 +6,7 @@ import {
   centerY, topY, NW, NH, RH, PAD,
 } from './layout';
 import { swapNodes, cloneTree, addChildNode, removeNode, reparentNode } from './tree';
-import { mountRetentionWidget } from './retention';
+import { mountRetentionWidget, buildChart } from './retention';
 import {
   saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal,
   saveFlowRemote, loadFlowsRemote, deleteFlowRemote,
@@ -580,7 +580,10 @@ const EDGE_STATUS = {
 
 // ── Edge annotation picker ────────────────────────────────────────────────────
 
-function closePicker() { document.getElementById('edge-picker')?.remove(); }
+function closePicker() {
+  document.getElementById('edge-picker')?.remove();
+  document.getElementById('edge-chart-preview')?.remove();
+}
 
 function canvasToScreen(lx: number, ly: number) {
   const r = cnv.getBoundingClientRect();
@@ -910,13 +913,46 @@ function renderSVG() {
         'font-size': 9, 'pointer-events': 'none' }));
     }
 
-    // Analytics badge `/`
+    // Analytics badge `/` — hover shows chart preview
     if (t.edgeRetention) {
       const ay = nextY();
-      svgl.appendChild(svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
-        fill: '#F0EDFF', stroke: '#9B8FD4', 'stroke-width': 1, 'pointer-events': 'none' }));
-      svgl.appendChild(svgText('/', { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: '#6B5FBF',
-        'font-size': 11, 'pointer-events': 'none' }));
+      const aData = t.edgeRetention;
+      const badgeBg  = svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
+        fill: '#F0EDFF', stroke: '#9B8FD4', 'stroke-width': 1,
+        'pointer-events': 'visiblePainted', cursor: 'pointer' });
+      const badgeTx  = svgText('/', { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: '#6B5FBF',
+        'font-size': 11, 'pointer-events': 'none' });
+      let chartTimer = 0;
+      const showChart = () => {
+        clearTimeout(chartTimer);
+        document.getElementById('edge-chart-preview')?.remove();
+        const { x: sx, y: sy } = canvasToScreen(lx, ay);
+        const pop = document.createElement('div');
+        pop.id = 'edge-chart-preview';
+        pop.style.cssText = `position:fixed;z-index:95;background:#1A1916;border:1px solid #2E2D2A;
+          border-radius:6px;padding:10px;pointer-events:none;`;
+        pop.appendChild(buildChart(aData));
+        if (aData.length >= 2) {
+          const last = aData[aData.length - 1];
+          const s = document.createElement('div');
+          s.style.cssText = 'font-size:10px;color:#AEADA8;margin-top:4px;text-align:center;font-family:monospace;';
+          s.textContent = `${last.pct}% reach the final stage`;
+          pop.appendChild(s);
+        }
+        document.body.appendChild(pop);
+        // Position: above badge, clamped to viewport
+        const pw = 268, ph = pop.offsetHeight || 170;
+        let px = sx - pw / 2, py = sy - ph - 10;
+        px = Math.max(6, Math.min(px, window.innerWidth - pw - 6));
+        py = py < 6 ? sy + 26 : py;
+        pop.style.left = px + 'px'; pop.style.top = py + 'px';
+      };
+      const hideChart = () => { chartTimer = window.setTimeout(() => document.getElementById('edge-chart-preview')?.remove(), 120); };
+      badgeBg.addEventListener('mouseenter', showChart);
+      badgeBg.addEventListener('mouseleave', hideChart);
+      badgeBg.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('edge-chart-preview')?.remove(); showEdgeAnalytics(t, lx, ay); });
+      svgl.appendChild(badgeBg);
+      svgl.appendChild(badgeTx);
     }
 
     // Hover hint if no annotations
