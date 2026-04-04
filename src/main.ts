@@ -14,6 +14,7 @@ import {
 import { mountToolbar } from './toolbar';
 import { mountFlowTabs, downloadFlowAsOutline } from './flowtabs';
 import { parseOutline, treeToOutline } from './parser';
+import fluidCursorFn from './fluid-cursor';
 
 // ── Share URL helpers ─────────────────────────────────────────────────────────
 
@@ -1271,30 +1272,8 @@ function render() {
   retention?.refresh();
 }
 
-// ── Fluid cursor ──────────────────────────────────────────────────────────────
-
-const fluidCursor = document.createElement('div');
-fluidCursor.id = 'fluid-cursor';
-document.body.appendChild(fluidCursor);
-
-let _fcx = -200, _fcy = -200, _fvx = 0, _fvy = 0, _ftx = -200, _fty = -200;
-
-document.addEventListener('mousemove', e => { _ftx = e.clientX; _fty = e.clientY; });
-
-(function tickCursor() {
-  const dx = _ftx - _fcx, dy = _fty - _fcy;
-  _fvx = _fvx * 0.68 + dx * 0.20;
-  _fvy = _fvy * 0.68 + dy * 0.20;
-  _fcx += _fvx; _fcy += _fvy;
-  const speed = Math.hypot(_fvx, _fvy);
-  const stretch = Math.min(speed / 7, 2);
-  const angle   = Math.atan2(_fvy, _fvx) * 180 / Math.PI;
-  fluidCursor.style.left      = _fcx + 'px';
-  fluidCursor.style.top       = _fcy + 'px';
-  fluidCursor.style.transform =
-    `translate(-50%,-50%) rotate(${angle}deg) scaleX(${1 + stretch * 0.45}) scaleY(${1 / (1 + stretch * 0.2)})`;
-  requestAnimationFrame(tickCursor);
-})();
+// ── Fluid cursor (WebGL Navier-Stokes) ────────────────────────────────────────
+fluidCursorFn();
 
 cnv.addEventListener('click', () => {
   if (editing || dr.on) return;
