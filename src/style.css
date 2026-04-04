@@ -445,6 +445,11 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
+/* ── Beam sweep — plays once on selection, CSS so timing is mount-relative ── */
+@keyframes beam-sweep {
+  to { stroke-dashoffset: -0.15; }
+}
+
 
 
 /* ── Toolbar text-edit button ───────────────────────────────────── */

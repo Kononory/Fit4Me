@@ -101,6 +101,13 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
+        {/* Static amber gradient — objectBoundingBox scales to each path's own bounds */}
+        <linearGradient id="beam-grad" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"    stopColor="#ffaa40" stopOpacity="0" />
+          <stop offset="5%"    stopColor="#ffaa40" stopOpacity="1" />
+          <stop offset="95%"   stopColor="#ffaa40" stopOpacity="1" />
+          <stop offset="100%"  stopColor="#ffaa40" stopOpacity="0" />
+        </linearGradient>
       </defs>
 
       {/* Tree edges */}
@@ -133,34 +140,33 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         } : {};
 
         const beamActive = beamSourceIds.has(f.id);
-        const gradId = `bg-${f.id}-${t.id}`;
-        const gradY  = ly;
-        const beamW  = 35;
-        const begin  = (ei * 0.06).toFixed(2);
+        const delay = `${(ei * 0.06).toFixed(2)}s`;
 
         return (
           <g key={`${f.id}-${t.id}`}>
-            {/* Inline defs — gradient co-located with its path, avoids url() resolution bugs */}
-            {beamActive && (
-              <defs key={selTick}>
-                <linearGradient id={gradId} gradientUnits="userSpaceOnUse"
-                  x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
-                  <animate attributeName="x1" from={x1 - beamW} to={x2}         dur="0.7s" repeatCount="1" begin={`${begin}s`} fill="remove" />
-                  <animate attributeName="x2" from={x1}         to={x2 + beamW} dur="0.7s" repeatCount="1" begin={`${begin}s`} fill="remove" />
-                  <stop offset="0%"    stopColor="#ffaa40" stopOpacity="0" />
-                  <stop offset="0.01%" stopColor="#ffaa40" stopOpacity="1" />
-                  <stop offset="100%"  stopColor="#ffaa40" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-            )}
-
             {/* Base path — pathLength="1" makes dashoffset work without getTotalLength() */}
             <path d={d} pathLength={doAnim ? 1 : undefined} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
 
-            {/* Beam overlay — plays once per selection */}
+            {/*
+              Beam overlay — CSS animation so timing is always relative to element mount,
+              never the SVG document timeline (which breaks SMIL on dynamic elements).
+              key={selTick} forces remount on every selection → animation always restarts.
+              pathLength="1" + dasharray/dashoffset sweeps a segment across the full path.
+            */}
             {beamActive && (
-              <path d={d} fill="none" stroke={`url(#${gradId})`}
-                strokeWidth={sw + 2} strokeLinecap="round" pointerEvents="none" />
+              <path
+                key={selTick}
+                d={d}
+                pathLength={1}
+                fill="none"
+                stroke="url(#beam-grad)"
+                strokeWidth={sw + 2}
+                strokeLinecap="round"
+                strokeDasharray="0.15 0.85"
+                strokeDashoffset={1.15}
+                pointerEvents="none"
+                style={{ animation: `beam-sweep 0.7s ease-out ${delay} forwards` }}
+              />
             )}
 
             {/* Hit area */}
