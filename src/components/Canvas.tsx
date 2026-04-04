@@ -58,7 +58,14 @@ export function Canvas({
     };
   }, [dragMove, dragEnd, drag.on]);
 
-  useEffect(() => { if (doAnim) clearEdgeAnim(); }, [doAnim, clearEdgeAnim]);
+  useEffect(() => {
+    if (!doAnim) return;
+    // Wait for all staggered animations to finish before clearing the flag.
+    // Each edge is delayed by ei * 0.025s; last one takes 0.35s to complete.
+    const maxMs = allEdges.length * 25 + 400;
+    const id = window.setTimeout(() => clearEdgeAnim(), maxMs);
+    return () => clearTimeout(id);
+  }, [doAnim, allEdges.length, clearEdgeAnim]);
 
   const nodeState = useCallback((n: TreeNode) => {
     if (!sel) return 'def' as const;
