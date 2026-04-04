@@ -100,26 +100,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
-        {/* Per-edge beam gradients — plays once each time a node is selected */}
-        {allEdges.map(([f, t], ei) => {
-          if (!beamSourceIds.has(f.id)) return null;
-          const { x1, y1, x2, y2 } = edgeGeom[ei];
-          const gradId = `bg-${f.id}-${t.id}-${selNodeId}`;
-          const beamW  = 35;
-          const gradY  = (y1 + y2) / 2;
-          const dur   = 0.7;
-          const begin = (ei * 0.06).toFixed(2); // stagger per edge
-          return (
-            <linearGradient key={gradId} id={gradId} gradientUnits="userSpaceOnUse"
-              x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
-              <animate attributeName="x1" from={x1 - beamW} to={x2}         dur={`${dur}s`} repeatCount="1" begin={`${begin}s`} fill="freeze" />
-              <animate attributeName="x2" from={x1}         to={x2 + beamW} dur={`${dur}s`} repeatCount="1" begin={`${begin}s`} fill="freeze" />
-              <stop offset="0%"    stopColor="#ffaa40" stopOpacity="0" />
-              <stop offset="0.01%" stopColor="#ffaa40" stopOpacity="1" />
-              <stop offset="100%"  stopColor="#ffaa40" stopOpacity="0" />
-            </linearGradient>
-          );
-        })}
       </defs>
 
       {/* Tree edges */}
@@ -151,14 +131,34 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           animation: `edge-draw 0.35s ease-out ${ei * 0.025}s forwards`,
         } : {};
 
+        const beamActive = beamSourceIds.has(f.id);
+        const gradId = `bg-${f.id}-${t.id}`;
+        const gradY  = ly;
+        const beamW  = 35;
+        const begin  = (ei * 0.06).toFixed(2);
+
         return (
           <g key={`${f.id}-${t.id}`}>
+            {/* Inline defs — gradient co-located with its path, avoids url() resolution bugs */}
+            {beamActive && (
+              <defs key={selNodeId}>
+                <linearGradient id={gradId} gradientUnits="userSpaceOnUse"
+                  x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
+                  <animate attributeName="x1" from={x1 - beamW} to={x2}         dur="0.7s" repeatCount="1" begin={`${begin}s`} fill="remove" />
+                  <animate attributeName="x2" from={x1}         to={x2 + beamW} dur="0.7s" repeatCount="1" begin={`${begin}s`} fill="remove" />
+                  <stop offset="0%"    stopColor="#ffaa40" stopOpacity="0" />
+                  <stop offset="0.01%" stopColor="#ffaa40" stopOpacity="1" />
+                  <stop offset="100%"  stopColor="#ffaa40" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            )}
+
             {/* Base path — pathLength="1" makes dashoffset work without getTotalLength() */}
             <path d={d} pathLength={doAnim ? 1 : undefined} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
 
             {/* Beam overlay — plays once per selection */}
-            {beamSourceIds.has(f.id) && (
-              <path d={d} fill="none" stroke={`url(#bg-${f.id}-${t.id}-${selNodeId})`}
+            {beamActive && (
+              <path d={d} fill="none" stroke={`url(#${gradId})`}
                 strokeWidth={sw + 2} strokeLinecap="round" pointerEvents="none" />
             )}
 
