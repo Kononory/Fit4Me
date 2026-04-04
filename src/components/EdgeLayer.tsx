@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import type { TreeNode, CrossEdge, RetentionPoint, SelectionState } from '../types';
 import { NW, centerY } from '../layout';
 import { buildChart } from '../retention';
+import { AnimatedBeam } from './magicui/animated-beam';
 
 
 const EDGE_STATUS = {
@@ -96,13 +97,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
-        <linearGradient id="beam-grad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-          <stop offset="0%"   stopColor="#a855f7" stopOpacity={0} />
-          <stop offset="30%"  stopColor="#a855f7" />
-          <stop offset="60%"  stopColor="#ec4899" />
-          <stop offset="90%"  stopColor="#f97316" />
-          <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
-        </linearGradient>
+        {/* beam gradients are managed per-edge by AnimatedBeam */}
       </defs>
 
       {/* Tree edges */}
@@ -138,11 +133,16 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
             {/* Base path */}
             <path d={d} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
 
-            {/* Beam overlay */}
+            {/* Animated beam (MagicUI) */}
             {beamSourceIds.has(f.id) && (
-              <path d={d} fill="none" stroke="url(#beam-grad)" strokeWidth={2.5} strokeLinecap="round"
-                pointerEvents="none" className="beam-travel"
-                style={{ animationDelay: `${ei * 0.18}s` }} />
+              <AnimatedBeam
+                pathD={d}
+                pathWidth={2}
+                gradientStartColor="#ffaa40"
+                gradientStopColor="#9c40ff"
+                duration={1.5}
+                delay={ei * 0.18}
+              />
             )}
 
             {/* Hit area */}
