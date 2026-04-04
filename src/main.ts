@@ -480,8 +480,8 @@ function dragMove(cx: number, cy: number) {
   if (!dr.on) return;
 
   const rect = cnv.getBoundingClientRect();
-  const mx = cx - rect.left + vp.scrollLeft;
-  const my = cy - rect.top  + vp.scrollTop;
+  const mx = cx - rect.left;   // canvas-space X (getBoundingClientRect already accounts for scroll)
+  const my = cy - rect.top;    // canvas-space Y
   dr.cx = mx; dr.cy = my;
 
   if (dr.mode === 'swap') {
@@ -973,13 +973,13 @@ function renderSVG() {
 }
 
 function startEdgeEdit(toNode: TreeNode, lx: number, ly: number) {
-  const rect = cnv.getBoundingClientRect();
   const inp  = document.createElement('input');
   inp.className   = 'edge-label-input';
   inp.value       = toNode.edgeLabel ?? '';
   inp.placeholder = 'add note…';
-  inp.style.left  = (rect.left + lx - vp.scrollLeft - 50) + 'px';
-  inp.style.top   = (rect.top  + ly - vp.scrollTop  - 11) + 'px';
+  const sc = canvasToScreen(lx, ly);
+  inp.style.left  = (sc.x - 50) + 'px';
+  inp.style.top   = (sc.y - 11) + 'px';
   document.body.appendChild(inp);
   inp.focus(); inp.select();
   const commit = () => {
@@ -1145,8 +1145,8 @@ vp.addEventListener('click', e => {
   if (target !== vp && target !== cnv && target.id !== 'svgl') return;
   const rect = cnv.getBoundingClientRect();
   spawnRipple(
-    e.clientX - rect.left + vp.scrollLeft,
-    e.clientY - rect.top  + vp.scrollTop,
+    e.clientX - rect.left,
+    e.clientY - rect.top,
   );
 });
 
