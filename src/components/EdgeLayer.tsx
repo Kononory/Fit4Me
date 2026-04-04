@@ -75,6 +75,20 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
     }, 120);
   }, []);
 
+  // Beam: selected node + entire subtree downstream
+  const beamSourceIds = new Set<string>();
+  if (selNodeId) {
+    const collect = (n: TreeNode) => { beamSourceIds.add(n.id); for (const c of n.c ?? []) collect(c); };
+    const selNode = allNodes.find(n => n.id === selNodeId);
+    if (selNode) collect(selNode);
+  }
+
+  // Pre-compute edge geometry (needed for both defs and path rendering)
+  const edgeGeom = allEdges.map(([f, t]) => {
+    const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
+    return { x1, y1, x2, y2, mx };
+  });
+
   const viewBox = `0 0 ${width} ${height}`;
 
   return (
@@ -86,11 +100,32 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
+        {/* Per-edge beam gradients — SMIL animates x1/x2 across the path */}
+        {allEdges.map(([f, t], ei) => {
+          if (!beamSourceIds.has(f.id)) return null;
+          const { x1, y1, x2, y2 } = edgeGeom[ei];
+          const gradId = `bg-${f.id}-${t.id}`;
+          const beamW  = 35;
+          const gradY  = (y1 + y2) / 2;
+          const dur    = (0.7 + (ei % 4) * 0.12).toFixed(2);
+          const begin  = (-(ei * 0.19 % parseFloat(dur))).toFixed(2);
+          return (
+            <linearGradient key={gradId} id={gradId} gradientUnits="userSpaceOnUse"
+              x1={x1 - beamW} y1={gradY} x2={x1} y2={gradY}>
+              <animate attributeName="x1" from={x1 - beamW} to={x2}        dur={`${dur}s`} repeatCount="indefinite" begin={`${begin}s`} />
+              <animate attributeName="x2" from={x1}         to={x2 + beamW} dur={`${dur}s`} repeatCount="indefinite" begin={`${begin}s`} />
+              <stop offset="0%"     stopColor="#ffaa40" stopOpacity="0" />
+              <stop offset="0.01%"  stopColor="#ffaa40" stopOpacity="1" />
+              <stop offset="32.5%"  stopColor="#9c40ff" stopOpacity="1" />
+              <stop offset="100%"   stopColor="#9c40ff" stopOpacity="0" />
+            </linearGradient>
+          );
+        })}
       </defs>
 
       {/* Tree edges */}
       {allEdges.map(([f, t], ei) => {
-        const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
+        const { x1, y1, x2, y2, mx } = edgeGeom[ei];
         const lx = mx, ly = (y1 + y2) / 2;
         const es = edgeState(f, t, sel, selNodeId);
         const stroke = es === 'act' ? '#1A1A1A' : es === 'dim' ? '#E0DFD9' : '#ABABAA';
@@ -109,17 +144,24 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         const grabBX = (w: number) => { const cx = bCursor + w / 2; bCursor += w + BADGE_GAP; return cx; };
         const hasAnnotation = !!(t.edgeLabel || t.edgeStatus || t.edgeRetention);
 
-        // Animate on mount (edge-draw)
+        // Trim-path draw animation on mount.
+        // pathLength="1" normalises the path so dasharray/dashoffset of 1 = full length.
         const pathStyle: React.CSSProperties = doAnim ? {
-          strokeDasharray: 9999,
-          strokeDashoffset: 9999,
+          strokeDasharray: 1,
+          strokeDashoffset: 1,
           animation: `edge-draw 0.35s ease-out ${ei * 0.025}s forwards`,
         } : {};
 
         return (
           <g key={`${f.id}-${t.id}`}>
-            {/* Base path */}
-            <path d={d} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
+            {/* Base path — pathLength="1" makes dashoffset work without getTotalLength() */}
+            <path d={d} pathLength={doAnim ? 1 : undefined} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
+
+            {/* Beam overlay — SMIL gradient travels from from-node to to-node */}
+            {beamSourceIds.has(f.id) && (
+              <path d={d} fill="none" stroke={`url(#bg-${f.id}-${t.id})`}
+                strokeWidth={sw + 2} strokeLinecap="round" pointerEvents="none" />
+            )}
 
             {/* Hit area */}
             <path d={d} fill="none" stroke="rgba(0,0,0,0)" strokeWidth={14} pointerEvents="stroke"
