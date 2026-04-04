@@ -1,11 +1,4 @@
-/**
- * NodeEl — renders a single tree node as an absolutely-positioned div.
- *
- * Uses forwardRef so Canvas.tsx can hold a RefObject<HTMLDivElement> per node,
- * which is passed to MagicUI's AnimatedBeam as fromRef/toRef.
- * This is required for AnimatedBeam to compute beam positions via getBoundingClientRect().
- */
-import { forwardRef, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import type { TreeNode } from '../types';
 import { NW, NH, topY } from '../layout';
 import { removeNode } from '../tree';
@@ -22,8 +15,7 @@ interface Props {
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export const NodeEl = forwardRef<HTMLDivElement, Props>(
-  function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEditDone }, ref) {
+export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEditDone }: Props) {
     const { pushUndo, updateActiveTree, getActive, setSel, setSelNodeId, triggerEdgeAnim } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
@@ -83,7 +75,6 @@ export const NodeEl = forwardRef<HTMLDivElement, Props>(
 
     return (
       <div
-        ref={ref}
         className={cls.join(' ')}
         data-nid={n.id}
         style={{ left: n.x, top: topY(n), width: NW, height: NH, position: 'absolute' }}
@@ -138,5 +129,4 @@ export const NodeEl = forwardRef<HTMLDivElement, Props>(
         )}
       </div>
     );
-  },
-);
+}

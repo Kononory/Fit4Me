@@ -445,6 +445,18 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
+/* ── Beam travel animation ──────────────────────────────────────── */
+/* dasharray "80 9999": 80px colored segment, huge gap.             */
+/* dashoffset 9999 → -9999 moves the segment from before the path   */
+/* start to past the end. Only the 0%→10% portion is motion         */
+/* (= 1.5 s of the 15 s cycle); 10%→100% holds at the end          */
+/* (segment is off-path, invisible) — giving 13.5 s of silence.     */
+@keyframes beam-travel {
+  0%  { stroke-dashoffset: 9999; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  10% { stroke-dashoffset: -9999; }
+  100%{ stroke-dashoffset: -9999; }
+}
+
 
 /* ── Toolbar text-edit button ───────────────────────────────────── */
 #tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }
