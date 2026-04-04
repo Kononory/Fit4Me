@@ -450,3 +450,54 @@ svg#svgl.dimmed { opacity: 0.08; }
   from { width: 0;     height: 0;     opacity: 1; }
   to   { width: 320px; height: 320px; opacity: 0; }
 }
+
+/* ── Toolbar text-edit button ───────────────────────────────────── */
+#tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }
+#tb-text.tb-active { background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A; }
+
+/* ── Text-edit panel ────────────────────────────────────────────── */
+#text-edit-panel {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; flex-direction: column;
+  background: #FEFCF8;
+}
+#text-edit-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; border-bottom: 1px solid #DEDDDA;
+  flex-shrink: 0;
+}
+#text-edit-title {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 10px; color: #AEADA8; letter-spacing: 0.02em;
+}
+#text-edit-title kbd {
+  display: inline-block; padding: 0 4px;
+  background: #EEEDE9; border: 1px solid #DEDDDA; border-radius: 2px;
+  font-family: inherit; font-size: 9px; color: #5A5955;
+}
+#text-edit-err {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: #B52B1E; flex: 1;
+}
+#text-edit-ta {
+  flex: 1; resize: none; border: none; outline: none;
+  padding: 16px 20px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 12px; line-height: 1.7; color: #1A1A1A;
+  background: #FEFCF8; tab-size: 2;
+}
+#text-edit-ta::selection { background: rgba(26,26,26,0.12); }
+#text-edit-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 10px 14px; border-top: 1px solid #DEDDDA;
+  flex-shrink: 0;
+}
+.te-btn {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 11px; padding: 5px 14px; border-radius: 2px;
+  cursor: pointer; border: 1.5px solid #DEDDDA;
+}
+.te-btn-cancel { background: transparent; color: #9A9995; }
+.te-btn-cancel:hover { background: #EEEDE9; color: #1A1A1A; border-color: #BCBBB7; }
+.te-btn-apply  { background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A; }
+.te-btn-apply:hover { background: #333; }

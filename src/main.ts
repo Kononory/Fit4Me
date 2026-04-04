@@ -13,6 +13,7 @@ import {
 } from './storage';
 import { mountToolbar } from './toolbar';
 import { mountFlowTabs, downloadFlowAsOutline } from './flowtabs';
+import { parseOutline, treeToOutline } from './parser';
 
 // ── Share URL helpers ─────────────────────────────────────────────────────────
 
@@ -105,6 +106,87 @@ function redo() {
 let setUndoEnabled!: (v: boolean) => void;
 let setRedoEnabled!: (v: boolean) => void;
 
+// ── Text-edit mode ────────────────────────────────────────────────────────────
+
+let textEditOpen = false;
+let textEditPanel: HTMLElement | null = null;
+
+function openTextEdit() {
+  if (textEditPanel) return;
+  textEditOpen = true;
+  setTextEditActive(true);
+
+  const panel = document.createElement('div');
+  panel.id = 'text-edit-panel';
+  textEditPanel = panel;
+
+  const header = document.createElement('div');
+  header.id = 'text-edit-header';
+  header.innerHTML = `
+    <span id="text-edit-title">Edit outline — <kbd>Ctrl+Enter</kbd> to apply · <kbd>Esc</kbd> to cancel</span>
+    <span id="text-edit-err"></span>
+  `;
+  panel.appendChild(header);
+
+  const ta = document.createElement('textarea');
+  ta.id = 'text-edit-ta';
+  ta.spellcheck = false;
+  ta.value = treeToOutline(getActive().tree);
+  panel.appendChild(ta);
+
+  const footer = document.createElement('div');
+  footer.id = 'text-edit-footer';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'te-btn te-btn-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', closeTextEdit);
+
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'te-btn te-btn-apply';
+  applyBtn.textContent = 'Apply';
+  applyBtn.addEventListener('click', () => applyTextEdit(ta));
+
+  footer.appendChild(cancelBtn);
+  footer.appendChild(applyBtn);
+  panel.appendChild(footer);
+
+  vp.appendChild(panel);
+  requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
+
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closeTextEdit(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); applyTextEdit(ta); }
+    e.stopPropagation();
+  });
+}
+
+function applyTextEdit(ta: HTMLTextAreaElement) {
+  const errEl = document.getElementById('text-edit-err')!;
+  try {
+    const tree = parseOutline(ta.value);
+    pushUndo();
+    getActive().tree = tree;
+    rebuildTree();
+    saveFlowsLocal(flows);
+    closeTextEdit();
+    render();
+  } catch (e) {
+    errEl.textContent = String(e);
+  }
+}
+
+function closeTextEdit() {
+  textEditPanel?.remove();
+  textEditPanel = null;
+  textEditOpen = false;
+  setTextEditActive(false);
+}
+
+function toggleTextEdit() {
+  if (textEditOpen) closeTextEdit(); else openTextEdit();
+}
+
 function syncUndoRedoUI() {
   setUndoEnabled(!!(undoStacks.get(activeId)?.length));
   setRedoEnabled(!!(redoStacks.get(activeId)?.length));
@@ -147,7 +229,9 @@ const dragOv = document.getElementById('drag-ov') as unknown as SVGSVGElement;
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
-const { setSaving, setSaved, setResetEnabled, setUndoEnabled: _sue, setRedoEnabled: _sre } = mountToolbar({
+let setTextEditActive!: (v: boolean) => void;
+
+const { setSaving, setSaved, setResetEnabled, setUndoEnabled: _sue, setRedoEnabled: _sre, setTextEditActive: _stea } = mountToolbar({
   onSave: async () => {
     setSaving(true);
     saveFlowsLocal(flows);
@@ -166,13 +250,16 @@ const { setSaving, setSaved, setResetEnabled, setUndoEnabled: _sue, setRedoEnabl
   },
   onUndo: undo,
   onRedo: redo,
+  onTextEdit: toggleTextEdit,
 });
-setUndoEnabled = _sue;
-setRedoEnabled = _sre;
+setUndoEnabled    = _sue;
+setRedoEnabled    = _sre;
+setTextEditActive = _stea;
 
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'e' && !textEditOpen) { e.preventDefault(); openTextEdit(); }
 });
 
 // ── Flow tabs ─────────────────────────────────────────────────────────────────
@@ -181,6 +268,7 @@ setResetEnabled(activeId === DEFAULT_FLOW.id);
 
 const tabs = mountFlowTabs(flows, activeId, {
   onSwitch(id) {
+    closeTextEdit();
     activeId = id;
     saveActiveLocal(id);
     setResetEnabled(id === DEFAULT_FLOW.id);
