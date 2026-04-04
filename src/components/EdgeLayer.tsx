@@ -158,7 +158,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
 
             {/* Beam overlay — plays once per selection */}
             {beamSourceIds.has(f.id) && (
-              <path d={d} fill="none" stroke={`url(#bg-${f.id}-${t.id})`}
+              <path d={d} fill="none" stroke={`url(#bg-${f.id}-${t.id}-${selNodeId})`}
                 strokeWidth={sw + 2} strokeLinecap="round" pointerEvents="none" />
             )}
 
