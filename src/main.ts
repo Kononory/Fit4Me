@@ -894,23 +894,12 @@ function renderSVG() {
   const doAnim = animateEdgesNext;
   animateEdgesNext = false;
 
-  // ── Arrow marker defs ──────────────────────────────────────────
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.innerHTML = `
-    <marker id="arr-back" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L8,3 z" fill="#C8963C"/>
-    </marker>
-    <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA"/>
-    </marker>
-    <filter id="beam-glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <radialGradient id="beam-grad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
-    </radialGradient>`;
+  // ── Arrow marker defs (static) ────────────────────────────────────────────
+  const NS_SVG = 'http://www.w3.org/2000/svg';
+  const defs = document.createElementNS(NS_SVG, 'defs');
+  const mkDef = (html: string) => { const t = document.createElementNS(NS_SVG, 'g'); t.innerHTML = html; return t.firstElementChild!; };
+  defs.appendChild(mkDef(`<marker id="arr-back" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#C8963C"/></marker>`));
+  defs.appendChild(mkDef(`<marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ABABAA"/></marker>`));
   svgl.appendChild(defs);
 
   // ── Tree edges ─────────────────────────────────────────────────
@@ -923,8 +912,7 @@ function renderSVG() {
     const sw     = es === 'act' ? 1.5 : 1;
     const d      = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
 
-    const pathId = `ep-${ei}`;
-    const path = svgEl('path', { id: pathId, d, fill: 'none', stroke, 'stroke-width': sw, 'pointer-events': 'none' }) as SVGPathElement;
+    const path = svgEl('path', { d, fill: 'none', stroke, 'stroke-width': sw, 'pointer-events': 'none' }) as SVGPathElement;
     if (doAnim) {
       const len = path.getTotalLength?.() ?? 200;
       path.style.strokeDasharray  = String(len);
@@ -933,19 +921,58 @@ function renderSVG() {
     }
     svgl.appendChild(path);
 
-    // Animated beam — glowing dot travelling along the edge
+    // ── Animated beam (MagicUI style) ───────────────────────────
+    // Animated linearGradient sweeps amber→violet across the edge stroke
     if (es !== 'dim') {
-      const NS = 'http://www.w3.org/2000/svg';
-      const beamEl = svgEl('circle', { r: '4', fill: '#ffffff', filter: 'url(#beam-glow)', 'pointer-events': 'none', opacity: '0.85' });
-      const motionEl = document.createElementNS(NS, 'animateMotion');
-      motionEl.setAttribute('dur', `${2.2 + (ei % 6) * 0.38}s`);
-      motionEl.setAttribute('repeatCount', 'indefinite');
-      motionEl.setAttribute('begin', `${-(ei * 0.41 % 2.2)}s`);
-      const mpathEl = document.createElementNS(NS, 'mpath');
-      mpathEl.setAttribute('href', `#${pathId}`);
-      motionEl.appendChild(mpathEl);
-      beamEl.appendChild(motionEl);
-      svgl.appendChild(beamEl);
+      const gradId  = `bg-${ei}`;
+      const beamW   = Math.max(80, (x2 - x1) * 0.35);   // beam span in canvas px
+      const gradY   = (y1 + y2) / 2;                     // horizontal gradient
+      const dur     = (2.4 + (ei % 7) * 0.35).toFixed(2);
+      const begin   = (-(ei * 0.43 % parseFloat(dur))).toFixed(2);
+
+      // linearGradient with SMIL animation on x1/x2
+      const grad = document.createElementNS(NS_SVG, 'linearGradient');
+      grad.setAttribute('id', gradId);
+      grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+      grad.setAttribute('x1', String(x1 - beamW));
+      grad.setAttribute('y1', String(gradY));
+      grad.setAttribute('x2', String(x1));
+      grad.setAttribute('y2', String(gradY));
+
+      const mkAnim = (attr: string, from: number, to: number) => {
+        const a = document.createElementNS(NS_SVG, 'animate');
+        a.setAttribute('attributeName', attr);
+        a.setAttribute('from', String(from));
+        a.setAttribute('to',   String(to));
+        a.setAttribute('dur',  dur + 's');
+        a.setAttribute('repeatCount', 'indefinite');
+        a.setAttribute('begin', begin + 's');
+        return a;
+      };
+      grad.appendChild(mkAnim('x1', x1 - beamW, x2));
+      grad.appendChild(mkAnim('x2', x1,         x2 + beamW));
+
+      // Color stops: hard back edge → amber → violet → transparent front
+      for (const [off, col, op] of [
+        ['0%',    '#ffaa40', '0'],
+        ['0.01%', '#ffaa40', '1'],   // sharp back edge (MagicUI style)
+        ['32.5%', '#9c40ff', '1'],
+        ['100%',  '#9c40ff', '0'],
+      ] as const) {
+        const stop = document.createElementNS(NS_SVG, 'stop');
+        stop.setAttribute('offset', off); stop.setAttribute('stop-color', col); stop.setAttribute('stop-opacity', op);
+        grad.appendChild(stop);
+      }
+      defs.appendChild(grad);
+
+      // Overlay path using gradient as stroke
+      svgl.appendChild(svgEl('path', {
+        d, fill: 'none',
+        stroke: `url(#${gradId})`,
+        'stroke-width': String(sw + 2),
+        'stroke-linecap': 'round',
+        'pointer-events': 'none',
+      }));
     }
 
     // Wide hit area → picker
