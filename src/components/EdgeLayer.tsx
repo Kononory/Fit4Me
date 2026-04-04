@@ -100,12 +100,12 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           moving window through this gradient, picking up colors based on its
           horizontal position: orange on the left → pink in the middle → purple on the right.
         */}
-        <linearGradient id="beam-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={width} y2="0">
-          <stop offset="0%"   stopColor="#ffaa40" stopOpacity="0" />
-          <stop offset="20%"  stopColor="#ffaa40" />
-          <stop offset="50%"  stopColor="#ec4899" />
-          <stop offset="80%"  stopColor="#9c40ff" />
-          <stop offset="100%" stopColor="#9c40ff" stopOpacity="0" />
+        <linearGradient id="beam-grad" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#a855f7" stopOpacity="0" />
+          <stop offset="30%"  stopColor="#a855f7" />
+          <stop offset="60%"  stopColor="#ec4899" />
+          <stop offset="90%"  stopColor="#f97316" />
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
         </linearGradient>
       </defs>
 
