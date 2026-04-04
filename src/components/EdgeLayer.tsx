@@ -77,14 +77,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
 
   const viewBox = `0 0 ${width} ${height}`;
 
-  // Beam: selected node + entire subtree downstream
-  const beamSourceIds = new Set<string>();
-  if (selNodeId) {
-    const collect = (n: TreeNode) => { beamSourceIds.add(n.id); for (const c of n.c ?? []) collect(c); };
-    const selNode = allNodes.find(n => n.id === selNodeId);
-    if (selNode) collect(selNode);
-  }
-
   return (
     <svg id="svgl" width={width} height={height} viewBox={viewBox} style={{ position: 'absolute', top: 0, left: 0 }}>
       <defs>
@@ -94,19 +86,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
-        {/*
-          Beam gradient — spans the full canvas width in user-space coords.
-          As the short dasharray segment travels along each path, it acts as a
-          moving window through this gradient, picking up colors based on its
-          horizontal position: orange on the left → pink in the middle → purple on the right.
-        */}
-        <linearGradient id="beam-grad" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%"   stopColor="#a855f7" stopOpacity="0" />
-          <stop offset="30%"  stopColor="#a855f7" />
-          <stop offset="60%"  stopColor="#ec4899" />
-          <stop offset="90%"  stopColor="#f97316" />
-          <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-        </linearGradient>
       </defs>
 
       {/* Tree edges */}
@@ -141,22 +120,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           <g key={`${f.id}-${t.id}`}>
             {/* Base path */}
             <path d={d} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
-
-            {/* Beam overlay — short gradient segment traveling along the connector */}
-            {beamSourceIds.has(f.id) && (
-              <path
-                d={d}
-                fill="none"
-                stroke="url(#beam-grad)"
-                strokeWidth={2.5}
-                strokeDasharray="80 9999"
-                strokeLinecap="round"
-                pointerEvents="none"
-                style={{
-                  animation: `beam-travel 15s linear ${ei * 0.18}s infinite`,
-                }}
-              />
-            )}
 
             {/* Hit area */}
             <path d={d} fill="none" stroke="rgba(0,0,0,0)" strokeWidth={14} pointerEvents="stroke"
