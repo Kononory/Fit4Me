@@ -123,7 +123,7 @@ function openTextEdit() {
   const header = document.createElement('div');
   header.id = 'text-edit-header';
   header.innerHTML = `
-    <span id="text-edit-title">Edit outline — <kbd>Ctrl+Enter</kbd> to apply · <kbd>Esc</kbd> to cancel</span>
+    <span id="text-edit-title">Edit outline — <kbd>Shift+↵</kbd> new block · <kbd>Tab</kbd> indent · <kbd>Ctrl+↵</kbd> apply · <kbd>Esc</kbd> cancel</span>
     <span id="text-edit-err"></span>
   `;
   panel.appendChild(header);
@@ -157,6 +157,38 @@ function openTextEdit() {
   ta.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); closeTextEdit(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); applyTextEdit(ta); }
+
+    // Shift+Enter → new sibling block (same indent level)
+    if (e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      const s = ta.selectionStart, val = ta.value;
+      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
+      const indent = (val.slice(lineStart).match(/^ */) ?? [''])[0];
+      ta.value = val.slice(0, s) + '\n' + indent + val.slice(ta.selectionEnd);
+      ta.selectionStart = ta.selectionEnd = s + 1 + indent.length;
+    }
+
+    // Tab → indent current line by 2 spaces
+    if (!e.shiftKey && e.key === 'Tab') {
+      e.preventDefault();
+      const s = ta.selectionStart, val = ta.value;
+      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
+      ta.value = val.slice(0, lineStart) + '  ' + val.slice(lineStart);
+      ta.selectionStart = ta.selectionEnd = s + 2;
+    }
+
+    // Shift+Tab → outdent current line by up to 2 spaces
+    if (e.shiftKey && e.key === 'Tab') {
+      e.preventDefault();
+      const s = ta.selectionStart, val = ta.value;
+      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
+      const spaces = (val.slice(lineStart).match(/^ {1,2}/) ?? [''])[0].length;
+      if (spaces > 0) {
+        ta.value = val.slice(0, lineStart) + val.slice(lineStart + spaces);
+        ta.selectionStart = ta.selectionEnd = Math.max(lineStart, s - spaces);
+      }
+    }
+
     e.stopPropagation();
   });
 }
