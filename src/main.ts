@@ -1302,16 +1302,64 @@ cnv.addEventListener('click', () => {
   render();
 });
 
-// ── Interactive grid highlight ─────────────────────────────────────────────────
+// ── Interactive grid background (MagicUI style) ───────────────────────────────
+// Individual SVG <rect> cells with asymmetric CSS transitions:
+// fast 80ms highlight on enter, slow 1000ms fade-out on leave (linger effect)
+
+const GRID_CELL = 40;
+let gridCells: SVGRectElement[] = [];
+let gridCols = 0;
+let activeGridCell: SVGRectElement | null = null;
+let gridSvgEl: SVGSVGElement | null = null;
+
+function buildGrid() {
+  gridSvgEl?.remove();
+  const W = window.innerWidth - 148;
+  const H = window.innerHeight;
+  gridCols  = Math.ceil(W / GRID_CELL) + 1;
+  const rows = Math.ceil(H / GRID_CELL) + 1;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
+  svg.id = 'grid-svg';
+  svg.setAttribute('width',  String(gridCols * GRID_CELL));
+  svg.setAttribute('height', String(rows * GRID_CELL));
+  svg.style.cssText = 'position:fixed;left:148px;top:0;pointer-events:none;z-index:0;';
+
+  gridCells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect') as SVGRectElement;
+      rect.setAttribute('x', String(c * GRID_CELL));
+      rect.setAttribute('y', String(r * GRID_CELL));
+      rect.setAttribute('width',  String(GRID_CELL));
+      rect.setAttribute('height', String(GRID_CELL));
+      rect.classList.add('grid-cell');
+      svg.appendChild(rect);
+      gridCells.push(rect);
+    }
+  }
+  document.body.appendChild(svg);
+  gridSvgEl = svg;
+}
+
+buildGrid();
+
 vp.addEventListener('mousemove', e => {
-  const rect = vp.getBoundingClientRect();
-  vp.style.setProperty('--gx', (e.clientX - rect.left + vp.scrollLeft) + 'px');
-  vp.style.setProperty('--gy', (e.clientY - rect.top  + vp.scrollTop)  + 'px');
+  const vr = vp.getBoundingClientRect();
+  const col = Math.floor((e.clientX - vr.left) / GRID_CELL);
+  const row = Math.floor((e.clientY - vr.top)  / GRID_CELL);
+  const cell = gridCells[row * gridCols + col] ?? null;
+  if (cell !== activeGridCell) {
+    activeGridCell?.classList.remove('gc-active');
+    cell?.classList.add('gc-active');
+    activeGridCell = cell;
+  }
 });
 vp.addEventListener('mouseleave', () => {
-  vp.style.setProperty('--gx', '-9999px');
-  vp.style.setProperty('--gy', '-9999px');
+  activeGridCell?.classList.remove('gc-active');
+  activeGridCell = null;
 });
+window.addEventListener('resize', () => { activeGridCell = null; buildGrid(); });
 
 render();
 
