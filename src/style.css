@@ -501,3 +501,54 @@ svg#svgl.dimmed { opacity: 0.08; }
 .te-btn-cancel:hover { background: #EEEDE9; color: #1A1A1A; border-color: #BCBBB7; }
 .te-btn-apply  { background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A; }
 .te-btn-apply:hover { background: #333; }
+
+/* ── Edge annotation picker ─────────────────────────────────────── */
+#edge-picker {
+  position: fixed; z-index: 90;
+  display: flex; gap: 2px; align-items: stretch;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 3px;
+  padding: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.ep-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 5px 10px; min-width: 52px;
+  background: transparent; border: 1px solid transparent; border-radius: 2px;
+  cursor: pointer; font-family: 'LatteraMonoLL','Space Mono',monospace;
+}
+.ep-btn:hover { background: #F0EDE8; border-color: #DEDDDA; }
+.ep-btn-active { background: #EEEAFF; border-color: #9B8FD4 !important; }
+.ep-btn-del:hover { background: #FCECEA; color: #B52B1E; }
+.ep-icon { font-size: 14px; line-height: 1; }
+.ep-label { font-size: 8px; color: #9A9995; letter-spacing: 0.04em; white-space: nowrap; }
+
+/* Status sub-picker */
+.ep-status { gap: 1px; }
+.ep-st-btn {
+  width: 30px; height: 30px;
+  background: transparent; border: 1px solid transparent; border-radius: 2px;
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+}
+.ep-st-btn:hover  { background: #F0EDE8; border-color: #DEDDDA; }
+.ep-st-active { background: #F0EDE8; border-color: #BCBBB7 !important; }
+
+/* Edge analytics popup */
+#edge-analytics {
+  position: fixed; z-index: 90;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 10px 12px; width: 220px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+.ea-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #5A5955;
+  text-transform: uppercase;
+}
+.ea-close {
+  background: none; border: none; color: #AEADA8; cursor: pointer;
+  font-size: 14px; padding: 0 2px; line-height: 1;
+}
+.ea-close:hover { color: #B52B1E; }
+.ea-body { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+.ea-row { display: flex; align-items: center; gap: 4px; }

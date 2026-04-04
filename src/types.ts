@@ -7,6 +7,7 @@ export interface TreeNode {
   sublabel?: string;
   edgeLabel?: string;   // label shown on the incoming branch line
   edgeStatus?: 'up' | 'down' | 'ok' | 'warn'; // status icon on the incoming branch line
+  edgeRetention?: RetentionPoint[]; // analytics data on the incoming branch line
   type?: NodeType;
   b?: BranchId;
   c?: TreeNode[];
@@ -16,10 +17,19 @@ export interface TreeNode {
   x?: number;
 }
 
+export interface CrossEdge {
+  id: string;
+  fromId: string;   // source node id
+  toId: string;     // target node id
+  label?: string;
+  type: 'back' | 'ref'; // back=return arrow, ref=cross-reference
+}
+
 export interface Flow {
   id: string;
   name: string;
   tree: TreeNode;
+  crossEdges?: CrossEdge[];
   retentionData?: RetentionPoint[]; // custom per-flow retention chart data
   savedAt?: string;
 }

@@ -1,5 +1,5 @@
 import './style.css';
-import type { TreeNode, Flow, DragState, SelectionState } from './types';
+import type { TreeNode, Flow, DragState, SelectionState, CrossEdge, RetentionPoint } from './types';
 import { DEFAULT_TREE, RETENTION_DATA } from './data';
 import {
   doLayout, flattenTree, collectEdges, canvasSize,
@@ -541,7 +541,13 @@ function dragEnd() {
       });
     } else if (tgt) {
       pushUndo();
-      reparentNode(getActive().tree, tgt.id, src.id);
+      const ok = reparentNode(getActive().tree, tgt.id, src.id);
+      if (!ok) {
+        // Cycle detected → create a back edge instead
+        const flow = getActive();
+        if (!flow.crossEdges) flow.crossEdges = [];
+        flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'back' });
+      }
       rebuildTree(); saveFlowsLocal(flows); render();
     } else {
       pushUndo();
@@ -571,16 +577,291 @@ const EDGE_STATUS = {
   ok:   { icon: '●', color: '#6B9B5E', bg: '#EEF5EA', border: '#A4C89A' },
   warn: { icon: '■', color: '#C8963C', bg: '#FDF4E7', border: '#DEB87A' },
 } as const;
-const STATUS_CYCLE: (keyof typeof EDGE_STATUS | undefined)[] = [undefined, 'up', 'down', 'ok', 'warn'];
 
-let animateEdgesNext = true; // true on first render and after rebuildTree
+// ── Edge annotation picker ────────────────────────────────────────────────────
+
+function closePicker() { document.getElementById('edge-picker')?.remove(); }
+
+function canvasToScreen(lx: number, ly: number) {
+  const r = cnv.getBoundingClientRect();
+  return { x: r.left + lx, y: r.top + ly };
+}
+
+function showEdgePicker(toNode: TreeNode, lx: number, ly: number) {
+  closePicker();
+  const { x: sx, y: sy } = canvasToScreen(lx, ly);
+
+  const picker = document.createElement('div');
+  picker.id = 'edge-picker';
+
+  const addBtn = (icon: string, label: string, action: () => void, active = false) => {
+    const btn = document.createElement('button');
+    btn.className = 'ep-btn' + (active ? ' ep-btn-active' : '');
+    btn.innerHTML = `<span class="ep-icon">${icon}</span><span class="ep-label">${label}</span>`;
+    btn.addEventListener('mousedown', e => { e.stopPropagation(); e.preventDefault(); });
+    btn.addEventListener('click',     e => { e.stopPropagation(); closePicker(); action(); });
+    picker.appendChild(btn);
+  };
+
+  addBtn('💬', 'Note',     () => startEdgeEdit(toNode, lx, ly),               !!toNode.edgeLabel);
+  addBtn('◉',  'Status',   () => showStatusPicker(toNode, lx, ly),             !!toNode.edgeStatus);
+  addBtn('/',  'Analytics',() => showEdgeAnalytics(toNode, lx, ly),            !!toNode.edgeRetention);
+
+  // Position: above click point, clamped to viewport
+  document.body.appendChild(picker);
+  const pw = picker.offsetWidth || 180, ph = picker.offsetHeight || 40;
+  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
+  const y = Math.max(sy - ph - 10, 38);
+  picker.style.left = x + 'px';
+  picker.style.top  = y + 'px';
+
+  const close = (e: MouseEvent) => {
+    if (!picker.contains(e.target as Node)) { closePicker(); document.removeEventListener('mousedown', close); }
+  };
+  setTimeout(() => document.addEventListener('mousedown', close), 0);
+}
+
+function showStatusPicker(toNode: TreeNode, lx: number, ly: number) {
+  closePicker();
+  const { x: sx, y: sy } = canvasToScreen(lx, ly);
+
+  const picker = document.createElement('div');
+  picker.id = 'edge-picker';
+  picker.classList.add('ep-status');
+
+  const opts: { val: typeof toNode.edgeStatus; icon: string; color?: string }[] = [
+    { val: undefined, icon: '✕' },
+    { val: 'up',   icon: '▲', color: EDGE_STATUS.up.color },
+    { val: 'down', icon: '▽', color: EDGE_STATUS.down.color },
+    { val: 'ok',   icon: '●', color: EDGE_STATUS.ok.color },
+    { val: 'warn', icon: '■', color: EDGE_STATUS.warn.color },
+  ];
+
+  opts.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'ep-st-btn' + (toNode.edgeStatus === o.val ? ' ep-st-active' : '');
+    btn.textContent = o.icon;
+    if (o.color) btn.style.color = o.color;
+    btn.addEventListener('mousedown', e => { e.stopPropagation(); e.preventDefault(); });
+    btn.addEventListener('click', e => {
+      e.stopPropagation(); closePicker();
+      pushUndo(); toNode.edgeStatus = o.val;
+      saveFlowsLocal(flows); render();
+    });
+    picker.appendChild(btn);
+  });
+
+  document.body.appendChild(picker);
+  const pw = picker.offsetWidth || 160;
+  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
+  const y = Math.max(sy - (picker.offsetHeight || 36) - 10, 38);
+  picker.style.left = x + 'px';
+  picker.style.top  = y + 'px';
+
+  const close = (e: MouseEvent) => {
+    if (!picker.contains(e.target as Node)) { closePicker(); document.removeEventListener('mousedown', close); }
+  };
+  setTimeout(() => document.addEventListener('mousedown', close), 0);
+}
+
+function showEdgeAnalytics(toNode: TreeNode, lx: number, ly: number) {
+  closePicker();
+  document.getElementById('edge-analytics')?.remove();
+
+  const { x: sx, y: sy } = canvasToScreen(lx, ly);
+  const data: RetentionPoint[] = toNode.edgeRetention ? [...toNode.edgeRetention] : [...RETENTION_DATA];
+
+  const popup = document.createElement('div');
+  popup.id = 'edge-analytics';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'ea-header';
+  hdr.innerHTML = `<span>Analytics</span>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ea-close'; closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', () => popup.remove());
+  hdr.appendChild(closeBtn);
+  popup.appendChild(hdr);
+
+  // Editable table
+  const rebuildTable = () => {
+    const old = popup.querySelector('.ea-body');
+    if (old) old.remove();
+    const body = document.createElement('div');
+    body.className = 'ea-body';
+
+    data.forEach((pt, i) => {
+      const row = document.createElement('div');
+      row.className = 'ea-row';
+
+      const lbl = document.createElement('input');
+      lbl.className = 'ret-inp ret-inp-lbl'; lbl.value = pt.s; lbl.placeholder = 'label';
+      lbl.addEventListener('input', () => { data[i] = { ...data[i], s: lbl.value || pt.s }; syncData(); });
+
+      const pct = document.createElement('input');
+      pct.className = 'ret-inp ret-inp-pct'; pct.type = 'number';
+      pct.min = '0'; pct.max = '100'; pct.step = '0.1'; pct.value = String(pt.pct);
+      pct.addEventListener('input', () => {
+        data[i] = { ...data[i], pct: Math.min(100, Math.max(0, parseFloat(pct.value) || 0)) };
+        syncData();
+      });
+
+      const unit = document.createElement('span');
+      unit.className = 'ret-pct-unit'; unit.textContent = '%';
+
+      row.appendChild(lbl); row.appendChild(pct); row.appendChild(unit);
+
+      if (data.length > 2) {
+        const del = document.createElement('button');
+        del.className = 'ret-row-del'; del.textContent = '×';
+        del.addEventListener('click', () => { data.splice(i, 1); syncData(); rebuildTable(); });
+        row.appendChild(del);
+      }
+      body.appendChild(row);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'ret-add-row'; addBtn.textContent = '+ Add stage';
+    addBtn.addEventListener('click', () => {
+      data.push({ s: `s${data.length + 1}`, pct: Math.max(0, (data[data.length - 1]?.pct ?? 10) - 5) });
+      syncData(); rebuildTable();
+    });
+    body.appendChild(addBtn);
+    popup.appendChild(body);
+  };
+
+  const syncData = () => {
+    pushUndo();
+    toNode.edgeRetention = [...data];
+    saveFlowsLocal(flows); render();
+  };
+
+  rebuildTable();
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'ret-reset'; resetBtn.textContent = 'Reset';
+  resetBtn.addEventListener('click', () => {
+    data.length = 0; data.push(...RETENTION_DATA.map(d => ({ ...d })));
+    toNode.edgeRetention = undefined; saveFlowsLocal(flows); render();
+    rebuildTable();
+  });
+  popup.appendChild(resetBtn);
+
+  document.body.appendChild(popup);
+  const pw = 220;
+  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
+  const y = Math.max(Math.min(sy + 10, window.innerHeight - 300), 38);
+  popup.style.left = x + 'px';
+  popup.style.top  = y + 'px';
+}
+
+function showCrossEdgePicker(ce: CrossEdge, lx: number, ly: number) {
+  closePicker();
+  const { x: sx, y: sy } = canvasToScreen(lx, ly);
+
+  const picker = document.createElement('div');
+  picker.id = 'edge-picker';
+
+  // Toggle type
+  const typeLbl = ce.type === 'back' ? '↩ Back' : '⤳ Ref';
+  const typeBtn = document.createElement('button');
+  typeBtn.className = 'ep-btn';
+  typeBtn.innerHTML = `<span class="ep-icon">${ce.type === 'back' ? '↩' : '⤳'}</span><span class="ep-label">${typeLbl}</span>`;
+  typeBtn.addEventListener('click', e => {
+    e.stopPropagation(); closePicker();
+    pushUndo(); ce.type = ce.type === 'back' ? 'ref' : 'back';
+    saveFlowsLocal(flows); render();
+  });
+  picker.appendChild(typeBtn);
+
+  // Edit label
+  const lblBtn = document.createElement('button');
+  lblBtn.className = 'ep-btn' + (ce.label ? ' ep-btn-active' : '');
+  lblBtn.innerHTML = `<span class="ep-icon">💬</span><span class="ep-label">Note</span>`;
+  lblBtn.addEventListener('click', e => {
+    e.stopPropagation(); closePicker();
+    startCrossEdgeEdit(ce, lx, ly);
+  });
+  picker.appendChild(lblBtn);
+
+  // Delete
+  const delBtn = document.createElement('button');
+  delBtn.className = 'ep-btn ep-btn-del';
+  delBtn.innerHTML = `<span class="ep-icon">×</span><span class="ep-label">Delete</span>`;
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation(); closePicker();
+    pushUndo();
+    const flow = getActive();
+    flow.crossEdges = (flow.crossEdges ?? []).filter(x => x.id !== ce.id);
+    saveFlowsLocal(flows); render();
+  });
+  picker.appendChild(delBtn);
+
+  document.body.appendChild(picker);
+  const pw = picker.offsetWidth || 200;
+  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
+  const y = Math.max(sy - (picker.offsetHeight || 40) - 10, 38);
+  picker.style.left = x + 'px';
+  picker.style.top  = y + 'px';
+
+  const close = (e: MouseEvent) => {
+    if (!picker.contains(e.target as Node)) { closePicker(); document.removeEventListener('mousedown', close); }
+  };
+  setTimeout(() => document.addEventListener('mousedown', close), 0);
+}
+
+function startCrossEdgeEdit(ce: CrossEdge, lx: number, ly: number) {
+  const { x: sx, y: sy } = canvasToScreen(lx, ly);
+  const inp = document.createElement('input');
+  inp.className = 'edge-label-input';
+  inp.value = ce.label ?? ''; inp.placeholder = 'add note…';
+  inp.style.left = (sx - 50) + 'px';
+  inp.style.top  = (Math.max(sy - 11, 38)) + 'px';
+  document.body.appendChild(inp);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const v = inp.value.trim();
+    pushUndo(); ce.label = v || undefined;
+    inp.remove(); saveFlowsLocal(flows); render();
+  };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter')  { e.preventDefault(); inp.removeEventListener('blur', commit); commit(); }
+    if (e.key === 'Escape') { inp.removeEventListener('blur', commit); inp.remove(); render(); }
+  });
+}
+
+let animateEdgesNext = true;
+
+function svgEl(tag: string, attrs: Record<string, string | number>): SVGElement {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  return el;
+}
+function svgText(txt: string, attrs: Record<string, string | number>): SVGTextElement {
+  const el = svgEl('text', attrs) as SVGTextElement;
+  el.textContent = txt;
+  return el;
+}
 
 function renderSVG() {
   svgl.innerHTML = '';
-  const NS = 'http://www.w3.org/2000/svg';
   const doAnim = animateEdgesNext;
   animateEdgesNext = false;
 
+  // ── Arrow marker defs ──────────────────────────────────────────
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <marker id="arr-back" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#C8963C"/>
+    </marker>
+    <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA"/>
+    </marker>`;
+  svgl.appendChild(defs);
+
+  // ── Tree edges ─────────────────────────────────────────────────
   for (let ei = 0; ei < allEdges.length; ei++) {
     const [f, t] = allEdges[ei];
     const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
@@ -590,10 +871,7 @@ function renderSVG() {
     const sw     = es === 'act' ? 1.5 : 1;
     const d      = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
 
-    const path = document.createElementNS(NS, 'path');
-    path.setAttribute('d', d); path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', stroke); path.setAttribute('stroke-width', String(sw));
-    path.setAttribute('pointer-events', 'none');
+    const path = svgEl('path', { d, fill: 'none', stroke, 'stroke-width': sw, 'pointer-events': 'none' }) as SVGPathElement;
     if (doAnim) {
       const len = path.getTotalLength?.() ?? 200;
       path.style.strokeDasharray  = String(len);
@@ -602,88 +880,95 @@ function renderSVG() {
     }
     svgl.appendChild(path);
 
-    // Hit area
-    const hit = document.createElementNS(NS, 'path');
-    hit.setAttribute('d', d); hit.setAttribute('fill', 'none');
-    hit.setAttribute('stroke', 'rgba(0,0,0,0)'); hit.setAttribute('stroke-width', '14');
-    hit.setAttribute('pointer-events', 'stroke');
+    // Wide hit area → picker
+    const hit = svgEl('path', { d, fill: 'none', stroke: 'rgba(0,0,0,0)', 'stroke-width': 14, 'pointer-events': 'stroke' });
     hit.style.cursor = 'pointer';
-    hit.addEventListener('click', e => { e.stopPropagation(); startEdgeEdit(t, lx, ly); });
+    hit.addEventListener('click', e => { e.stopPropagation(); showEdgePicker(t, lx, ly); });
     svgl.appendChild(hit);
 
-    // ── Edge label ───────────────────────────────────────────────
-    const hasLabel = !!t.edgeLabel;
-    const labelY   = t.edgeStatus ? ly - 12 : ly;
+    // Annotation badges: determine vertical layout
+    const annotRows: number[] = []; // occupied y centers
+    const nextY = () => { const y = ly + annotRows.length * 20; annotRows.push(y); return y; };
 
-    if (hasLabel) {
-      const tw = t.edgeLabel!.length * 6.2 + 10;
-      const bg = document.createElementNS(NS, 'rect');
-      bg.setAttribute('x', String(lx - tw / 2)); bg.setAttribute('y', String(labelY - 8));
-      bg.setAttribute('width', String(tw)); bg.setAttribute('height', '13');
-      bg.setAttribute('rx', '3'); bg.setAttribute('fill', '#FEFCF8');
-      bg.setAttribute('stroke', '#BCBBB7'); bg.setAttribute('stroke-width', '0.8');
-      bg.setAttribute('pointer-events', 'none');
-      svgl.appendChild(bg);
-      const txt = document.createElementNS(NS, 'text');
-      txt.setAttribute('x', String(lx)); txt.setAttribute('y', String(labelY + 4));
-      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', '#5A5955');
-      txt.setAttribute('font-size', '10'); txt.setAttribute('font-family', 'LatteraMonoLL,Space Mono,monospace');
-      txt.setAttribute('pointer-events', 'none');
-      txt.textContent = t.edgeLabel!;
-      svgl.appendChild(txt);
+    // Label pill
+    if (t.edgeLabel) {
+      const ay = nextY();
+      const tw = t.edgeLabel.length * 6.2 + 10;
+      svgl.appendChild(svgEl('rect', { x: lx - tw / 2, y: ay - 8, width: tw, height: 13, rx: 3,
+        fill: '#FEFCF8', stroke: '#BCBBB7', 'stroke-width': 0.8, 'pointer-events': 'none' }));
+      svgl.appendChild(svgText(t.edgeLabel, { x: lx, y: ay + 4, 'text-anchor': 'middle', fill: '#5A5955',
+        'font-size': 10, 'font-family': 'LatteraMonoLL,Space Mono,monospace', 'pointer-events': 'none' }));
     }
 
-    // ── Status badge ─────────────────────────────────────────────
+    // Status badge
     if (t.edgeStatus) {
       const cfg = EDGE_STATUS[t.edgeStatus];
-      const sx = lx - 8, sy = ly + (hasLabel ? 4 : -8);
-      const sq = document.createElementNS(NS, 'rect');
-      sq.setAttribute('x', String(sx)); sq.setAttribute('y', String(sy));
-      sq.setAttribute('width', '16'); sq.setAttribute('height', '16');
-      sq.setAttribute('rx', '2'); sq.setAttribute('fill', cfg.bg);
-      sq.setAttribute('stroke', cfg.border); sq.setAttribute('stroke-width', '1');
-      sq.style.cursor = 'pointer';
-      sq.addEventListener('click', e => {
-        e.stopPropagation();
-        pushUndo();
-        const idx = STATUS_CYCLE.indexOf(t.edgeStatus);
-        t.edgeStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-        saveFlowsLocal(flows); render();
-      });
-      svgl.appendChild(sq);
-      const icon = document.createElementNS(NS, 'text');
-      icon.setAttribute('x', String(lx)); icon.setAttribute('y', String(sy + 12));
-      icon.setAttribute('text-anchor', 'middle'); icon.setAttribute('fill', cfg.color);
-      icon.setAttribute('font-size', '9'); icon.setAttribute('pointer-events', 'none');
-      icon.textContent = cfg.icon;
-      svgl.appendChild(icon);
-    } else {
-      // ── Hover hint: + to add note / click square to set status ─
-      const sbx = lx - 8, sby = ly - 8;
-      const hintSq = document.createElementNS(NS, 'rect');
-      hintSq.setAttribute('x', String(sbx)); hintSq.setAttribute('y', String(sby));
-      hintSq.setAttribute('width', '16'); hintSq.setAttribute('height', '16');
-      hintSq.setAttribute('rx', '2'); hintSq.setAttribute('fill', '#FEFCF8');
-      hintSq.setAttribute('stroke', '#BCBBB7'); hintSq.setAttribute('stroke-width', '0.8');
-      hintSq.setAttribute('opacity', '0'); hintSq.style.transition = 'opacity 0.15s';
-      hintSq.style.cursor = 'pointer';
-      hintSq.addEventListener('click', e => {
-        e.stopPropagation();
-        pushUndo();
-        t.edgeStatus = 'up';
-        saveFlowsLocal(flows); render();
-      });
-      hit.addEventListener('mouseenter', () => { hintSq.setAttribute('opacity', '1'); hintTxt.setAttribute('opacity', '1'); });
-      hit.addEventListener('mouseleave', () => { hintSq.setAttribute('opacity', '0'); hintTxt.setAttribute('opacity', '0'); });
-      svgl.appendChild(hintSq);
-      const hintTxt = document.createElementNS(NS, 'text');
-      hintTxt.setAttribute('x', String(lx)); hintTxt.setAttribute('y', String(sby + 11));
-      hintTxt.setAttribute('text-anchor', 'middle'); hintTxt.setAttribute('fill', '#BCBBB7');
-      hintTxt.setAttribute('font-size', '10'); hintTxt.setAttribute('pointer-events', 'none');
-      hintTxt.setAttribute('opacity', '0'); hintTxt.style.transition = 'opacity 0.15s';
-      hintTxt.textContent = '+';
-      svgl.appendChild(hintTxt);
+      const ay = nextY();
+      svgl.appendChild(svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
+        fill: cfg.bg, stroke: cfg.border, 'stroke-width': 1, 'pointer-events': 'none' }));
+      svgl.appendChild(svgText(cfg.icon, { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: cfg.color,
+        'font-size': 9, 'pointer-events': 'none' }));
     }
+
+    // Analytics badge `/`
+    if (t.edgeRetention) {
+      const ay = nextY();
+      svgl.appendChild(svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
+        fill: '#F0EDFF', stroke: '#9B8FD4', 'stroke-width': 1, 'pointer-events': 'none' }));
+      svgl.appendChild(svgText('/', { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: '#6B5FBF',
+        'font-size': 11, 'pointer-events': 'none' }));
+    }
+
+    // Hover hint if no annotations
+    if (!t.edgeLabel && !t.edgeStatus && !t.edgeRetention) {
+      const hintSq = svgEl('rect', { x: lx - 8, y: ly - 8, width: 16, height: 16, rx: 2,
+        fill: '#FEFCF8', stroke: '#BCBBB7', 'stroke-width': 0.8, opacity: 0 });
+      hintSq.style.transition = 'opacity 0.15s'; hintSq.style.cursor = 'pointer';
+      const hintTx = svgText('+', { x: lx, y: ly + 5, 'text-anchor': 'middle', fill: '#BCBBB7',
+        'font-size': 10, opacity: 0, 'pointer-events': 'none' });
+      hintTx.style.transition = 'opacity 0.15s';
+      hit.addEventListener('mouseenter', () => { hintSq.setAttribute('opacity', '1'); hintTx.setAttribute('opacity', '1'); });
+      hit.addEventListener('mouseleave', () => { hintSq.setAttribute('opacity', '0'); hintTx.setAttribute('opacity', '0'); });
+      svgl.appendChild(hintSq);
+      svgl.appendChild(hintTx);
+    }
+  }
+
+  // ── Cross / back edges ─────────────────────────────────────────
+  const crossEdges = getActive().crossEdges ?? [];
+  for (const ce of crossEdges) {
+    const fn = allNodes.find(n => n.id === ce.fromId);
+    const tn = allNodes.find(n => n.id === ce.toId);
+    if (!fn || !tn) continue;
+
+    const fx = fn.x! + NW, fy = centerY(fn);
+    const tx = tn.x! + NW, ty = centerY(tn);
+    const R  = Math.max(80, Math.abs(fx - tx) * 0.35 + 60);
+    const d  = `M${fx} ${fy} C${fx + R} ${fy} ${tx + R} ${ty} ${tx} ${ty}`;
+
+    const color  = ce.type === 'back' ? '#C8963C' : '#ABABAA';
+    const dash   = ce.type === 'back' ? '7 4' : '3 4';
+    const marker = ce.type === 'back' ? 'url(#arr-back)' : 'url(#arr-ref)';
+    const lx = (fx + fx + R + tx + R + tx) / 4;  // rough bezier midpoint x
+    const ly = (fy + ty) / 2;
+
+    svgl.appendChild(svgEl('path', { d, fill: 'none', stroke: color, 'stroke-width': 1.5,
+      'stroke-dasharray': dash, 'marker-end': marker, 'pointer-events': 'none' }));
+
+    // Hit area
+    const hit = svgEl('path', { d, fill: 'none', stroke: 'rgba(0,0,0,0)', 'stroke-width': 14, 'pointer-events': 'stroke' });
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('click', e => { e.stopPropagation(); showCrossEdgePicker(ce, lx, ly); });
+    svgl.appendChild(hit);
+
+    // Type label + note
+    const typeIcon = ce.type === 'back' ? '↩' : '⤳';
+    const labelStr = ce.label ? `${typeIcon} ${ce.label}` : typeIcon;
+    const tw = labelStr.length * 6 + 10;
+    svgl.appendChild(svgEl('rect', { x: lx - tw / 2, y: ly - 9, width: tw, height: 14, rx: 3,
+      fill: '#FEFCF8', stroke: color, 'stroke-width': 1, 'pointer-events': 'none' }));
+    svgl.appendChild(svgText(labelStr, { x: lx, y: ly + 4, 'text-anchor': 'middle', fill: color,
+      'font-size': 9, 'font-family': 'LatteraMonoLL,Space Mono,monospace', 'pointer-events': 'none' }));
   }
 }
 
