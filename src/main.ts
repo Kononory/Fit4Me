@@ -894,6 +894,14 @@ function renderSVG() {
   const doAnim = animateEdgesNext;
   animateEdgesNext = false;
 
+  // ── Beam: only on edges downstream of selected node ───────────────────────
+  const beamSourceIds = new Set<string>();
+  if (selNodeId) {
+    const collect = (n: TreeNode) => { beamSourceIds.add(n.id); for (const c of n.c ?? []) collect(c); };
+    const selNode = allNodes.find(n => n.id === selNodeId);
+    if (selNode) collect(selNode);
+  }
+
   // ── Arrow marker defs (static) ────────────────────────────────────────────
   const NS_SVG = 'http://www.w3.org/2000/svg';
   const defs = document.createElementNS(NS_SVG, 'defs');
@@ -922,13 +930,13 @@ function renderSVG() {
     svgl.appendChild(path);
 
     // ── Animated beam (MagicUI style) ───────────────────────────
-    // Animated linearGradient sweeps amber→violet across the edge stroke
-    if (es !== 'dim') {
+    // Only on edges whose source is the selected node or downstream of it
+    if (beamSourceIds.has(f.id)) {
       const gradId  = `bg-${ei}`;
-      const beamW   = Math.max(80, (x2 - x1) * 0.35);   // beam span in canvas px
-      const gradY   = (y1 + y2) / 2;                     // horizontal gradient
-      const dur     = (2.4 + (ei % 7) * 0.35).toFixed(2);
-      const begin   = (-(ei * 0.43 % parseFloat(dur))).toFixed(2);
+      const beamW   = 35;                                 // short flash (not full branch)
+      const gradY   = (y1 + y2) / 2;
+      const dur     = (0.7 + (ei % 4) * 0.12).toFixed(2); // fast
+      const begin   = (-(ei * 0.19 % parseFloat(dur))).toFixed(2);
 
       // linearGradient with SMIL animation on x1/x2
       const grad = document.createElementNS(NS_SVG, 'linearGradient');
