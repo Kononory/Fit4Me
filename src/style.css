@@ -144,11 +144,15 @@ html, body {
 #vp {
   width: calc(100% - 148px); height: 100%; overflow: auto; margin-left: 148px;
 
-  /* Checkerboard: dots ↔ diagonal hatch, 280px grid, 560px tile */
+  /* Interactive grid pattern — mouse highlight via CSS vars set in JS */
   background-color: #F2F1ED;
-  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560'><defs><pattern id='dp' width='14' height='14' patternUnits='userSpaceOnUse'><circle cx='1' cy='1' r='1' fill='%23DEDDDA'/></pattern><pattern id='hp' width='8' height='8' patternUnits='userSpaceOnUse'><line x1='0' y1='8' x2='8' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/><line x1='-8' y1='8' x2='0' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/><line x1='8' y1='8' x2='16' y2='0' stroke='%23DEDDDA' stroke-width='0.5'/></pattern></defs><rect width='280' height='280' fill='url(%23dp)'/><rect x='280' y='280' width='280' height='280' fill='url(%23dp)'/><rect x='280' y='0' width='280' height='280' fill='url(%23hp)'/><rect x='0' y='280' width='280' height='280' fill='url(%23hp)'/><line x1='0' y1='280' x2='560' y2='280' stroke='%23E2E1DC' stroke-width='0.5'/><line x1='280' y1='0' x2='280' y2='560' stroke='%23E2E1DC' stroke-width='0.5'/><circle cx='0' cy='0' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='0' cy='0' r='2' fill='%23BCBBB7'/><circle cx='280' cy='0' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='280' cy='0' r='2' fill='%23BCBBB7'/><circle cx='0' cy='280' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='0' cy='280' r='2' fill='%23BCBBB7'/><circle cx='280' cy='280' r='7' fill='%23F5F4F0' stroke='%23DEDDDA' stroke-width='1.5'/><circle cx='280' cy='280' r='2' fill='%23BCBBB7'/></svg>");
-  background-size: 560px 560px;
-  background-repeat: repeat;
+  background-image:
+    radial-gradient(circle 260px at var(--gx, -9999px) var(--gy, -9999px),
+      rgba(26,25,22,0.10) 0%, transparent 100%),
+    linear-gradient(rgba(26,25,22,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,25,22,0.055) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
+  background-attachment: local, local, local;
 }
 
 #cnv { position: relative; }
@@ -435,20 +439,20 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
-/* ── Canvas ripple ──────────────────────────────────────────────── */
-.canvas-ripple {
-  position: absolute;
-  width: 0; height: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(26,26,26,0.07) 0%, transparent 65%);
-  transform: translate(-50%, -50%);
+/* ── Fluid cursor ───────────────────────────────────────────────── */
+#fluid-cursor {
+  position: fixed;
   pointer-events: none;
-  z-index: 0;
-  animation: ripple-expand 0.55s ease-out forwards;
-}
-@keyframes ripple-expand {
-  from { width: 0;     height: 0;     opacity: 1; }
-  to   { width: 320px; height: 320px; opacity: 0; }
+  z-index: 9998;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%,
+    rgba(255,255,255,0.55) 0%,
+    rgba(26,25,22,0.07) 60%,
+    transparent 100%);
+  border: 1.5px solid rgba(26,25,22,0.18);
+  backdrop-filter: blur(1px);
+  will-change: left, top, transform;
 }
 
 /* ── Toolbar text-edit button ───────────────────────────────────── */

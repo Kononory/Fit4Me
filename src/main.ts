@@ -902,7 +902,15 @@ function renderSVG() {
     </marker>
     <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
       <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA"/>
-    </marker>`;
+    </marker>
+    <filter id="beam-glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="beam-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>`;
   svgl.appendChild(defs);
 
   // ── Tree edges ─────────────────────────────────────────────────
@@ -915,7 +923,8 @@ function renderSVG() {
     const sw     = es === 'act' ? 1.5 : 1;
     const d      = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
 
-    const path = svgEl('path', { d, fill: 'none', stroke, 'stroke-width': sw, 'pointer-events': 'none' }) as SVGPathElement;
+    const pathId = `ep-${ei}`;
+    const path = svgEl('path', { id: pathId, d, fill: 'none', stroke, 'stroke-width': sw, 'pointer-events': 'none' }) as SVGPathElement;
     if (doAnim) {
       const len = path.getTotalLength?.() ?? 200;
       path.style.strokeDasharray  = String(len);
@@ -923,6 +932,21 @@ function renderSVG() {
       path.style.animation = `edge-draw 0.35s ease-out ${ei * 0.025}s forwards`;
     }
     svgl.appendChild(path);
+
+    // Animated beam — glowing dot travelling along the edge
+    if (es !== 'dim') {
+      const NS = 'http://www.w3.org/2000/svg';
+      const beamEl = svgEl('circle', { r: '4', fill: '#ffffff', filter: 'url(#beam-glow)', 'pointer-events': 'none', opacity: '0.85' });
+      const motionEl = document.createElementNS(NS, 'animateMotion');
+      motionEl.setAttribute('dur', `${2.2 + (ei % 6) * 0.38}s`);
+      motionEl.setAttribute('repeatCount', 'indefinite');
+      motionEl.setAttribute('begin', `${-(ei * 0.41 % 2.2)}s`);
+      const mpathEl = document.createElementNS(NS, 'mpath');
+      mpathEl.setAttribute('href', `#${pathId}`);
+      motionEl.appendChild(mpathEl);
+      beamEl.appendChild(motionEl);
+      svgl.appendChild(beamEl);
+    }
 
     // Wide hit area → picker
     const hit = svgEl('path', { d, fill: 'none', stroke: 'rgba(0,0,0,0)', 'stroke-width': 14, 'pointer-events': 'stroke' });
@@ -1212,31 +1236,46 @@ function render() {
   retention?.refresh();
 }
 
-// ── Canvas ripple ─────────────────────────────────────────────────────────────
+// ── Fluid cursor ──────────────────────────────────────────────────────────────
 
-function spawnRipple(canvasX: number, canvasY: number) {
-  const el = document.createElement('div');
-  el.className = 'canvas-ripple';
-  el.style.left = canvasX + 'px';
-  el.style.top  = canvasY + 'px';
-  cnv.appendChild(el);
-  el.addEventListener('animationend', () => el.remove(), { once: true });
-}
+const fluidCursor = document.createElement('div');
+fluidCursor.id = 'fluid-cursor';
+document.body.appendChild(fluidCursor);
 
-vp.addEventListener('click', e => {
-  const target = e.target as HTMLElement;
-  if (target !== vp && target !== cnv && target.id !== 'svgl') return;
-  const rect = cnv.getBoundingClientRect();
-  spawnRipple(
-    e.clientX - rect.left,
-    e.clientY - rect.top,
-  );
-});
+let _fcx = -200, _fcy = -200, _fvx = 0, _fvy = 0, _ftx = -200, _fty = -200;
+
+document.addEventListener('mousemove', e => { _ftx = e.clientX; _fty = e.clientY; });
+
+(function tickCursor() {
+  const dx = _ftx - _fcx, dy = _fty - _fcy;
+  _fvx = _fvx * 0.68 + dx * 0.20;
+  _fvy = _fvy * 0.68 + dy * 0.20;
+  _fcx += _fvx; _fcy += _fvy;
+  const speed = Math.hypot(_fvx, _fvy);
+  const stretch = Math.min(speed / 7, 2);
+  const angle   = Math.atan2(_fvy, _fvx) * 180 / Math.PI;
+  fluidCursor.style.left      = _fcx + 'px';
+  fluidCursor.style.top       = _fcy + 'px';
+  fluidCursor.style.transform =
+    `translate(-50%,-50%) rotate(${angle}deg) scaleX(${1 + stretch * 0.45}) scaleY(${1 / (1 + stretch * 0.2)})`;
+  requestAnimationFrame(tickCursor);
+})();
 
 cnv.addEventListener('click', () => {
   if (editing || dr.on) return;
   sel = null; selNodeId = null;
   render();
+});
+
+// ── Interactive grid highlight ─────────────────────────────────────────────────
+vp.addEventListener('mousemove', e => {
+  const rect = vp.getBoundingClientRect();
+  vp.style.setProperty('--gx', (e.clientX - rect.left + vp.scrollLeft) + 'px');
+  vp.style.setProperty('--gy', (e.clientY - rect.top  + vp.scrollTop)  + 'px');
+});
+vp.addEventListener('mouseleave', () => {
+  vp.style.setProperty('--gx', '-9999px');
+  vp.style.setProperty('--gy', '-9999px');
 });
 
 render();
