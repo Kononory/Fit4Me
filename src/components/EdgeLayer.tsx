@@ -104,7 +104,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         {allEdges.map(([f, t], ei) => {
           if (!beamSourceIds.has(f.id)) return null;
           const { x1, y1, x2, y2 } = edgeGeom[ei];
-          const gradId = `bg-${f.id}-${t.id}`;
+          const gradId = `bg-${f.id}-${t.id}-${selNodeId}`;
           const beamW  = 35;
           const gradY  = (y1 + y2) / 2;
           const dur   = 0.7;
