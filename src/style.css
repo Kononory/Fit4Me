@@ -443,19 +443,19 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
-/* ── Edge spring-bounce blink (300 ms pulse every 30 s) ─────────── */
-/* 300ms / 30000ms = 1% of the cycle. Spring: hit → rebound → hit → gone */
+/* ── Edge pulse (1.5 s smooth fade-in/out, fires every 15 s) ─────── */
+/* 1500ms / 15000ms = 10% of cycle. Smooth sine-like pulse, no width change */
 @keyframes edge-blink {
-  0%     { stroke-opacity: 0;   stroke-width: 2; }
-  0.5%   { stroke-opacity: 1;   stroke-width: 7; }   /* 150 ms — first hit   */
-  0.7%   { stroke-opacity: 0.3; stroke-width: 2; }   /* 210 ms — rebound     */
-  0.9%   { stroke-opacity: 0.7; stroke-width: 5; }   /* 270 ms — second hit  */
-  1.1%   { stroke-opacity: 0;   stroke-width: 1; }   /* 330 ms — fade out    */
-  100%   { stroke-opacity: 0;   stroke-width: 1; }   /* quiet for 29.7 s     */
+  0%    { stroke-opacity: 0; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  5%    { stroke-opacity: 0.9; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  10%   { stroke-opacity: 0; }
+  100%  { stroke-opacity: 0; }
 }
 .edge-blink {
-  animation: edge-blink 30s ease-out infinite;
+  animation: edge-blink 15s linear infinite;
   stroke-opacity: 0;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px #ffaa40);
 }
 
 
