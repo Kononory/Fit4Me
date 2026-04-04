@@ -741,14 +741,23 @@ function showEdgeAnalytics(toNode: TreeNode, lx: number, ly: number) {
 
   rebuildTable();
 
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'ret-reset'; resetBtn.textContent = 'Reset';
-  resetBtn.addEventListener('click', () => {
-    data.length = 0; data.push(...RETENTION_DATA.map(d => ({ ...d })));
-    toNode.edgeRetention = undefined; saveFlowsLocal(flows); render();
-    rebuildTable();
+  const footer = document.createElement('div');
+  footer.className = 'ea-footer';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'ret-reset ea-remove-btn'; removeBtn.textContent = '× Remove analytics';
+  removeBtn.addEventListener('click', () => {
+    toNode.edgeRetention = undefined; pushUndo(); saveFlowsLocal(flows); render();
+    popup.remove();
   });
-  popup.appendChild(resetBtn);
+
+  const doneBtn = document.createElement('button');
+  doneBtn.className = 'ea-done-btn'; doneBtn.textContent = 'Done';
+  doneBtn.addEventListener('click', () => popup.remove());
+
+  footer.appendChild(removeBtn);
+  footer.appendChild(doneBtn);
+  popup.appendChild(footer);
 
   document.body.appendChild(popup);
   const pw = 220;
@@ -889,44 +898,51 @@ function renderSVG() {
     hit.addEventListener('click', e => { e.stopPropagation(); showEdgePicker(t, lx, ly); });
     svgl.appendChild(hit);
 
-    // Annotation badges: determine vertical layout
-    const annotRows: number[] = []; // occupied y centers
-    const nextY = () => { const y = ly + annotRows.length * 20; annotRows.push(y); return y; };
+    // Annotation badges: horizontal layout centered on edge midpoint
+    const BADGE_SZ = 14, BADGE_GAP = 4;
+    const labelW = t.edgeLabel ? Math.max(t.edgeLabel.length * 6 + 10, 24) : 0;
+    const bWidths = [
+      ...(t.edgeLabel    ? [labelW]   : []),
+      ...(t.edgeStatus   ? [BADGE_SZ] : []),
+      ...(t.edgeRetention? [BADGE_SZ] : []),
+    ];
+    const totalBW = bWidths.reduce((s, w) => s + w, 0) + BADGE_GAP * Math.max(0, bWidths.length - 1);
+    let bCursor = lx - totalBW / 2;
+    const grabBX = (w: number) => { const cx = bCursor + w / 2; bCursor += w + BADGE_GAP; return cx; };
 
     // Label pill
     if (t.edgeLabel) {
-      const ay = nextY();
-      const tw = t.edgeLabel.length * 6.2 + 10;
-      svgl.appendChild(svgEl('rect', { x: lx - tw / 2, y: ay - 8, width: tw, height: 13, rx: 3,
+      const bx = grabBX(labelW);
+      svgl.appendChild(svgEl('rect', { x: bx - labelW / 2, y: ly - 7, width: labelW, height: 13, rx: 3,
         fill: '#FEFCF8', stroke: '#BCBBB7', 'stroke-width': 0.8, 'pointer-events': 'none' }));
-      svgl.appendChild(svgText(t.edgeLabel, { x: lx, y: ay + 4, 'text-anchor': 'middle', fill: '#5A5955',
+      svgl.appendChild(svgText(t.edgeLabel, { x: bx, y: ly + 4, 'text-anchor': 'middle', fill: '#5A5955',
         'font-size': 10, 'font-family': 'LatteraMonoLL,Space Mono,monospace', 'pointer-events': 'none' }));
     }
 
     // Status badge
     if (t.edgeStatus) {
       const cfg = EDGE_STATUS[t.edgeStatus];
-      const ay = nextY();
-      svgl.appendChild(svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
+      const bx = grabBX(BADGE_SZ);
+      svgl.appendChild(svgEl('rect', { x: bx - BADGE_SZ / 2, y: ly - BADGE_SZ / 2, width: BADGE_SZ, height: BADGE_SZ, rx: 2,
         fill: cfg.bg, stroke: cfg.border, 'stroke-width': 1, 'pointer-events': 'none' }));
-      svgl.appendChild(svgText(cfg.icon, { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: cfg.color,
+      svgl.appendChild(svgText(cfg.icon, { x: bx, y: ly + 4, 'text-anchor': 'middle', fill: cfg.color,
         'font-size': 9, 'pointer-events': 'none' }));
     }
 
-    // Analytics badge `/` — hover shows chart preview
+    // Analytics badge `/` — hover shows chart preview, click opens editor
     if (t.edgeRetention) {
-      const ay = nextY();
+      const bx = grabBX(BADGE_SZ);
       const aData = t.edgeRetention;
-      const badgeBg  = svgEl('rect', { x: lx - 8, y: ay - 8, width: 16, height: 16, rx: 2,
+      const badgeBg = svgEl('rect', { x: bx - BADGE_SZ / 2, y: ly - BADGE_SZ / 2, width: BADGE_SZ, height: BADGE_SZ, rx: 2,
         fill: '#F0EDFF', stroke: '#9B8FD4', 'stroke-width': 1,
         'pointer-events': 'visiblePainted', cursor: 'pointer' });
-      const badgeTx  = svgText('/', { x: lx, y: ay + 5, 'text-anchor': 'middle', fill: '#6B5FBF',
+      const badgeTx = svgText('/', { x: bx, y: ly + 4, 'text-anchor': 'middle', fill: '#6B5FBF',
         'font-size': 11, 'pointer-events': 'none' });
       let chartTimer = 0;
       const showChart = () => {
         clearTimeout(chartTimer);
         document.getElementById('edge-chart-preview')?.remove();
-        const { x: sx, y: sy } = canvasToScreen(lx, ay);
+        const { x: sx, y: sy } = canvasToScreen(bx, ly);
         const pop = document.createElement('div');
         pop.id = 'edge-chart-preview';
         pop.style.cssText = `position:fixed;z-index:95;background:#1A1916;border:1px solid #2E2D2A;
@@ -940,17 +956,16 @@ function renderSVG() {
           pop.appendChild(s);
         }
         document.body.appendChild(pop);
-        // Position: above badge, clamped to viewport
         const pw = 268, ph = pop.offsetHeight || 170;
         let px = sx - pw / 2, py = sy - ph - 10;
         px = Math.max(6, Math.min(px, window.innerWidth - pw - 6));
-        py = py < 6 ? sy + 26 : py;
+        py = py < 6 ? sy + 20 : py;
         pop.style.left = px + 'px'; pop.style.top = py + 'px';
       };
       const hideChart = () => { chartTimer = window.setTimeout(() => document.getElementById('edge-chart-preview')?.remove(), 120); };
       badgeBg.addEventListener('mouseenter', showChart);
       badgeBg.addEventListener('mouseleave', hideChart);
-      badgeBg.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('edge-chart-preview')?.remove(); showEdgeAnalytics(t, lx, ay); });
+      badgeBg.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('edge-chart-preview')?.remove(); showEdgeAnalytics(t, bx, ly); });
       svgl.appendChild(badgeBg);
       svgl.appendChild(badgeTx);
     }

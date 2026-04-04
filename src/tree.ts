@@ -10,7 +10,15 @@ export function findNode(root: TreeNode, id: string): TreeNode | null {
 }
 
 export function addChildNode(parent: TreeNode): TreeNode {
-  const node: TreeNode = { id: `n-${Date.now()}`, label: 'New Block', b: parent.b };
+  let b = parent.b;
+  if (!b) {
+    // Auto-assign next available branch letter to direct children of root-like nodes
+    const used = new Set((parent.c ?? []).map(n => n.b).filter(Boolean) as string[]);
+    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+      if (!used.has(letter)) { b = letter; break; }
+    }
+  }
+  const node: TreeNode = { id: `n-${Date.now()}`, label: 'New Block', b };
   if (!parent.c) parent.c = [];
   parent.c.push(node);
   return node;

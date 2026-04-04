@@ -552,3 +552,16 @@ svg#svgl.dimmed { opacity: 0.08; }
 .ea-close:hover { color: #B52B1E; }
 .ea-body { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
 .ea-row { display: flex; align-items: center; gap: 4px; }
+.ea-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 6px; }
+.ea-remove-btn {
+  margin-top: 0; font-size: 8px; color: #AEADA8;
+  background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+}
+.ea-remove-btn:hover { color: #B52B1E; }
+.ea-done-btn {
+  background: #1A1A1A; color: #FEFCF8; border: none; border-radius: 4px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.06em; padding: 5px 12px; cursor: pointer;
+}
+.ea-done-btn:hover { background: #333; }
