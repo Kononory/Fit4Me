@@ -445,19 +445,6 @@ svg#svgl.dimmed { opacity: 0.08; }
   to { stroke-dashoffset: 0; }
 }
 
-/* ── Traveling beam: 1.5 s slide every 15 s ─────────────────────── */
-/* Segment travels start → end in 10% of cycle, then resets silently */
-@keyframes beam-travel {
-  0%   { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
-  10%  { stroke-dashoffset: -2400; }
-  100% { stroke-dashoffset: -2400; }
-}
-.beam-travel {
-  stroke-dasharray: 100 2400;
-  animation: beam-travel 15s linear infinite;
-  filter: drop-shadow(0 0 3px #a855f7);
-}
-
 
 /* ── Toolbar text-edit button ───────────────────────────────────── */
 #tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }

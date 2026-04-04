@@ -2,9 +2,6 @@ import { useCallback, useRef } from 'react';
 import type { TreeNode, CrossEdge, RetentionPoint, SelectionState } from '../types';
 import { NW, centerY } from '../layout';
 import { buildChart } from '../retention';
-import { AnimatedBeam } from './magicui/animated-beam';
-
-
 const EDGE_STATUS = {
   up:   { icon: '▲', color: '#6B9B5E', bg: '#EEF5EA', border: '#A4C89A' },
   down: { icon: '▽', color: '#B52B1E', bg: '#FCECEA', border: '#D98A83' },
@@ -50,14 +47,6 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
 
 export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
-
-  // Beam: collect subtree of selected node
-  const beamSourceIds = new Set<string>();
-  if (selNodeId) {
-    const collect = (n: TreeNode) => { beamSourceIds.add(n.id); for (const c of n.c ?? []) collect(c); };
-    const selNode = allNodes.find(n => n.id === selNodeId);
-    if (selNode) collect(selNode);
-  }
 
   const showChartPreview = useCallback((aData: RetentionPoint[], bx: number, ly: number) => {
     document.getElementById('edge-chart-preview')?.remove();
@@ -132,18 +121,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           <g key={`${f.id}-${t.id}`}>
             {/* Base path */}
             <path d={d} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
-
-            {/* Animated beam (MagicUI) */}
-            {beamSourceIds.has(f.id) && (
-              <AnimatedBeam
-                pathD={d}
-                pathWidth={2}
-                gradientStartColor="#ffaa40"
-                gradientStopColor="#9c40ff"
-                duration={1.5}
-                delay={ei * 0.18}
-              />
-            )}
 
             {/* Hit area */}
             <path d={d} fill="none" stroke="rgba(0,0,0,0)" strokeWidth={14} pointerEvents="stroke"
