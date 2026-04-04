@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState, onSetPickerMode }: Props) {
-  const { getActive, activeId, animateEdgesNext } = useStore();
+  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim } = useStore();
   const vpRef = useRef<HTMLDivElement>(null);
   const [tree, setTree] = useState(() => {
     const active = getActive();
@@ -36,6 +36,9 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
     doLayout(active.tree, 0, 0);
     setTree({ ...active.tree });
   }, [flows, getActive]);
+
+  // Trigger draw animation on initial mount and flow switch
+  useEffect(() => { triggerEdgeAnim(); }, [activeId, triggerEdgeAnim]);
 
   // Scroll to root node on flow switch
   useEffect(() => {
