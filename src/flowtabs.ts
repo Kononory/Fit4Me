@@ -8,6 +8,7 @@ export interface FlowTabsCallbacks {
   onImport:  (flow: Flow) => void;
   onNew:     (flow: Flow) => void;
   onExport:  (id: string) => void;
+  onShare:   (id: string) => void;
 }
 
 function genId(): string {
@@ -205,6 +206,19 @@ export function mountFlowTabs(
         cb.onExport(flow.id);
       });
       tab.appendChild(btnExp);
+
+      // Share button
+      const btnShare = document.createElement('button');
+      btnShare.className = 'flow-tab-btn';
+      btnShare.title = 'Copy share link';
+      btnShare.textContent = '⎘';
+      btnShare.addEventListener('click', e => {
+        e.stopPropagation();
+        cb.onShare(flow.id);
+        btnShare.textContent = '✓';
+        setTimeout(() => { btnShare.textContent = '⎘'; }, 1800);
+      });
+      tab.appendChild(btnShare);
 
       // Delete button (only if more than 1 flow)
       if (currentFlows.length > 1) {

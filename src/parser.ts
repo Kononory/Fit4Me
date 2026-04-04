@@ -98,7 +98,15 @@ export function parseOutline(text: string): TreeNode {
     }
   }
 
-  return root ?? { id: 'root', label: 'New Flow', type: 'root' };
+  const finalRoot = root ?? { id: 'root', label: 'New Flow', type: 'root' };
+  // Propagate branch IDs from parents to children (so selection highlighting works)
+  const propagateBranch = (node: TreeNode, parentBranch?: BranchId) => {
+    if (!node.b && parentBranch) node.b = parentBranch;
+    const branch = node.b;
+    for (const child of node.c ?? []) propagateBranch(child, branch);
+  };
+  propagateBranch(finalRoot);
+  return finalRoot;
 }
 
 /** Serialise a tree back to outline text (for export/download). */

@@ -6,6 +6,7 @@ export interface TreeNode {
   label: string;
   sublabel?: string;
   edgeLabel?: string;   // label shown on the incoming branch line
+  edgeStatus?: 'up' | 'down' | 'ok' | 'warn'; // status icon on the incoming branch line
   type?: NodeType;
   b?: BranchId;
   c?: TreeNode[];

@@ -374,3 +374,33 @@ svg#svgl.dimmed { opacity: 0.08; }
   outline: none; text-align: center;
 }
 .edge-label-input::placeholder { color: #BCBBB7; }
+
+/* ── Toolbar undo/redo buttons ──────────────────────────────────── */
+#tb-undo, #tb-redo {
+  font-size: 15px; padding: 0 7px; line-height: 1;
+}
+#tb-undo:disabled, #tb-redo:disabled { opacity: 0.3; }
+
+/* ── Edge status badge ──────────────────────────────────────────── */
+/* (rendered as SVG elements — no extra CSS needed) */
+
+/* ── Edge draw animation ────────────────────────────────────────── */
+@keyframes edge-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Canvas ripple ──────────────────────────────────────────────── */
+.canvas-ripple {
+  position: absolute;
+  width: 0; height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(26,26,26,0.07) 0%, transparent 65%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: ripple-expand 0.55s ease-out forwards;
+}
+@keyframes ripple-expand {
+  from { width: 0;     height: 0;     opacity: 1; }
+  to   { width: 320px; height: 320px; opacity: 0; }
+}

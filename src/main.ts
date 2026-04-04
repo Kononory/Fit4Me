@@ -14,6 +14,25 @@ import {
 import { mountToolbar } from './toolbar';
 import { mountFlowTabs, downloadFlowAsOutline } from './flowtabs';
 
+// ── Share URL helpers ─────────────────────────────────────────────────────────
+
+function encodeFlow(flow: Flow): string {
+  const json = JSON.stringify({ name: flow.name, tree: cloneTree(flow.tree) });
+  return btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))));
+}
+
+function decodeSharedFlow(): Flow | null {
+  const hash = location.hash;
+  if (!hash.startsWith('#share=')) return null;
+  try {
+    const raw  = atob(hash.slice(7));
+    const json = decodeURIComponent(raw.split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const data = JSON.parse(json) as { name: string; tree: TreeNode };
+    location.hash = '';
+    return { id: `flow-${Date.now()}`, name: data.name ?? 'Shared Flow', tree: data.tree };
+  } catch { return null; }
+}
+
 // ── Initial flows ─────────────────────────────────────────────────────────────
 
 const DEFAULT_FLOW: Flow = {
@@ -33,6 +52,63 @@ function initFlows(): { flows: Flow[]; activeId: string } {
 
 let { flows, activeId } = initFlows();
 const getActive = (): Flow => flows.find(f => f.id === activeId) ?? flows[0];
+
+// Auto-import shared flow from URL
+const sharedFlow = decodeSharedFlow();
+if (sharedFlow && !flows.find(f => f.id === sharedFlow.id)) {
+  flows.push(sharedFlow);
+  activeId = sharedFlow.id;
+  saveFlowsLocal(flows);
+  saveActiveLocal(activeId);
+}
+
+// ── Undo / Redo ───────────────────────────────────────────────────────────────
+
+const undoStacks = new Map<string, string[]>();
+const redoStacks = new Map<string, string[]>();
+
+function pushUndo() {
+  const id = activeId;
+  if (!undoStacks.has(id)) undoStacks.set(id, []);
+  if (!redoStacks.has(id)) redoStacks.set(id, []);
+  const stack = undoStacks.get(id)!;
+  stack.push(JSON.stringify(cloneTree(getActive().tree)));
+  if (stack.length > 60) stack.shift();
+  redoStacks.get(id)!.length = 0;
+  syncUndoRedoUI();
+}
+
+function applySnapshot(json: string) {
+  getActive().tree = JSON.parse(json) as TreeNode;
+  rebuildTree(); saveFlowsLocal(flows); render();
+  syncUndoRedoUI();
+}
+
+function undo() {
+  const id = activeId;
+  const stack = undoStacks.get(id);
+  if (!stack?.length) return;
+  if (!redoStacks.has(id)) redoStacks.set(id, []);
+  redoStacks.get(id)!.push(JSON.stringify(cloneTree(getActive().tree)));
+  applySnapshot(stack.pop()!);
+}
+
+function redo() {
+  const id = activeId;
+  const stack = redoStacks.get(id);
+  if (!stack?.length) return;
+  if (!undoStacks.has(id)) undoStacks.set(id, []);
+  undoStacks.get(id)!.push(JSON.stringify(cloneTree(getActive().tree)));
+  applySnapshot(stack.pop()!);
+}
+
+let setUndoEnabled!: (v: boolean) => void;
+let setRedoEnabled!: (v: boolean) => void;
+
+function syncUndoRedoUI() {
+  setUndoEnabled(!!(undoStacks.get(activeId)?.length));
+  setRedoEnabled(!!(redoStacks.get(activeId)?.length));
+}
 
 // ── Per-canvas state ──────────────────────────────────────────────────────────
 
@@ -71,7 +147,7 @@ const dragOv = document.getElementById('drag-ov') as unknown as SVGSVGElement;
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
-const { setSaving, setSaved, setResetEnabled } = mountToolbar({
+const { setSaving, setSaved, setResetEnabled, setUndoEnabled: _sue, setRedoEnabled: _sre } = mountToolbar({
   onSave: async () => {
     setSaving(true);
     saveFlowsLocal(flows);
@@ -82,11 +158,21 @@ const { setSaving, setSaved, setResetEnabled } = mountToolbar({
   onReset: () => {
     const active = getActive();
     if (active.id !== DEFAULT_FLOW.id) return;
+    pushUndo();
     active.tree = cloneTree(DEFAULT_TREE);
     saveFlowsLocal(flows);
     rebuildTree();
     render();
   },
+  onUndo: undo,
+  onRedo: redo,
+});
+setUndoEnabled = _sue;
+setRedoEnabled = _sre;
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
 });
 
 // ── Flow tabs ─────────────────────────────────────────────────────────────────
@@ -102,6 +188,7 @@ const tabs = mountFlowTabs(flows, activeId, {
     rebuildTree();
     render();
     tabs.setActive(id);
+    syncUndoRedoUI();
   },
   onRename(id, name) {
     const f = flows.find(f => f.id === id);
@@ -150,6 +237,12 @@ const tabs = mountFlowTabs(flows, activeId, {
     const f = flows.find(f => f.id === id);
     if (f) downloadFlowAsOutline(f);
   },
+  onShare(id) {
+    const f = flows.find(f => f.id === id);
+    if (!f) return;
+    const url = `${location.origin}${location.pathname}#share=${encodeFlow(f)}`;
+    navigator.clipboard.writeText(url).catch(() => prompt('Copy share link:', url));
+  },
 });
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -158,6 +251,7 @@ function rebuildTree() {
   doLayout(getActive().tree, 0, 0);
   allNodes = flattenTree(getActive().tree);
   allEdges = collectEdges(getActive().tree);
+  animateEdgesNext = true;
   syncSize();
 }
 
@@ -343,26 +437,26 @@ function dragEnd() {
 
   if (mode === 'swap') {
     if (wasOn && tgt && tgt !== src) {
+      pushUndo();
       swapNodes(getActive().tree, src, tgt);
       rebuildTree(); saveFlowsLocal(flows); render();
     }
   } else {
     // connect mode
     if (!wasOn) {
-      // click on + handle → add new child
+      pushUndo();
       const newNode = addChildNode(src);
       rebuildTree(); saveFlowsLocal(flows); render();
-      // auto-start editing the new node
       requestAnimationFrame(() => {
         const el = cnv.querySelector<HTMLElement>(`[data-nid="${newNode.id}"]`);
         if (el) startEdit(el, newNode);
       });
     } else if (tgt) {
-      // dragged to an existing node → reparent tgt under src
+      pushUndo();
       reparentNode(getActive().tree, tgt.id, src.id);
       rebuildTree(); saveFlowsLocal(flows); render();
     } else {
-      // dragged to empty space → add new child
+      pushUndo();
       const newNode = addChildNode(src);
       rebuildTree(); saveFlowsLocal(flows); render();
       requestAnimationFrame(() => {
@@ -383,12 +477,26 @@ document.addEventListener('touchend', () => dragEnd());
 
 // ── Render edges ──────────────────────────────────────────────────────────────
 
+const EDGE_STATUS = {
+  up:   { icon: '▲', color: '#6B9B5E', bg: '#EEF5EA', border: '#A4C89A' },
+  down: { icon: '▽', color: '#B52B1E', bg: '#FCECEA', border: '#D98A83' },
+  ok:   { icon: '●', color: '#6B9B5E', bg: '#EEF5EA', border: '#A4C89A' },
+  warn: { icon: '■', color: '#C8963C', bg: '#FDF4E7', border: '#DEB87A' },
+} as const;
+const STATUS_CYCLE: (keyof typeof EDGE_STATUS | undefined)[] = [undefined, 'up', 'down', 'ok', 'warn'];
+
+let animateEdgesNext = true; // true on first render and after rebuildTree
+
 function renderSVG() {
   svgl.innerHTML = '';
   const NS = 'http://www.w3.org/2000/svg';
-  for (const [f, t] of allEdges) {
+  const doAnim = animateEdgesNext;
+  animateEdgesNext = false;
+
+  for (let ei = 0; ei < allEdges.length; ei++) {
+    const [f, t] = allEdges[ei];
     const x1 = f.x! + NW, y1 = centerY(f), x2 = t.x!, y2 = centerY(t), mx = (x1 + x2) / 2;
-    const lx = mx, ly = (y1 + y2) / 2; // label midpoint
+    const lx = mx, ly = (y1 + y2) / 2;
     const es = edgeState(f, t);
     const stroke = es === 'act' ? '#1A1A1A' : es === 'dim' ? '#E0DFD9' : '#ABABAA';
     const sw     = es === 'act' ? 1.5 : 1;
@@ -398,54 +506,95 @@ function renderSVG() {
     path.setAttribute('d', d); path.setAttribute('fill', 'none');
     path.setAttribute('stroke', stroke); path.setAttribute('stroke-width', String(sw));
     path.setAttribute('pointer-events', 'none');
+    if (doAnim) {
+      const len = path.getTotalLength?.() ?? 200;
+      path.style.strokeDasharray  = String(len);
+      path.style.strokeDashoffset = String(len);
+      path.style.animation = `edge-draw 0.35s ease-out ${ei * 0.025}s forwards`;
+    }
     svgl.appendChild(path);
 
-    // Wider invisible hit area for click
+    // Hit area
     const hit = document.createElementNS(NS, 'path');
     hit.setAttribute('d', d); hit.setAttribute('fill', 'none');
     hit.setAttribute('stroke', 'rgba(0,0,0,0)'); hit.setAttribute('stroke-width', '14');
     hit.setAttribute('pointer-events', 'stroke');
     hit.style.cursor = 'pointer';
-    hit.addEventListener('click', (e) => {
-      e.stopPropagation();
-      startEdgeEdit(t, lx, ly);
-    });
+    hit.addEventListener('click', e => { e.stopPropagation(); startEdgeEdit(t, lx, ly); });
     svgl.appendChild(hit);
 
-    // Edge label (stored on child node)
-    if (t.edgeLabel) {
-      const tw = t.edgeLabel.length * 6.5 + 10;
+    // ── Edge label ───────────────────────────────────────────────
+    const hasLabel = !!t.edgeLabel;
+    const labelY   = t.edgeStatus ? ly - 12 : ly;
+
+    if (hasLabel) {
+      const tw = t.edgeLabel!.length * 6.2 + 10;
       const bg = document.createElementNS(NS, 'rect');
-      bg.setAttribute('x', String(lx - tw / 2)); bg.setAttribute('y', String(ly - 9));
-      bg.setAttribute('width', String(tw)); bg.setAttribute('height', '14');
+      bg.setAttribute('x', String(lx - tw / 2)); bg.setAttribute('y', String(labelY - 8));
+      bg.setAttribute('width', String(tw)); bg.setAttribute('height', '13');
       bg.setAttribute('rx', '3'); bg.setAttribute('fill', '#FEFCF8');
       bg.setAttribute('stroke', '#BCBBB7'); bg.setAttribute('stroke-width', '0.8');
+      bg.setAttribute('pointer-events', 'none');
       svgl.appendChild(bg);
       const txt = document.createElementNS(NS, 'text');
-      txt.setAttribute('x', String(lx)); txt.setAttribute('y', String(ly + 4));
+      txt.setAttribute('x', String(lx)); txt.setAttribute('y', String(labelY + 4));
       txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', '#5A5955');
       txt.setAttribute('font-size', '10'); txt.setAttribute('font-family', 'LatteraMonoLL,Space Mono,monospace');
-      txt.textContent = t.edgeLabel;
+      txt.setAttribute('pointer-events', 'none');
+      txt.textContent = t.edgeLabel!;
       svgl.appendChild(txt);
+    }
+
+    // ── Status badge ─────────────────────────────────────────────
+    if (t.edgeStatus) {
+      const cfg = EDGE_STATUS[t.edgeStatus];
+      const sx = lx - 8, sy = ly + (hasLabel ? 4 : -8);
+      const sq = document.createElementNS(NS, 'rect');
+      sq.setAttribute('x', String(sx)); sq.setAttribute('y', String(sy));
+      sq.setAttribute('width', '16'); sq.setAttribute('height', '16');
+      sq.setAttribute('rx', '2'); sq.setAttribute('fill', cfg.bg);
+      sq.setAttribute('stroke', cfg.border); sq.setAttribute('stroke-width', '1');
+      sq.style.cursor = 'pointer';
+      sq.addEventListener('click', e => {
+        e.stopPropagation();
+        pushUndo();
+        const idx = STATUS_CYCLE.indexOf(t.edgeStatus);
+        t.edgeStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+        saveFlowsLocal(flows); render();
+      });
+      svgl.appendChild(sq);
+      const icon = document.createElementNS(NS, 'text');
+      icon.setAttribute('x', String(lx)); icon.setAttribute('y', String(sy + 12));
+      icon.setAttribute('text-anchor', 'middle'); icon.setAttribute('fill', cfg.color);
+      icon.setAttribute('font-size', '9'); icon.setAttribute('pointer-events', 'none');
+      icon.textContent = cfg.icon;
+      svgl.appendChild(icon);
     } else {
-      // Subtle + hint on hover — drawn as a tiny circle with + only when edge hovered
-      const hint = document.createElementNS(NS, 'circle');
-      hint.setAttribute('cx', String(lx)); hint.setAttribute('cy', String(ly));
-      hint.setAttribute('r', '5'); hint.setAttribute('fill', '#FEFCF8');
-      hint.setAttribute('stroke', '#BCBBB7'); hint.setAttribute('stroke-width', '0.8');
-      hint.setAttribute('opacity', '0'); hint.style.transition = 'opacity 0.15s';
-      hit.addEventListener('mouseenter', () => { hint.setAttribute('opacity', '1'); });
-      hit.addEventListener('mouseleave', () => { hint.setAttribute('opacity', '0'); });
-      svgl.appendChild(hint);
-      const plusTxt = document.createElementNS(NS, 'text');
-      plusTxt.setAttribute('x', String(lx)); plusTxt.setAttribute('y', String(ly + 4));
-      plusTxt.setAttribute('text-anchor', 'middle'); plusTxt.setAttribute('fill', '#BCBBB7');
-      plusTxt.setAttribute('font-size', '9'); plusTxt.setAttribute('pointer-events', 'none');
-      plusTxt.setAttribute('opacity', '0'); plusTxt.style.transition = 'opacity 0.15s';
-      hit.addEventListener('mouseenter', () => { plusTxt.setAttribute('opacity', '1'); });
-      hit.addEventListener('mouseleave', () => { plusTxt.setAttribute('opacity', '0'); });
-      plusTxt.textContent = '+';
-      svgl.appendChild(plusTxt);
+      // ── Hover hint: + to add note / click square to set status ─
+      const sbx = lx - 8, sby = ly - 8;
+      const hintSq = document.createElementNS(NS, 'rect');
+      hintSq.setAttribute('x', String(sbx)); hintSq.setAttribute('y', String(sby));
+      hintSq.setAttribute('width', '16'); hintSq.setAttribute('height', '16');
+      hintSq.setAttribute('rx', '2'); hintSq.setAttribute('fill', '#FEFCF8');
+      hintSq.setAttribute('stroke', '#BCBBB7'); hintSq.setAttribute('stroke-width', '0.8');
+      hintSq.setAttribute('opacity', '0'); hintSq.style.transition = 'opacity 0.15s';
+      hintSq.style.cursor = 'pointer';
+      hintSq.addEventListener('click', e => {
+        e.stopPropagation();
+        pushUndo();
+        t.edgeStatus = 'up';
+        saveFlowsLocal(flows); render();
+      });
+      hit.addEventListener('mouseenter', () => { hintSq.setAttribute('opacity', '1'); hintTxt.setAttribute('opacity', '1'); });
+      hit.addEventListener('mouseleave', () => { hintSq.setAttribute('opacity', '0'); hintTxt.setAttribute('opacity', '0'); });
+      svgl.appendChild(hintSq);
+      const hintTxt = document.createElementNS(NS, 'text');
+      hintTxt.setAttribute('x', String(lx)); hintTxt.setAttribute('y', String(sby + 11));
+      hintTxt.setAttribute('text-anchor', 'middle'); hintTxt.setAttribute('fill', '#BCBBB7');
+      hintTxt.setAttribute('font-size', '10'); hintTxt.setAttribute('pointer-events', 'none');
+      hintTxt.setAttribute('opacity', '0'); hintTxt.style.transition = 'opacity 0.15s';
+      hintTxt.textContent = '+';
+      svgl.appendChild(hintTxt);
     }
   }
 }
@@ -453,15 +602,16 @@ function renderSVG() {
 function startEdgeEdit(toNode: TreeNode, lx: number, ly: number) {
   const rect = cnv.getBoundingClientRect();
   const inp  = document.createElement('input');
-  inp.className  = 'edge-label-input';
-  inp.value      = toNode.edgeLabel ?? '';
+  inp.className   = 'edge-label-input';
+  inp.value       = toNode.edgeLabel ?? '';
   inp.placeholder = 'add note…';
-  inp.style.left = (rect.left + lx - vp.scrollLeft - 50) + 'px';
-  inp.style.top  = (rect.top  + ly - vp.scrollTop  - 11) + 'px';
+  inp.style.left  = (rect.left + lx - vp.scrollLeft - 50) + 'px';
+  inp.style.top   = (rect.top  + ly - vp.scrollTop  - 11) + 'px';
   document.body.appendChild(inp);
   inp.focus(); inp.select();
   const commit = () => {
     const v = inp.value.trim();
+    if (v !== (toNode.edgeLabel ?? '')) pushUndo();
     toNode.edgeLabel = v || undefined;
     inp.remove();
     saveFlowsLocal(flows);
@@ -520,6 +670,7 @@ function renderNodes() {
           ? `Delete "${n.label}" and its ${childCount} child block(s)?`
           : `Delete "${n.label}"?`;
         if (confirm(msg)) {
+          pushUndo();
           removeNode(getActive().tree, n.id);
           rebuildTree(); saveFlowsLocal(flows); render();
         }
@@ -562,6 +713,7 @@ function renderNodes() {
 
 function startEdit(el: HTMLElement, n: TreeNode) {
   editing = true;
+  pushUndo();
   const lbl = el.querySelector<HTMLElement>('.nd-lbl')!;
   const orig = n.label;
   const inp  = document.createElement('input');
@@ -606,8 +758,32 @@ if (p28Node && daysNode) {
 function render() {
   renderSVG();
   renderNodes();
-  retention?.update();
+  const isDefault = activeId === DEFAULT_FLOW.id;
+  const retMarker = document.getElementById('ret-marker');
+  if (retMarker) retMarker.style.display = isDefault ? '' : 'none';
+  if (isDefault) retention?.update();
 }
+
+// ── Canvas ripple ─────────────────────────────────────────────────────────────
+
+function spawnRipple(canvasX: number, canvasY: number) {
+  const el = document.createElement('div');
+  el.className = 'canvas-ripple';
+  el.style.left = canvasX + 'px';
+  el.style.top  = canvasY + 'px';
+  cnv.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+vp.addEventListener('click', e => {
+  const target = e.target as HTMLElement;
+  if (target !== vp && target !== cnv && target.id !== 'svgl') return;
+  const rect = cnv.getBoundingClientRect();
+  spawnRipple(
+    e.clientX - rect.left + vp.scrollLeft,
+    e.clientY - rect.top  + vp.scrollTop,
+  );
+});
 
 cnv.addEventListener('click', () => {
   if (editing || dr.on) return;
