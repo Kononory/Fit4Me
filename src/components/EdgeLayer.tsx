@@ -100,7 +100,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
         <marker id="arr-ref" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
         </marker>
-        {/* Per-edge beam gradients — SMIL animates x1/x2 across the path */}
+        {/* Per-edge beam gradients — plays once each time a node is selected */}
         {allEdges.map(([f, t], ei) => {
           if (!beamSourceIds.has(f.id)) return null;
           const { x1, y1, x2, y2 } = edgeGeom[ei];
@@ -156,7 +156,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
             {/* Base path — pathLength="1" makes dashoffset work without getTotalLength() */}
             <path d={d} pathLength={doAnim ? 1 : undefined} fill="none" stroke={stroke} strokeWidth={sw} pointerEvents="none" style={pathStyle} />
 
-            {/* Beam overlay — SMIL gradient travels from from-node to to-node */}
+            {/* Beam overlay — plays once per selection */}
             {beamSourceIds.has(f.id) && (
               <path d={d} fill="none" stroke={`url(#bg-${f.id}-${t.id})`}
                 strokeWidth={sw + 2} strokeLinecap="round" pointerEvents="none" />
