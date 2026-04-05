@@ -36,6 +36,17 @@ src/
 - Active dev branch: `claude/add-text-steps-display-MPzeW`
 - Push with: `git push -u origin <branch>`
 
+## Token efficiency report (on every new feature task)
+At the start of each implementation plan, include a one-line estimate:
+> **Token cost w/ CLAUDE.md:** ~X k | **Without:** ~Y k | **Saved:** ~Z k
+
+Count saved tokens from skipped work:
+- No Explore agent (~8–15 k) — stack/layout/CSS already known
+- No full style.css read (~3 k) — conventions documented above
+- No store.ts read (~2 k) — state patterns documented above
+- No multi-file grep for conventions (~2–5 k) — prefixes/z-index/colors listed above
+- Shorter plan (~1–2 k) — no need to explain the project to yourself
+
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code
 - Don't create helper abstractions for one-off logic
