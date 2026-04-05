@@ -9,7 +9,16 @@ const EDGE_STATUS = {
   warn: { icon: '■', color: '#C8963C', bg: '#FDF4E7', border: '#DEB87A' },
 } as const;
 
-const BADGE_SZ = 14, BADGE_GAP = 4;
+const BADGE_SZ = 14, BADGE_GAP = 4, BADGE_PAD = 5;
+
+function analyticsLabel(pts: RetentionPoint[]): { dir: 'up' | 'down' | 'flat'; label: string } {
+  if (pts.length < 2) return { dir: 'flat', label: `${Math.round(pts[0]?.pct ?? 0)}%` };
+  const delta = pts[pts.length - 1].pct - pts[0].pct;
+  const abs = Math.round(Math.abs(delta));
+  if (delta > 0.5)  return { dir: 'up',   label: `+${abs}%` };
+  if (delta < -0.5) return { dir: 'down', label: `\u2212${abs}%` };
+  return { dir: 'flat', label: `${Math.round(pts[0].pct)}%` };
+}
 const FF = 'LatteraMonoLL,Space Mono,monospace';
 
 interface Props {
@@ -121,10 +130,21 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
 
         // Badge layout
         const labelW = t.edgeLabel ? Math.max(t.edgeLabel.length * 6 + 10, 24) : 0;
+        // Pre-compute status pill width (wider when analytics add a label)
+        const hasStatusBadge = !!(t.edgeStatus || t.edgeRetention);
+        let statusPillW = BADGE_SZ;
+        let statusCfg = t.edgeStatus ? EDGE_STATUS[t.edgeStatus] : null;
+        let extraLabel: string | null = null;
+        if (t.edgeRetention) {
+          const { dir, label } = analyticsLabel(t.edgeRetention);
+          extraLabel = label;
+          if (!statusCfg) statusCfg = dir === 'up' ? EDGE_STATUS.up : dir === 'down' ? EDGE_STATUS.down : EDGE_STATUS.ok;
+          statusPillW = Math.max(BADGE_SZ, (statusCfg.icon.length * 7) + (extraLabel.length * 6) + BADGE_PAD * 2);
+        }
         const bWidths = [
-          ...(t.edgeLabel     ? [labelW]   : []),
-          ...(t.edgeStatus    ? [BADGE_SZ] : []),
-          ...(t.edgeRetention ? [BADGE_SZ] : []),
+          ...(t.edgeLabel     ? [labelW]      : []),
+          ...(hasStatusBadge  ? [statusPillW] : []),
+          ...(t.edgeRetention ? [BADGE_SZ]    : []),
         ];
         const totalBW = bWidths.reduce((s, w) => s + w, 0) + BADGE_GAP * Math.max(0, bWidths.length - 1);
         let bCursor = lx - totalBW / 2;
@@ -191,12 +211,16 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               <text x={bx} y={ly + 4} textAnchor="middle" fill="#5A5955" fontSize={10} fontFamily={FF} pointerEvents="none">{t.edgeLabel}</text>
             </>); })()}
 
-            {/* Status badge */}
-            {t.edgeStatus && (() => { const cfg = EDGE_STATUS[t.edgeStatus]; const bx = grabBX(BADGE_SZ); return (<>
-              <rect x={bx - BADGE_SZ / 2} y={ly - BADGE_SZ / 2} width={BADGE_SZ} height={BADGE_SZ} rx={2}
-                fill={cfg.bg} stroke={cfg.border} strokeWidth={1} pointerEvents="none" />
-              <text x={bx} y={ly + 4} textAnchor="middle" fill={cfg.color} fontSize={9} pointerEvents="none">{cfg.icon}</text>
-            </>); })()}
+            {/* Status badge (+ auto-labeled from analytics when present) */}
+            {hasStatusBadge && (() => {
+              const bx = grabBX(statusPillW);
+              const fullText = extraLabel ? `${statusCfg!.icon} ${extraLabel}` : statusCfg!.icon;
+              return (<>
+                <rect x={bx - statusPillW / 2} y={ly - BADGE_SZ / 2} width={statusPillW} height={BADGE_SZ} rx={3}
+                  fill={statusCfg!.bg} stroke={statusCfg!.border} strokeWidth={1} pointerEvents="none" />
+                <text x={bx} y={ly + 4} textAnchor="middle" fill={statusCfg!.color} fontSize={8} fontFamily={FF} pointerEvents="none">{fullText}</text>
+              </>);
+            })()}
 
             {/* Analytics badge */}
             {t.edgeRetention && (() => {
