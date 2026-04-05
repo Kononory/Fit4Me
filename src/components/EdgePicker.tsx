@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import type { TreeNode, CrossEdge, RetentionPoint } from '../types';
-import { RETENTION_DATA } from '../data';
 import { useStore } from '../store';
 
 // ── Shared positioning helpers ─────────────────────────────────────────────────
@@ -208,7 +207,7 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
 
   useEffect(() => {
     if (mode === 'analytics' && toNode && !initialized.current) {
-      setData(toNode.edgeRetention ? [...toNode.edgeRetention] : [...RETENTION_DATA]);
+      setData(toNode.edgeRetention ? [...toNode.edgeRetention] : [{ pct: 100, s: 'start' }, { pct: 0, s: 'end' }]);
       initialized.current = true;
     }
     if (mode !== 'analytics') initialized.current = false;

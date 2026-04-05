@@ -24,9 +24,10 @@ export function buildChart(data: RetentionPoint[]): SVGSVGElement {
   const W = 248, H = 140, ml = 8, mr = 4, mt = 20, mb = 18;
   const cw = W - ml - mr, ch = H - mt - mb, cb = mt + ch;
   const n = data.length;
-  const bw = Math.max(6, Math.min(20, Math.floor((cw - (n - 1) * 3) / n)));
-  const bg = n > 1 ? (cw - n * bw) / (n - 1) : 0;
-  const bxx = (i: number) => ml + i * (bw + bg);
+  const gap = 4;
+  const bw = Math.min(32, Math.max(6, Math.floor((cw - (n - 1) * gap) / n)));
+  const groupW = n * bw + (n - 1) * gap;
+  const bxx = (i: number) => ml + (cw - groupW) / 2 + i * (bw + gap);
   const max = data[0]?.pct ?? 100;
   const pyy = (p: number) => cb - (p / max) * ch;
 
