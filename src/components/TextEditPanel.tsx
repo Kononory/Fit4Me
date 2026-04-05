@@ -1,11 +1,43 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { parseOutline, treeToOutline } from '../parser';
+
+function getLabel(raw: string): string {
+  let text = raw.trim();
+  const pipeIdx = text.indexOf(' | ');
+  if (pipeIdx !== -1) text = text.slice(0, pipeIdx).trim();
+  text = text.replace(/\[([^\]]+)\]\s*$/, '').trim();
+  return text || 'Untitled';
+}
+
+function computeBreadcrumbs(value: string, cursorPos: number): string[] {
+  const lines = value.split('\n');
+  let pos = 0, curIdx = lines.length - 1;
+  for (let i = 0; i < lines.length; i++) {
+    if (pos + lines[i].length >= cursorPos) { curIdx = i; break; }
+    pos += lines[i].length + 1;
+  }
+  const curLine = lines[curIdx];
+  if (!curLine.trim()) return [];
+  const curLevel = Math.floor(((curLine.match(/^ */)?.[0] ?? '').length) / 2);
+  const crumbs: string[] = [];
+  let target = curLevel - 1;
+  for (let i = curIdx - 1; i >= 0 && target >= 0; i--) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const level = Math.floor(((line.match(/^ */)?.[0] ?? '').length) / 2);
+    if (level === target) { crumbs.unshift(getLabel(line)); target--; }
+  }
+  crumbs.push(getLabel(curLine));
+  return crumbs;
+}
 
 export function TextEditPanel() {
   const { getActive, setTextEditOpen, pushUndo, updateActiveTree } = useStore();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const errRef = useRef<HTMLSpanElement>(null);
+  const [showSteps, setShowSteps] = useState(false);
+  const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
 
   useEffect(() => {
     const ta = taRef.current;
@@ -29,6 +61,11 @@ export function TextEditPanel() {
   };
 
   const close = () => setTextEditOpen(false);
+
+  const updateBreadcrumbs = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
@@ -79,9 +116,37 @@ export function TextEditPanel() {
         <span id="text-edit-title">
           Edit outline — <kbd>Shift+↵</kbd> new block · <kbd>Tab</kbd> indent · <kbd>Ctrl+↵</kbd> apply · <kbd>Esc</kbd> cancel
         </span>
+        <button
+          className={`te-btn te-steps-toggle${showSteps ? ' te-steps-on' : ''}`}
+          onClick={() => setShowSteps(s => !s)}
+          title="Toggle path display"
+        >
+          steps
+        </button>
         <span id="text-edit-err" ref={errRef} />
       </div>
-      <textarea id="text-edit-ta" ref={taRef} spellCheck={false} onKeyDown={handleKeyDown} />
+      {showSteps && (
+        <div id="text-edit-steps">
+          {breadcrumbs.length === 0
+            ? <span className="te-step te-step-empty">— move cursor to a line —</span>
+            : breadcrumbs.map((crumb, i) => (
+                <span key={i} className={`te-step${i === breadcrumbs.length - 1 ? ' te-step-cur' : ''}`}>
+                  {i > 0 && <span className="te-step-sep">›</span>}
+                  {crumb}
+                </span>
+              ))
+          }
+        </div>
+      )}
+      <textarea
+        id="text-edit-ta"
+        ref={taRef}
+        spellCheck={false}
+        onKeyDown={handleKeyDown}
+        onKeyUp={updateBreadcrumbs}
+        onClick={updateBreadcrumbs}
+        onSelect={updateBreadcrumbs}
+      />
       <div id="text-edit-footer">
         <button className="te-btn te-btn-cancel" onClick={close}>Cancel</button>
         <button className="te-btn te-btn-apply" onClick={apply}>Apply</button>
