@@ -46,7 +46,7 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
   return { x: (r?.left ?? 0) + lx, y: (r?.top ?? 0) + ly };
 }
 
-export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, selTick, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
+export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
 
   const showChartPreview = useCallback((aData: RetentionPoint[], bx: number, ly: number) => {
@@ -139,8 +139,6 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
           animation: `edge-draw 0.35s ease-out ${ei * 0.025}s forwards`,
         } : {};
 
-        const beamActive = beamSourceIds.has(f.id);
-        const delay = `${(ei * 0.06).toFixed(2)}s`;
 
         return (
           <g key={`${f.id}-${t.id}`}>

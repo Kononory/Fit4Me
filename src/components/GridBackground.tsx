@@ -25,7 +25,7 @@ export function GridBackground({ vpRef: _vpRef }: Props) {
       width={CELL}
       height={CELL}
       squares={[cols, rows]}
-      style={{ position: 'fixed', left: 148, top: 0, pointerEvents: 'all', zIndex: 0 }}
+      style={{ position: 'fixed', left: 148, top: 0, zIndex: 0 }}
     />
   );
 }
