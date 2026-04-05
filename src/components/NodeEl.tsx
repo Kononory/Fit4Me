@@ -7,7 +7,7 @@ import { useStore } from '../store';
 interface Props {
   node: TreeNode;
   state: 'act' | 'par' | 'dim' | 'def';
-  onDragBegin: (n: TreeNode, el: HTMLElement, cx: number, cy: number, mode?: 'swap' | 'connect') => void;
+  onDragBegin: (n: TreeNode, el: HTMLElement, cx: number, cy: number, mode?: 'swap' | 'connect', forceRef?: boolean) => void;
   onSelect: (n: TreeNode) => void;
   editNodeId: string | null;
   onEditDone: () => void;
@@ -117,7 +117,7 @@ export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEd
             className="nd-handle nd-handle-add"
             onMouseDown={e => {
               e.stopPropagation();
-              onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect');
+              onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect', e.altKey);
             }}
             onClick={e => e.stopPropagation()}
           >+</div>
