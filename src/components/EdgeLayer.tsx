@@ -50,6 +50,37 @@ function edgeState(from: TreeNode, to: TreeNode, sel: string | null, selNodeId: 
   return 'par';
 }
 
+function findChain(allNodes: TreeNode[], allEdges: [TreeNode, TreeNode][], toId: string): RetentionPoint[][] {
+  const parentOf = new Map(allEdges.map(([f, t]) => [t.id, f.id]));
+  const nodeById = new Map(allNodes.map(n => [n.id, n]));
+  const chain: RetentionPoint[][] = [];
+  let id: string | undefined = toId;
+  while (id) {
+    const node = nodeById.get(id);
+    if (node?.edgeRetention) chain.unshift(node.edgeRetention);
+    id = parentOf.get(id);
+  }
+  return chain;
+}
+
+function buildChainData(segments: RetentionPoint[][]): { combined: RetentionPoint[]; highlightFrom: number } {
+  if (segments.length <= 1) return { combined: segments[0] ?? [], highlightFrom: 0 };
+  let scale = 1.0;
+  const combined: RetentionPoint[] = [];
+  for (let si = 0; si < segments.length; si++) {
+    const seg = segments[si];
+    const skip = si > 0 ? 1 : 0; // skip first point of later segments — it equals prior segment's last
+    for (let pi = skip; pi < seg.length; pi++) {
+      combined.push({ s: seg[pi].s, pct: Math.round(seg[pi].pct * scale * 10) / 10 });
+    }
+    if (si < segments.length - 1) scale *= seg[seg.length - 1].pct / (seg[0].pct || 1);
+  }
+  // highlightFrom = total points from all prior segments (minus skipped overlaps)
+  let hf = segments[0].length;
+  for (let si = 1; si < segments.length - 1; si++) hf += segments[si].length - 1;
+  return { combined, highlightFrom: hf };
+}
+
 function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivElement | null>) {
   const r = cnvRef.current?.getBoundingClientRect();
   return { x: (r?.left ?? 0) + lx, y: (r?.top ?? 0) + ly };
@@ -58,17 +89,23 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
 export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
 
-  const showChartPreview = useCallback((aData: RetentionPoint[], bx: number, ly: number) => {
+  const showChartPreview = useCallback((
+    aData: RetentionPoint[], bx: number, ly: number,
+    toNode: TreeNode, nodes: TreeNode[], edges: [TreeNode, TreeNode][],
+  ) => {
     document.getElementById('edge-chart-preview')?.remove();
     const { x: sx, y: sy } = canvasToScreen(bx, ly, cnvRef);
+    const chain = findChain(nodes, edges, toNode.id);
+    const { combined, highlightFrom } = buildChainData(chain);
+    const chartData = combined.length > 0 ? combined : aData;
     const pop = document.createElement('div');
     pop.id = 'edge-chart-preview';
     pop.style.cssText = `position:fixed;z-index:95;background:#1A1916;border:1px solid #2E2D2A;border-radius:6px;padding:10px;pointer-events:none;`;
-    pop.appendChild(buildChart(aData));
-    if (aData.length >= 2) {
+    pop.appendChild(buildChart(chartData, highlightFrom));
+    if (chartData.length >= 2) {
       const s = document.createElement('div');
       s.style.cssText = 'font-size:10px;color:#AEADA8;margin-top:4px;text-align:center;font-family:monospace;';
-      s.textContent = `${aData[aData.length - 1].pct}% reach the final stage`;
+      s.textContent = `${chartData[chartData.length - 1].pct}% reach the final stage`;
       pop.appendChild(s);
     }
     document.body.appendChild(pop);
@@ -77,7 +114,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
     px = Math.max(6, Math.min(px, window.innerWidth - pw - 6));
     py = py < 6 ? sy + 20 : py;
     pop.style.left = px + 'px'; pop.style.top = py + 'px';
-  }, [cnvRef]);
+  }, [cnvRef]); // allNodes/allEdges passed as params at call time — no dep needed
 
   const hideChartPreview = useCallback((key: string) => {
     chartTimerRef.current[key] = window.setTimeout(() => {
@@ -230,7 +267,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               return (<>
                 <rect x={bx - BADGE_SZ / 2} y={ly - BADGE_SZ / 2} width={BADGE_SZ} height={BADGE_SZ} rx={2}
                   fill="#F0EDFF" stroke="#9B8FD4" strokeWidth={1} pointerEvents="visiblePainted" style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => { clearTimeout(chartTimerRef.current[key]); showChartPreview(aData, bx, ly); }}
+                  onMouseEnter={() => { clearTimeout(chartTimerRef.current[key]); showChartPreview(aData, bx, ly, t, allNodes, allEdges); }}
                   onMouseLeave={() => hideChartPreview(key)}
                   onClick={e => { e.stopPropagation(); document.getElementById('edge-chart-preview')?.remove(); onShowEdgePicker(t, lx, ly); }}
                 />
