@@ -1,5 +1,8 @@
 # Fit4Me — Claude Code Rules
 
+## Project
+Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivity. Users create multi-tab flows of tree-structured nodes, edit them via an indented text outline, connect nodes with typed edges, and persist everything to Supabase. An Anthropic AI integration assists with node content. Deployed on Vercel.
+
 ## Stack
 - React 19 + TypeScript, Vite 5, Tailwind CSS 4, Zustand 5
 - Font: `LatteraMonoLL` / `Space Mono` (monospace everywhere)
