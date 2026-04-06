@@ -7,15 +7,17 @@ import { useStore } from '../store';
 interface Props {
   node: TreeNode;
   state: 'act' | 'par' | 'dim' | 'def';
-  onDragBegin: (n: TreeNode, el: HTMLElement, cx: number, cy: number, mode?: 'swap' | 'connect') => void;
+  onDragBegin: (n: TreeNode, el: HTMLElement, cx: number, cy: number, mode?: 'swap' | 'connect', forceRef?: boolean) => void;
   onSelect: (n: TreeNode) => void;
+  onToggleMulti: () => void;
+  multiSel: boolean;
   editNodeId: string | null;
   onEditDone: () => void;
 }
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEditDone }: Props) {
+export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, editNodeId, onEditDone }: Props) {
     const { pushUndo, updateActiveTree, getActive, setSel, setSelNodeId, triggerEdgeAnim } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
@@ -30,6 +32,7 @@ export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEd
     if (state === 'act')       cls.push('s-active');
     else if (state === 'par')  cls.push('s-partial');
     else if (state === 'dim')  cls.push('s-dim');
+    if (multiSel)              cls.push('s-multi');
 
     const handleDelete = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
@@ -54,6 +57,8 @@ export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEd
 
     const handleClick = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
+      // Shift+click → toggle multi-selection
+      if (e.shiftKey) { onToggleMulti(); return; }
       if (tapTimer.current && tapId.current === n.id) {
         // Double-tap → inline rename
         clearTimeout(tapTimer.current); tapTimer.current = 0; tapId.current = null;
@@ -68,10 +73,13 @@ export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEd
           if (sel === n.b && selNodeId === n.id) { setSel(null); setSelNodeId(null); }
           else { setSel(n.b); setSelNodeId(n.id); }
         } else {
-          setSel(null); setSelNodeId(null);
+          // No branch: use node id as selection key so the node still highlights
+          const { selNodeId: sid } = useStore.getState();
+          if (sid === n.id) { setSel(null); setSelNodeId(null); }
+          else              { setSel(n.id); setSelNodeId(n.id); }
         }
       }, 270);
-    }, [n, onSelect, setSel, setSelNodeId]);
+    }, [n, onSelect, onToggleMulti, setSel, setSelNodeId]);
 
     return (
       <div
@@ -117,7 +125,7 @@ export function NodeEl({ node: n, state, onDragBegin, onSelect, editNodeId, onEd
             className="nd-handle nd-handle-add"
             onMouseDown={e => {
               e.stopPropagation();
-              onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect');
+              onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect', e.altKey);
             }}
             onClick={e => e.stopPropagation()}
           >+</div>

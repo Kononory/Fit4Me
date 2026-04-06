@@ -13,6 +13,7 @@ export function useDrag(
   getAllNodes: () => TreeNode[],
   onCommit: () => void,
   onAddAndEdit: (newNode: TreeNode) => void,
+  getMultiSel: () => Set<string> = () => new Set(),
 ) {
   const store = useStore();
   const drRef = useRef({
@@ -22,6 +23,7 @@ export function useDrag(
     sx: 0, sy: 0,
     on: false,
     mode: 'swap' as 'swap' | 'connect',
+    forceRef: false,
   });
 
   // ── Ghost + class helpers (imperative, outside React render) ──────────────
@@ -73,11 +75,11 @@ export function useDrag(
   }, [cnvRef, store]);
 
   // ── Public API ────────────────────────────────────────────────────────────
-  const dragBegin = useCallback((n: TreeNode, el: HTMLElement, clientX: number, clientY: number, mode: 'swap' | 'connect' = 'swap') => {
+  const dragBegin = useCallback((n: TreeNode, el: HTMLElement, clientX: number, clientY: number, mode: 'swap' | 'connect' = 'swap', forceRef = false) => {
     if (mode === 'swap' && !canDrag(n)) return;
     if (mode === 'connect' && !canConnect(n)) return;
     const dr = drRef.current;
-    dr.node = n; dr.sx = clientX; dr.sy = clientY; dr.on = false; dr.mode = mode; dr.target = null;
+    dr.node = n; dr.sx = clientX; dr.sy = clientY; dr.on = false; dr.mode = mode; dr.target = null; dr.forceRef = forceRef;
     store.setDrag({ node: n, el, on: false, mode, sx: clientX, sy: clientY, cx: 0, cy: 0, target: null, ghost: null });
   }, [store]);
 
@@ -167,10 +169,25 @@ export function useDrag(
         onAddAndEdit(newNode);
       } else if (tgt) {
         pushUndo();
-        const ok = reparentNode(flow.tree, tgt.id, src.id);
-        if (!ok) {
-          if (!flow.crossEdges) flow.crossEdges = [];
-          flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'back' });
+        if (!flow.crossEdges) flow.crossEdges = [];
+        const multiIds = getMultiSel();
+        if (multiIds.size > 0) {
+          // Multi-select: create ref edges from all selected nodes → target
+          for (const id of multiIds) {
+            if (id !== tgt.id) flow.crossEdges.push({ id: `ce-${Date.now()}-${id}`, fromId: id, toId: tgt.id, type: 'ref' });
+          }
+        } else if (dr.forceRef) {
+          // Alt+drag: always ref cross-edge, never reparent
+          flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'ref' });
+        } else {
+          // Cross-branch drag → ref edge; same-branch drag → try reparent (back on cycle)
+          const crossBranch = src.b && tgt.b && src.b !== tgt.b;
+          if (crossBranch) {
+            flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'ref' });
+          } else {
+            const ok = reparentNode(flow.tree, tgt.id, src.id);
+            if (!ok) flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'back' });
+          }
         }
         triggerEdgeAnim();
         onCommit();

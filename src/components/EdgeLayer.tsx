@@ -9,7 +9,16 @@ const EDGE_STATUS = {
   warn: { icon: '■', color: '#C8963C', bg: '#FDF4E7', border: '#DEB87A' },
 } as const;
 
-const BADGE_SZ = 14, BADGE_GAP = 4;
+const BADGE_SZ = 14, BADGE_GAP = 4, BADGE_PAD = 5;
+
+function analyticsLabel(pts: RetentionPoint[]): { dir: 'up' | 'down' | 'flat'; label: string } {
+  if (pts.length < 2) return { dir: 'flat', label: `${Math.round(pts[0]?.pct ?? 0)}%` };
+  const delta = pts[pts.length - 1].pct - pts[0].pct;
+  const abs = Math.round(Math.abs(delta));
+  if (delta > 0.5)  return { dir: 'up',   label: `+${abs}%` };
+  if (delta < -0.5) return { dir: 'down', label: `\u2212${abs}%` };
+  return { dir: 'flat', label: `${Math.round(pts[0].pct)}%` };
+}
 const FF = 'LatteraMonoLL,Space Mono,monospace';
 
 interface Props {
@@ -41,6 +50,37 @@ function edgeState(from: TreeNode, to: TreeNode, sel: string | null, selNodeId: 
   return 'par';
 }
 
+function findChain(allNodes: TreeNode[], allEdges: [TreeNode, TreeNode][], toId: string): RetentionPoint[][] {
+  const parentOf = new Map(allEdges.map(([f, t]) => [t.id, f.id]));
+  const nodeById = new Map(allNodes.map(n => [n.id, n]));
+  const chain: RetentionPoint[][] = [];
+  let id: string | undefined = toId;
+  while (id) {
+    const node = nodeById.get(id);
+    if (node?.edgeRetention) chain.unshift(node.edgeRetention);
+    id = parentOf.get(id);
+  }
+  return chain;
+}
+
+function buildChainData(segments: RetentionPoint[][]): { combined: RetentionPoint[]; highlightFrom: number } {
+  if (segments.length <= 1) return { combined: segments[0] ?? [], highlightFrom: 0 };
+  let scale = 1.0;
+  const combined: RetentionPoint[] = [];
+  for (let si = 0; si < segments.length; si++) {
+    const seg = segments[si];
+    const skip = si > 0 ? 1 : 0; // skip first point of later segments — it equals prior segment's last
+    for (let pi = skip; pi < seg.length; pi++) {
+      combined.push({ s: seg[pi].s, pct: Math.round(seg[pi].pct * scale * 10) / 10 });
+    }
+    if (si < segments.length - 1) scale *= seg[seg.length - 1].pct / (seg[0].pct || 1);
+  }
+  // highlightFrom = total points from all prior segments (minus skipped overlaps)
+  let hf = segments[0].length;
+  for (let si = 1; si < segments.length - 1; si++) hf += segments[si].length - 1;
+  return { combined, highlightFrom: hf };
+}
+
 function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivElement | null>) {
   const r = cnvRef.current?.getBoundingClientRect();
   return { x: (r?.left ?? 0) + lx, y: (r?.top ?? 0) + ly };
@@ -49,17 +89,23 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
 export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
 
-  const showChartPreview = useCallback((aData: RetentionPoint[], bx: number, ly: number) => {
+  const showChartPreview = useCallback((
+    aData: RetentionPoint[], bx: number, ly: number,
+    toNode: TreeNode, nodes: TreeNode[], edges: [TreeNode, TreeNode][],
+  ) => {
     document.getElementById('edge-chart-preview')?.remove();
     const { x: sx, y: sy } = canvasToScreen(bx, ly, cnvRef);
+    const chain = findChain(nodes, edges, toNode.id);
+    const { combined, highlightFrom } = buildChainData(chain);
+    const chartData = combined.length > 0 ? combined : aData;
     const pop = document.createElement('div');
     pop.id = 'edge-chart-preview';
     pop.style.cssText = `position:fixed;z-index:95;background:#1A1916;border:1px solid #2E2D2A;border-radius:6px;padding:10px;pointer-events:none;`;
-    pop.appendChild(buildChart(aData));
-    if (aData.length >= 2) {
+    pop.appendChild(buildChart(chartData, highlightFrom));
+    if (chartData.length >= 2) {
       const s = document.createElement('div');
       s.style.cssText = 'font-size:10px;color:#AEADA8;margin-top:4px;text-align:center;font-family:monospace;';
-      s.textContent = `${aData[aData.length - 1].pct}% reach the final stage`;
+      s.textContent = `${chartData[chartData.length - 1].pct}% reach the final stage`;
       pop.appendChild(s);
     }
     document.body.appendChild(pop);
@@ -68,7 +114,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
     px = Math.max(6, Math.min(px, window.innerWidth - pw - 6));
     py = py < 6 ? sy + 20 : py;
     pop.style.left = px + 'px'; pop.style.top = py + 'px';
-  }, [cnvRef]);
+  }, [cnvRef]); // allNodes/allEdges passed as params at call time — no dep needed
 
   const hideChartPreview = useCallback((key: string) => {
     chartTimerRef.current[key] = window.setTimeout(() => {
@@ -121,10 +167,21 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
 
         // Badge layout
         const labelW = t.edgeLabel ? Math.max(t.edgeLabel.length * 6 + 10, 24) : 0;
+        // Pre-compute status pill width (wider when analytics add a label)
+        const hasStatusBadge = !!(t.edgeStatus || t.edgeRetention);
+        let statusPillW = BADGE_SZ;
+        let statusCfg = t.edgeStatus ? EDGE_STATUS[t.edgeStatus] : null;
+        let extraLabel: string | null = null;
+        if (t.edgeRetention) {
+          const { dir, label } = analyticsLabel(t.edgeRetention);
+          extraLabel = label;
+          if (!statusCfg) statusCfg = dir === 'up' ? EDGE_STATUS.up : dir === 'down' ? EDGE_STATUS.down : EDGE_STATUS.ok;
+          statusPillW = Math.max(BADGE_SZ, (statusCfg.icon.length * 7) + (extraLabel.length * 6) + BADGE_PAD * 2);
+        }
         const bWidths = [
-          ...(t.edgeLabel     ? [labelW]   : []),
-          ...(t.edgeStatus    ? [BADGE_SZ] : []),
-          ...(t.edgeRetention ? [BADGE_SZ] : []),
+          ...(t.edgeLabel     ? [labelW]      : []),
+          ...(hasStatusBadge  ? [statusPillW] : []),
+          ...(t.edgeRetention ? [BADGE_SZ]    : []),
         ];
         const totalBW = bWidths.reduce((s, w) => s + w, 0) + BADGE_GAP * Math.max(0, bWidths.length - 1);
         let bCursor = lx - totalBW / 2;
@@ -191,12 +248,16 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               <text x={bx} y={ly + 4} textAnchor="middle" fill="#5A5955" fontSize={10} fontFamily={FF} pointerEvents="none">{t.edgeLabel}</text>
             </>); })()}
 
-            {/* Status badge */}
-            {t.edgeStatus && (() => { const cfg = EDGE_STATUS[t.edgeStatus]; const bx = grabBX(BADGE_SZ); return (<>
-              <rect x={bx - BADGE_SZ / 2} y={ly - BADGE_SZ / 2} width={BADGE_SZ} height={BADGE_SZ} rx={2}
-                fill={cfg.bg} stroke={cfg.border} strokeWidth={1} pointerEvents="none" />
-              <text x={bx} y={ly + 4} textAnchor="middle" fill={cfg.color} fontSize={9} pointerEvents="none">{cfg.icon}</text>
-            </>); })()}
+            {/* Status badge (+ auto-labeled from analytics when present) */}
+            {hasStatusBadge && (() => {
+              const bx = grabBX(statusPillW);
+              const fullText = extraLabel ? `${statusCfg!.icon} ${extraLabel}` : statusCfg!.icon;
+              return (<>
+                <rect x={bx - statusPillW / 2} y={ly - BADGE_SZ / 2} width={statusPillW} height={BADGE_SZ} rx={3}
+                  fill={statusCfg!.bg} stroke={statusCfg!.border} strokeWidth={1} pointerEvents="none" />
+                <text x={bx} y={ly + 4} textAnchor="middle" fill={statusCfg!.color} fontSize={8} fontFamily={FF} pointerEvents="none">{fullText}</text>
+              </>);
+            })()}
 
             {/* Analytics badge */}
             {t.edgeRetention && (() => {
@@ -206,7 +267,7 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               return (<>
                 <rect x={bx - BADGE_SZ / 2} y={ly - BADGE_SZ / 2} width={BADGE_SZ} height={BADGE_SZ} rx={2}
                   fill="#F0EDFF" stroke="#9B8FD4" strokeWidth={1} pointerEvents="visiblePainted" style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => { clearTimeout(chartTimerRef.current[key]); showChartPreview(aData, bx, ly); }}
+                  onMouseEnter={() => { clearTimeout(chartTimerRef.current[key]); showChartPreview(aData, bx, ly, t, allNodes, allEdges); }}
                   onMouseLeave={() => hideChartPreview(key)}
                   onClick={e => { e.stopPropagation(); document.getElementById('edge-chart-preview')?.remove(); onShowEdgePicker(t, lx, ly); }}
                 />

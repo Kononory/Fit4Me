@@ -26,6 +26,18 @@ export function Canvas({
   const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
+  const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
+
+  const toggleMultiSel = useCallback((id: string) => {
+    setMultiSelIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearMultiSel = useCallback(() => setMultiSelIds(new Set()), []);
+  const getMultiSel   = useCallback(() => multiSelIds, [multiSelIds]);
 
   // ── Canvas size ─────────────────────────────────────────────────────────────
   const { cw, ch } = canvasSize(allNodes);
@@ -39,7 +51,7 @@ export function Canvas({
     requestAnimationFrame(() => setEditNodeId(newNode.id));
   }, []);
 
-  const { dragBegin, dragMove, dragEnd } = useDrag(cnvRef, () => allNodes, handleCommit, handleAddAndEdit);
+  const { dragBegin, dragMove, dragEnd } = useDrag(cnvRef, () => allNodes, handleCommit, handleAddAndEdit, getMultiSel);
 
   useEffect(() => {
     const onMove      = (e: MouseEvent)  => dragMove(e.clientX, e.clientY);
@@ -68,9 +80,9 @@ export function Canvas({
   }, [doAnim, allEdges.length, clearEdgeAnim]);
 
   const nodeState = useCallback((n: TreeNode) => {
-    if (!sel) return 'def' as const;
-    if (n.id === selNodeId) return 'act' as const;
-    if (!n.b)              return 'par' as const;
+    if (n.id === selNodeId)      return 'act' as const;   // always highlight selected node first
+    if (!sel)                    return 'def' as const;
+    if (!n.b)                    return 'par' as const;
     return n.b === sel ? 'def' as const : 'dim' as const;
   }, [sel, selNodeId]);
 
@@ -81,7 +93,7 @@ export function Canvas({
       style={{ width: cw, height: ch, position: 'relative' }}
       onClick={() => {
         if (editNodeId || drag.on) return;
-        setSel(null); setSelNodeId(null);
+        setSel(null); setSelNodeId(null); clearMultiSel();
       }}
     >
       {/* SVG edge layer (base paths, badges, cross-edges) */}
@@ -105,8 +117,10 @@ export function Canvas({
           key={n.id}
           node={n}
           state={nodeState(n)}
+          multiSel={multiSelIds.has(n.id)}
           onDragBegin={dragBegin}
           onSelect={n => setEditNodeId(n.id)}
+          onToggleMulti={() => toggleMultiSel(n.id)}
           editNodeId={editNodeId}
           onEditDone={() => setEditNodeId(null)}
         />

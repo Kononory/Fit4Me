@@ -84,26 +84,31 @@ export function TextEditPanel() {
       return;
     }
 
-    // Tab → indent by 2 spaces
+    // Tab → indent all selected lines by 2 spaces
     if (!e.shiftKey && e.key === 'Tab') {
       e.preventDefault();
-      const s = ta.selectionStart, val = ta.value;
-      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
-      ta.value = val.slice(0, lineStart) + '  ' + val.slice(lineStart);
-      ta.selectionStart = ta.selectionEnd = s + 2;
+      const { selectionStart: ss, selectionEnd: se, value: val } = ta;
+      const blockStart = val.lastIndexOf('\n', ss - 1) + 1;
+      const blockEnd   = se > ss ? (val.indexOf('\n', se - 1) === -1 ? val.length : val.indexOf('\n', se - 1))
+                                 : (val.indexOf('\n', ss)    === -1 ? val.length : val.indexOf('\n', ss));
+      const indented = val.slice(blockStart, blockEnd).split('\n').map(l => '  ' + l).join('\n');
+      ta.value = val.slice(0, blockStart) + indented + val.slice(blockEnd);
+      ta.selectionStart = blockStart;
+      ta.selectionEnd   = blockStart + indented.length;
       return;
     }
 
-    // Shift+Tab → outdent by up to 2 spaces
+    // Shift+Tab → outdent all selected lines by up to 2 spaces
     if (e.shiftKey && e.key === 'Tab') {
       e.preventDefault();
-      const s = ta.selectionStart, val = ta.value;
-      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
-      const spaces = (val.slice(lineStart).match(/^ {1,2}/) ?? [''])[0].length;
-      if (spaces > 0) {
-        ta.value = val.slice(0, lineStart) + val.slice(lineStart + spaces);
-        ta.selectionStart = ta.selectionEnd = Math.max(lineStart, s - spaces);
-      }
+      const { selectionStart: ss, selectionEnd: se, value: val } = ta;
+      const blockStart = val.lastIndexOf('\n', ss - 1) + 1;
+      const blockEnd   = se > ss ? (val.indexOf('\n', se - 1) === -1 ? val.length : val.indexOf('\n', se - 1))
+                                 : (val.indexOf('\n', ss)    === -1 ? val.length : val.indexOf('\n', ss));
+      const outdented = val.slice(blockStart, blockEnd).split('\n').map(l => l.replace(/^ {1,2}/, '')).join('\n');
+      ta.value = val.slice(0, blockStart) + outdented + val.slice(blockEnd);
+      ta.selectionStart = blockStart;
+      ta.selectionEnd   = blockStart + outdented.length;
       return;
     }
 

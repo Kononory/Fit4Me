@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import type { TreeNode, CrossEdge, RetentionPoint } from '../types';
-import { RETENTION_DATA } from '../data';
 import { useStore } from '../store';
 
 // ── Shared positioning helpers ─────────────────────────────────────────────────
+
+function findParent(tree: TreeNode, targetId: string): TreeNode | null {
+  for (const child of tree.c ?? []) {
+    if (child.id === targetId) return tree;
+    const found = findParent(child, targetId);
+    if (found) return found;
+  }
+  return null;
+}
 
 function clampX(x: number, width: number) {
   return Math.min(Math.max(x, 156), window.innerWidth - width - 8);
@@ -208,7 +216,8 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
 
   useEffect(() => {
     if (mode === 'analytics' && toNode && !initialized.current) {
-      setData(toNode.edgeRetention ? [...toNode.edgeRetention] : [...RETENTION_DATA]);
+      const fromLabel = findParent(getActive().tree, toNode.id)?.label ?? 'start';
+      setData(toNode.edgeRetention ? [...toNode.edgeRetention] : [{ pct: 100, s: fromLabel }, { pct: 0, s: toNode.label }]);
       initialized.current = true;
     }
     if (mode !== 'analytics') initialized.current = false;

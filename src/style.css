@@ -194,6 +194,7 @@ svg#svgl.dimmed { opacity: 0.08; }
 .s-active .sub { opacity: 0.32; }
 .s-partial { border-color: #9A9995 !important; color: #777472 !important; background: #F8F7F4 !important; }
 .s-dim     { opacity: 0.28 !important; }
+.s-multi   { outline: 1.5px dashed #6B9B5E; outline-offset: 2px; }
 
 /* ── Drag states ────────────────────────────────────────────────── */
 .nd-source {
