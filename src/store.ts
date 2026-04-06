@@ -2,7 +2,28 @@ import { create } from 'zustand';
 import type { Flow, TreeNode, DragState } from './types';
 import { cloneTree } from './tree';
 import { DEFAULT_TREE } from './data';
-import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal } from './storage';
+import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveFlowRemote } from './storage';
+
+// ── Debounced cloud save ───────────────────────────────────────────────────────
+const cloudSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function scheduleCloudSave(flow: Flow) {
+  const existing = cloudSaveTimers.get(flow.id);
+  if (existing) clearTimeout(existing);
+  cloudSaveTimers.set(flow.id, setTimeout(() => {
+    saveFlowRemote(flow);
+    cloudSaveTimers.delete(flow.id);
+  }, 2000));
+}
+
+export function flushCloudSaves(flows: Flow[]) {
+  for (const [id, timer] of cloudSaveTimers) {
+    clearTimeout(timer);
+    cloudSaveTimers.delete(id);
+    const flow = flows.find(f => f.id === id);
+    if (flow) saveFlowRemote(flow);
+  }
+}
 
 const DEFAULT_FLOW: Flow = {
   id: 'default',
@@ -76,6 +97,7 @@ export const useStore = create<AppStore>((set, get) => {
     setFlows: (flows) => {
       set({ flows });
       saveFlowsLocal(flows);
+      flows.forEach(scheduleCloudSave);
     },
     setActiveId: (activeId) => {
       set({ activeId });
@@ -86,6 +108,8 @@ export const useStore = create<AppStore>((set, get) => {
       const updated = flows.map(f => f.id === activeId ? { ...f, tree } : f);
       set({ flows: updated });
       saveFlowsLocal(updated);
+      const changed = updated.find(f => f.id === activeId);
+      if (changed) scheduleCloudSave(changed);
     },
 
     // ── Selection ────────────────────────────────────────────────────
@@ -122,6 +146,8 @@ export const useStore = create<AppStore>((set, get) => {
       const updated = flows.map(f => f.id === activeId ? { ...f, tree } : f);
       set({ flows: updated, undoStacks: new Map(undoStacks), redoStacks: new Map(redoStacks) });
       saveFlowsLocal(updated);
+      const changed = updated.find(f => f.id === activeId);
+      if (changed) scheduleCloudSave(changed);
     },
     redo: () => {
       const { flows, activeId, undoStacks, redoStacks } = get();
@@ -137,6 +163,8 @@ export const useStore = create<AppStore>((set, get) => {
       const updated = flows.map(f => f.id === activeId ? { ...f, tree } : f);
       set({ flows: updated, undoStacks: new Map(undoStacks), redoStacks: new Map(redoStacks) });
       saveFlowsLocal(updated);
+      const changed = updated.find(f => f.id === activeId);
+      if (changed) scheduleCloudSave(changed);
     },
     canUndo: () => (get().undoStacks.get(get().activeId)?.length ?? 0) > 0,
     canRedo: () => (get().redoStacks.get(get().activeId)?.length ?? 0) > 0,

@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
-import { useStore } from './store';
+import { useStore, flushCloudSaves } from './store';
 import { decodeSharedFlow } from './utils';
-import { saveFlowRemote } from './storage';
+import { saveFlowRemote, loadFlowsRemote } from './storage';
 import { Toolbar } from './components/Toolbar';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
@@ -17,6 +17,18 @@ export function App() {
     textEditOpen, setTextEditOpen,
     undo, redo,
   } = useStore();
+
+  // ── Cloud-first load on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    loadFlowsRemote().then(remote => {
+      if (remote && remote.length > 0) setFlows(remote);
+    });
+
+    // Flush any pending debounced saves before tab closes
+    const handleUnload = () => flushCloudSaves(flows);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handle shared flow from URL hash ─────────────────────────────────────
   useEffect(() => {
