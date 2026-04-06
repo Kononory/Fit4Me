@@ -3,6 +3,7 @@ import { buildChart } from '../retention';
 import { RETENTION_DATA } from '../data';
 import type { RetentionPoint } from '../types';
 import { useStore } from '../store';
+import { HotkeysPanel } from './HotkeysPanel';
 
 export function RetentionWidget() {
   const { getActive, setFlows, flows, activeId } = useStore();
@@ -61,6 +62,8 @@ export function RetentionWidget() {
     saveData(d);
   }, [saveData]);
 
+  const [hotkeysOpen, setHotkeysOpen] = useState(false);
+
   const showPopup  = () => { clearTimeout(hideTimer.current); setOpen(true); setData(getData()); };
   const startHide  = () => { hideTimer.current = window.setTimeout(() => setOpen(false), 150); };
   const cancelHide = () => clearTimeout(hideTimer.current);
@@ -69,7 +72,9 @@ export function RetentionWidget() {
 
   return (
     <>
+      {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <div id="ret-marker"
+        onClick={() => setHotkeysOpen(o => !o)}
         onMouseEnter={showPopup}
         onMouseLeave={startHide}>
         /

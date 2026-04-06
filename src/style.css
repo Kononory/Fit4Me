@@ -352,6 +352,55 @@ svg#svgl.dimmed { opacity: 0.08; }
 }
 .ft-modal-btn-create:hover { background: #fff; color: #1A1A1A; }
 
+/* ── Hotkeys panel ──────────────────────────────────────────────── */
+#hk-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(26,26,26,0.32);
+  display: flex; align-items: flex-end; justify-content: flex-end;
+  padding: 20px;
+}
+#hk-panel {
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  width: 300px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+#hk-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #E2E1DC;
+}
+#hk-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #1A1A1A;
+}
+#hk-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: #9A9995; line-height: 1;
+  padding: 0 2px;
+}
+#hk-close:hover { color: #1A1A1A; }
+.hk-group { padding: 8px 12px 6px; border-bottom: 1px solid #EEEDE9; }
+.hk-group:last-child { border-bottom: none; }
+.hk-group-title {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #AEADA8; margin-bottom: 5px;
+}
+.hk-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 2px 0;
+}
+.hk-label { font-size: 9.5px; color: #1A1A1A; flex: 1; }
+.hk-keys { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.hk-or { font-size: 8px; color: #AEADA8; margin: 0 2px; }
+.hk-kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #F2F1ED; border: 1px solid #DEDDDA; border-radius: 2px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8.5px; color: #1A1A1A;
+  padding: 1px 5px; min-width: 20px; text-align: center;
+  box-shadow: 0 1px 0 #DEDDDA;
+}
+
 /* ── Retention marker (fixed corner) ────────────────────────────── */
 #ret-marker {
   position: fixed; z-index: 60;
