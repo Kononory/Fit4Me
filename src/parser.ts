@@ -60,9 +60,25 @@ function parseLine(raw: string): ParsedLine {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-/** Normalize -> arrow prefixes to 2-space indentation. "->Child" → "  Child", "->->Child" → "    Child". */
-function normalizeArrows(line: string): string {
-  return line.replace(/^((?:->)+)/, (arrows) => '  '.repeat(arrows.length / 2));
+/**
+ * Normalize indent-prefix shorthands to 2-space indentation per level.
+ * Supported prefixes (mixable): "->" and "then"/"Then" (case-insensitive, followed by whitespace).
+ * Examples: "->Child" → "  Child", "then then Child" → "    Child", "->Then Screen" → "    Screen"
+ */
+export function normalizeArrows(line: string): string {
+  let rest = line;
+  let levels = 0;
+  for (;;) {
+    if (rest.startsWith('->')) {
+      levels++;
+      rest = rest.slice(2);
+    } else {
+      const m = rest.match(/^[Tt]hen\s+/);
+      if (m) { levels++; rest = rest.slice(m[0].length); }
+      else break;
+    }
+  }
+  return levels === 0 ? line : '  '.repeat(levels) + rest;
 }
 
 /** Parse an indented outline text into a TreeNode hierarchy. */

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { parseOutline, treeToOutline } from '../parser';
+import { parseOutline, treeToOutline, normalizeArrows } from '../parser';
 
 function getLabel(raw: string): string {
   let text = raw.trim();
@@ -67,7 +67,7 @@ export function TextEditPanel() {
     setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
   };
 
-  // Convert -> arrow prefixes to indentation in real-time as the user types
+  // Convert -> / "then" prefixes to indentation in real-time as the user types
   const handleInput = () => {
     const ta = taRef.current;
     if (!ta) return;
@@ -76,12 +76,11 @@ export function TextEditPanel() {
     const lineEndRaw = value.indexOf('\n', ss);
     const lineEnd = lineEndRaw === -1 ? value.length : lineEndRaw;
     const line = value.slice(lineStart, lineEnd);
-    const match = line.match(/^((?:->)+)(.*)/);
-    if (!match) return;
-    const indent = '  '.repeat(match[1].length / 2);
-    const newLine = indent + match[2];
+    const newLine = normalizeArrows(line);
+    if (newLine === line) return;
     ta.value = value.slice(0, lineStart) + newLine + value.slice(lineEnd);
-    ta.selectionStart = ta.selectionEnd = lineStart + Math.min(ss - lineStart - match[1].length + indent.length, newLine.length);
+    const shift = newLine.length - line.length;
+    ta.selectionStart = ta.selectionEnd = Math.max(lineStart, Math.min(ss + shift, lineStart + newLine.length));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
