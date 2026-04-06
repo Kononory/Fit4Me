@@ -50,6 +50,18 @@ Count saved tokens from skipped work:
 - No multi-file grep for conventions (~2–5 k) — prefixes/z-index/colors listed above
 - Shorter plan (~1–2 k) — no need to explain the project to yourself
 
+## Post-iteration rule update (mandatory)
+After every completed feature, bugfix, or refactor — before closing the task — do the following:
+
+1. **Add any new pattern** discovered during the iteration to the relevant section above (CSS, state, repo layout, etc.)
+2. **Document errors encountered** and how they were resolved, as a rule to prevent recurrence:
+   - Format: `- [Error type]: [root cause] → [fix]`
+   - Add under a `## Known pitfalls` section (create if missing)
+3. **Update token estimates** if new files or patterns were read that should be pre-documented
+4. **Commit the updated CLAUDE.md** alongside the feature commit — never separately
+
+This keeps CLAUDE.md as a living document and prevents repeating the same mistakes.
+
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code
 - Don't create helper abstractions for one-off logic
