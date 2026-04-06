@@ -34,9 +34,10 @@ function computeBreadcrumbs(value: string, cursorPos: number): string[] {
 
 export function TextEditPanel() {
   const { getActive, setTextEditOpen, pushUndo, updateActiveTree } = useStore();
-  const taRef   = useRef<HTMLTextAreaElement>(null);
-  const dimRef  = useRef<HTMLDivElement>(null);
-  const errRef  = useRef<HTMLSpanElement>(null);
+  const taRef      = useRef<HTMLTextAreaElement>(null);
+  const dimRef     = useRef<HTMLDivElement>(null);
+  const errRef     = useRef<HTMLSpanElement>(null);
+  const dimActive  = useRef(false);
   const [showSteps, setShowSteps] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
 
@@ -45,6 +46,7 @@ export function TextEditPanel() {
     const ta  = taRef.current;
     const dim = dimRef.current;
     if (!ta || !dim) return;
+    if (!dimActive.current) { dim.style.background = ''; return; }
     const style   = getComputedStyle(ta);
     const lineH   = parseFloat(style.lineHeight) || 20.4;
     const padT    = parseFloat(style.paddingTop)  || 16;
@@ -60,7 +62,7 @@ export function TextEditPanel() {
     const ta = taRef.current;
     if (!ta) return;
     ta.value = normalizeOutline(treeToOutline(getActive().tree));
-    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); updateDim(); });
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apply = () => {
@@ -82,6 +84,16 @@ export function TextEditPanel() {
   const updateBreadcrumbs = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
     setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
+    updateDim();
+  };
+
+  const handleTaClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    dimActive.current = true;
+    updateBreadcrumbs(e);
+  };
+
+  const handleTaBlur = () => {
+    dimActive.current = false;
     updateDim();
   };
 
@@ -189,9 +201,10 @@ export function TextEditPanel() {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onKeyUp={updateBreadcrumbs}
-          onClick={updateBreadcrumbs}
+          onClick={handleTaClick}
           onSelect={updateBreadcrumbs}
           onScroll={updateDim}
+          onBlur={handleTaBlur}
         />
         <div id="text-edit-dim" ref={dimRef} />
       </div>
