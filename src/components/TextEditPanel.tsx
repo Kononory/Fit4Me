@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
 import { parseOutline, treeToOutline, normalizeArrows, splitInlineArrows, normalizeOutline } from '../parser';
 
@@ -34,16 +34,33 @@ function computeBreadcrumbs(value: string, cursorPos: number): string[] {
 
 export function TextEditPanel() {
   const { getActive, setTextEditOpen, pushUndo, updateActiveTree } = useStore();
-  const taRef = useRef<HTMLTextAreaElement>(null);
-  const errRef = useRef<HTMLSpanElement>(null);
+  const taRef   = useRef<HTMLTextAreaElement>(null);
+  const dimRef  = useRef<HTMLDivElement>(null);
+  const errRef  = useRef<HTMLSpanElement>(null);
   const [showSteps, setShowSteps] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
+
+  // ── Line-focus dim overlay ───────────────────────────────────────────────────
+  const updateDim = useCallback(() => {
+    const ta  = taRef.current;
+    const dim = dimRef.current;
+    if (!ta || !dim) return;
+    const style   = getComputedStyle(ta);
+    const lineH   = parseFloat(style.lineHeight) || 20.4;
+    const padT    = parseFloat(style.paddingTop)  || 16;
+    const lineIdx = (ta.value.slice(0, ta.selectionStart).match(/\n/g) ?? []).length;
+    const top     = padT + lineIdx * lineH - ta.scrollTop;
+    const bot     = top + lineH;
+    const c0 = 'rgba(254,252,248,0)';
+    const c1 = 'rgba(254,252,248,0.55)';
+    dim.style.background = `linear-gradient(to bottom,${c1} 0px,${c1} ${top}px,${c0} ${top}px,${c0} ${bot}px,${c1} ${bot}px,${c1} 100%)`;
+  }, []);
 
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
     ta.value = normalizeOutline(treeToOutline(getActive().tree));
-    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); updateDim(); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apply = () => {
@@ -65,6 +82,7 @@ export function TextEditPanel() {
   const updateBreadcrumbs = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
     setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
+    updateDim();
   };
 
   // Convert arrow prefixes and inline arrows to indentation in real-time
@@ -77,9 +95,11 @@ export function TextEditPanel() {
     const lineEnd = lineEndRaw === -1 ? value.length : lineEndRaw;
     const line = value.slice(lineStart, lineEnd);
     const replaced = splitInlineArrows(normalizeArrows(line)).join('\n');
-    if (replaced === line) return;
-    ta.value = value.slice(0, lineStart) + replaced + value.slice(lineEnd);
-    ta.selectionStart = ta.selectionEnd = lineStart + replaced.length;
+    if (replaced !== line) {
+      ta.value = value.slice(0, lineStart) + replaced + value.slice(lineEnd);
+      ta.selectionStart = ta.selectionEnd = lineStart + replaced.length;
+    }
+    updateDim();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -96,6 +116,7 @@ export function TextEditPanel() {
       const indent = (val.slice(lineStart).match(/^ */) ?? [''])[0];
       ta.value = val.slice(0, s) + '\n' + indent + val.slice(ta.selectionEnd);
       ta.selectionStart = ta.selectionEnd = s + 1 + indent.length;
+      updateDim();
       return;
     }
 
@@ -110,6 +131,7 @@ export function TextEditPanel() {
       ta.value = val.slice(0, blockStart) + indented + val.slice(blockEnd);
       ta.selectionStart = blockStart;
       ta.selectionEnd   = blockStart + indented.length;
+      updateDim();
       return;
     }
 
@@ -124,6 +146,7 @@ export function TextEditPanel() {
       ta.value = val.slice(0, blockStart) + outdented + val.slice(blockEnd);
       ta.selectionStart = blockStart;
       ta.selectionEnd   = blockStart + outdented.length;
+      updateDim();
       return;
     }
 
@@ -158,16 +181,20 @@ export function TextEditPanel() {
           }
         </div>
       )}
-      <textarea
-        id="text-edit-ta"
-        ref={taRef}
-        spellCheck={false}
-        onKeyDown={handleKeyDown}
-        onInput={handleInput}
-        onKeyUp={updateBreadcrumbs}
-        onClick={updateBreadcrumbs}
-        onSelect={updateBreadcrumbs}
-      />
+      <div id="text-edit-ta-wrap">
+        <textarea
+          id="text-edit-ta"
+          ref={taRef}
+          spellCheck={false}
+          onKeyDown={handleKeyDown}
+          onInput={handleInput}
+          onKeyUp={updateBreadcrumbs}
+          onClick={updateBreadcrumbs}
+          onSelect={updateBreadcrumbs}
+          onScroll={updateDim}
+        />
+        <div id="text-edit-dim" ref={dimRef} />
+      </div>
       <div id="text-edit-footer">
         <button className="te-btn te-btn-cancel" onClick={close}>Cancel</button>
         <button className="te-btn te-btn-apply" onClick={apply}>Apply</button>
