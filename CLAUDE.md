@@ -76,3 +76,8 @@ This keeps CLAUDE.md as a living document and prevents repeating the same mistak
 - Don't launch Explore/Plan agents for targeted searches — use Grep/Glob directly
 - Don't read files you don't need to modify
 - Don't use Bash for file reads/searches — use Read/Grep/Glob tools
+
+## Known pitfalls
+- [TextEditPanel dim overlay]: Initial `ta.focus()` in useEffect fires `onFocus` — do NOT activate dim there. Dim must only activate on explicit user `onClick`. Gate with a `dimActive` ref (default false); set true on click, false on blur.
+- [TextEditPanel dim overlay]: `transparent` in CSS gradients resolves to `rgba(0,0,0,0)` causing dark fringe. Always use `rgba(R,G,B,0)` matching the background color for the transparent stop.
+- [CSS textarea sizing]: A textarea inside a flex column needs `width:100%; height:100%` once wrapped in a `position:relative` div — `flex:1` alone stops working on the textarea itself.

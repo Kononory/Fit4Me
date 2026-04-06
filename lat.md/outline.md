@@ -30,4 +30,6 @@ Opened with `⌘E`. Pre-filled with `treeToOutline()` output. On apply (`⌘↵`
 
 Keyboard shortcuts inside the panel: `Tab` / `Shift+Tab` — indent/unindent. `->` — arrow prefix auto-converts to one indent level. `Shift+Enter` — new line. `⌘Enter` — apply. `Esc` — discard.
 
+**Line-focus dim:** inactive lines are dimmed 55% when the user clicks/taps a line. Dim clears when focus leaves the textarea. No dim on editor open — only activates on explicit click. Controlled by `dimActive` ref in `TextEditPanel`.
+
 Source: `src/components/TextEditPanel.tsx`
