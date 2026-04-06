@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { parseOutline, treeToOutline, normalizeArrows } from '../parser';
+import { parseOutline, treeToOutline, normalizeArrows, splitInlineArrows, normalizeOutline } from '../parser';
 
 function getLabel(raw: string): string {
   let text = raw.trim();
@@ -42,7 +42,7 @@ export function TextEditPanel() {
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
-    ta.value = treeToOutline(getActive().tree);
+    ta.value = normalizeOutline(treeToOutline(getActive().tree));
     requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -67,7 +67,7 @@ export function TextEditPanel() {
     setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
   };
 
-  // Convert -> / "then" prefixes to indentation in real-time as the user types
+  // Convert arrow prefixes and inline arrows to indentation in real-time
   const handleInput = () => {
     const ta = taRef.current;
     if (!ta) return;
@@ -76,11 +76,10 @@ export function TextEditPanel() {
     const lineEndRaw = value.indexOf('\n', ss);
     const lineEnd = lineEndRaw === -1 ? value.length : lineEndRaw;
     const line = value.slice(lineStart, lineEnd);
-    const newLine = normalizeArrows(line);
-    if (newLine === line) return;
-    ta.value = value.slice(0, lineStart) + newLine + value.slice(lineEnd);
-    const shift = newLine.length - line.length;
-    ta.selectionStart = ta.selectionEnd = Math.max(lineStart, Math.min(ss + shift, lineStart + newLine.length));
+    const replaced = splitInlineArrows(normalizeArrows(line)).join('\n');
+    if (replaced === line) return;
+    ta.value = value.slice(0, lineStart) + replaced + value.slice(lineEnd);
+    ta.selectionStart = ta.selectionEnd = lineStart + replaced.length;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

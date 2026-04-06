@@ -60,30 +60,54 @@ function parseLine(raw: string): ParsedLine {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+// Matches any supported arrow token at the start of remaining text
+const PREFIX_ARROW_RE = /^(?:==>|-->|=>|->|→)\s*|^[Tt]hen\s+/;
+// Matches any supported arrow token surrounded by whitespace (inline separator)
+const INLINE_ARROW_RE = /\s*(?:==>|-->|=>|->|→)\s+|\s+[Tt]hen\s+/;
+
 /**
  * Normalize indent-prefix shorthands to 2-space indentation per level.
- * Supported prefixes (mixable): "->" and "then"/"Then" (case-insensitive, followed by whitespace).
- * Examples: "->Child" → "  Child", "then then Child" → "    Child", "->Then Screen" → "    Screen"
+ * Supported prefixes (mixable): ->, -->, =>, ==>, → and "then"/"Then".
+ * Examples: "-->Child" → "  Child", "then then Child" → "    Child"
  */
 export function normalizeArrows(line: string): string {
   let rest = line;
   let levels = 0;
   for (;;) {
-    if (rest.startsWith('->')) {
-      levels++;
-      rest = rest.slice(2);
-    } else {
-      const m = rest.match(/^[Tt]hen\s+/);
-      if (m) { levels++; rest = rest.slice(m[0].length); }
-      else break;
-    }
+    const m = rest.match(PREFIX_ARROW_RE);
+    if (m) { levels++; rest = rest.slice(m[0].length); }
+    else break;
   }
   return levels === 0 ? line : '  '.repeat(levels) + rest;
 }
 
+/**
+ * Split a line that contains inline arrows into multiple indented lines.
+ * "Parent -> Child -> Grandchild" → ["Parent", "  Child", "    Grandchild"]
+ * Existing leading indentation is preserved as the base level.
+ */
+export function splitInlineArrows(line: string): string[] {
+  const baseIndent = (line.match(/^( *)/) ?? ['', ''])[1];
+  const content = line.slice(baseIndent.length);
+  const parts = content.split(INLINE_ARROW_RE).map(p => p.trim()).filter(Boolean);
+  if (parts.length <= 1) return [line];
+  return parts.map((part, i) => baseIndent + '  '.repeat(i) + part);
+}
+
+/** Apply full normalization to outline text: prefix arrows + inline splitting. */
+export function normalizeOutline(text: string): string {
+  return text
+    .split('\n')
+    .flatMap(line => splitInlineArrows(normalizeArrows(line)))
+    .join('\n');
+}
+
 /** Parse an indented outline text into a TreeNode hierarchy. */
 export function parseOutline(text: string): TreeNode {
-  const lines = text.split('\n').filter(l => l.trim() !== '').map(normalizeArrows);
+  const lines = text
+    .split('\n')
+    .filter(l => l.trim() !== '')
+    .flatMap(l => splitInlineArrows(normalizeArrows(l)));
   const usedIds = new Set<string>();
 
   // Stack tracks the last node seen at each indent level
