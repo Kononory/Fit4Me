@@ -25,6 +25,7 @@ const GROUPS: HotkeyGroup[] = [
       { keys: ['⌘↵'],   label: 'Apply changes' },
       { keys: ['Esc'],   label: 'Close' },
       { keys: ['Tab'],   label: 'Indent node (add level)' },
+      { keys: ['->'],    label: 'Arrow prefix → indent level' },
       { keys: ['⇧Tab'],  label: 'Unindent node' },
       { keys: ['⇧↵'],   label: 'New line' },
     ],

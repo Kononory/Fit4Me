@@ -60,9 +60,14 @@ function parseLine(raw: string): ParsedLine {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+/** Normalize -> arrow prefixes to 2-space indentation. "->Child" → "  Child", "->->Child" → "    Child". */
+function normalizeArrows(line: string): string {
+  return line.replace(/^((?:->)+)/, (arrows) => '  '.repeat(arrows.length / 2));
+}
+
 /** Parse an indented outline text into a TreeNode hierarchy. */
 export function parseOutline(text: string): TreeNode {
-  const lines = text.split('\n').filter(l => l.trim() !== '');
+  const lines = text.split('\n').filter(l => l.trim() !== '').map(normalizeArrows);
   const usedIds = new Set<string>();
 
   // Stack tracks the last node seen at each indent level

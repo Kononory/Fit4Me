@@ -67,6 +67,23 @@ export function TextEditPanel() {
     setBreadcrumbs(computeBreadcrumbs(ta.value, ta.selectionStart));
   };
 
+  // Convert -> arrow prefixes to indentation in real-time as the user types
+  const handleInput = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const { value, selectionStart: ss } = ta;
+    const lineStart = value.lastIndexOf('\n', ss - 1) + 1;
+    const lineEndRaw = value.indexOf('\n', ss);
+    const lineEnd = lineEndRaw === -1 ? value.length : lineEndRaw;
+    const line = value.slice(lineStart, lineEnd);
+    const match = line.match(/^((?:->)+)(.*)/);
+    if (!match) return;
+    const indent = '  '.repeat(match[1].length / 2);
+    const newLine = indent + match[2];
+    ta.value = value.slice(0, lineStart) + newLine + value.slice(lineEnd);
+    ta.selectionStart = ta.selectionEnd = lineStart + Math.min(ss - lineStart - match[1].length + indent.length, newLine.length);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;
 
@@ -119,7 +136,7 @@ export function TextEditPanel() {
     <div id="text-edit-panel">
       <div id="text-edit-header">
         <span id="text-edit-title">
-          Edit outline — <kbd>Shift+↵</kbd> new block · <kbd>Tab</kbd> indent · <kbd>Ctrl+↵</kbd> apply · <kbd>Esc</kbd> cancel
+          Edit outline — <kbd>Shift+↵</kbd> new block · <kbd>Tab</kbd> indent · <kbd>-&gt;</kbd> level down · <kbd>Ctrl+↵</kbd> apply · <kbd>Esc</kbd> cancel
         </span>
         <button
           className={`te-btn te-steps-toggle${showSteps ? ' te-steps-on' : ''}`}
@@ -148,6 +165,7 @@ export function TextEditPanel() {
         ref={taRef}
         spellCheck={false}
         onKeyDown={handleKeyDown}
+        onInput={handleInput}
         onKeyUp={updateBreadcrumbs}
         onClick={updateBreadcrumbs}
         onSelect={updateBreadcrumbs}
