@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useStore } from './store';
 import { decodeSharedFlow } from './utils';
-import { saveFlowRemote } from './storage';
+import { saveFlowRemote, loadFlowsRemote, saveFlowsLocal } from './storage';
 import { Toolbar } from './components/Toolbar';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
@@ -17,6 +17,28 @@ export function App() {
     textEditOpen, setTextEditOpen,
     undo, redo,
   } = useStore();
+
+  // ── Load remote flows on startup, merge with local ───────────────────────
+  useEffect(() => {
+    loadFlowsRemote().then(remote => {
+      if (!remote || remote.length === 0) return;
+      const { flows } = useStore.getState();
+      let changed = false;
+      const merged = [...flows];
+      for (const rf of remote) {
+        const li = merged.findIndex(f => f.id === rf.id);
+        if (li === -1) {
+          merged.push(rf); changed = true;
+        } else if (rf.savedAt && (!merged[li].savedAt || rf.savedAt > merged[li].savedAt)) {
+          merged[li] = rf; changed = true;
+        }
+      }
+      if (changed) {
+        useStore.setState({ flows: merged });
+        saveFlowsLocal(merged);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handle shared flow from URL hash ─────────────────────────────────────
   useEffect(() => {

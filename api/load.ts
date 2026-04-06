@@ -17,12 +17,18 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     return res.status(500).json({ error: error.message });
   }
 
-  const flows = (data ?? []).map(r => ({
-    id:      r.id,
-    name:    r.name ?? 'Untitled',
-    tree:    r.tree,
-    savedAt: r.saved_at,
-  }));
+  const flows = (data ?? []).map(r => {
+    // Detect compound format { tree, crossEdges, retentionData } vs legacy plain TreeNode
+    const isCompound = r.tree && typeof r.tree === 'object' && 'tree' in r.tree;
+    return {
+      id:            r.id,
+      name:          r.name ?? 'Untitled',
+      tree:          isCompound ? r.tree.tree          : r.tree,
+      crossEdges:    isCompound ? (r.tree.crossEdges   ?? []) : [],
+      retentionData: isCompound ? (r.tree.retentionData ?? []) : [],
+      savedAt:       r.saved_at,
+    };
+  });
 
   return res.status(200).json(flows);
 }

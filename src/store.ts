@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Flow, TreeNode, DragState } from './types';
 import { cloneTree } from './tree';
 import { DEFAULT_TREE } from './data';
-import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal } from './storage';
+import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveFlowRemote } from './storage';
 
 const DEFAULT_FLOW: Flow = {
   id: 'default',
@@ -86,6 +86,8 @@ export const useStore = create<AppStore>((set, get) => {
       const updated = flows.map(f => f.id === activeId ? { ...f, tree } : f);
       set({ flows: updated });
       saveFlowsLocal(updated);
+      const flow = updated.find(f => f.id === activeId);
+      if (flow) saveFlowRemote(flow); // fire-and-forget cloud sync
     },
 
     // ── Selection ────────────────────────────────────────────────────
