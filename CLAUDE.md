@@ -8,6 +8,13 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 - Font: `LatteraMonoLL` / `Space Mono` (monospace everywhere)
 - No external component libraries — all UI is hand-crafted
 
+## Storage pattern
+- **Local** (`localStorage`) — written on every change, instant, machine-specific
+- **Cloud** (Supabase via `/api/*`) — debounced 2s after each change via `scheduleCloudSave()` in `store.ts`
+- **Load order** — app mount calls `loadFlowsRemote()` first; cloud wins over localStorage
+- **Tab close** — `flushCloudSaves()` fires all pending debounced saves on `beforeunload`
+- Never call `saveFlowRemote` directly for auto-saves — always go through `scheduleCloudSave(flow)`
+
 ## Repo layout
 ```
 src/
