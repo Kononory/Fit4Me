@@ -33,7 +33,7 @@ src/
 - All styles in `src/style.css` — no separate files, no CSS modules
 - ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
 - Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention
-- Z-index ladder: 500 modals → 100 sidebar → 90 pickers → 60 ret-marker → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
+- Z-index ladder: 500 modals/hotkeys → 100 sidebar → 90 pickers → 60 ret-marker → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
 - Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
 
 ## State patterns
