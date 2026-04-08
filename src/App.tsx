@@ -4,9 +4,11 @@ import { ZoomControls } from './components/ZoomControls';
 import { decodeSharedFlow } from './utils';
 import { saveFlowRemote, loadFlowsRemote } from './storage';
 import { Toolbar } from './components/Toolbar';
+import { LayerTabs } from './components/LayerTabs';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
 import { TextEditPanel } from './components/TextEditPanel';
+import { EventsMap } from './components/EventsMap';
 import { HotkeysPanel } from './components/HotkeysPanel';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
@@ -16,7 +18,7 @@ import type { TreeNode, CrossEdge } from './types';
 export function App() {
   const {
     flows, setFlows, setActiveId,
-    textEditOpen, setTextEditOpen,
+    activeLayer, setActiveLayer,
     hotkeysOpen, setHotkeysOpen,
     undo, redo,
   } = useStore();
@@ -50,13 +52,12 @@ export function App() {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
       if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
-      if (ctrl && e.key === 'e') { e.preventDefault(); setTextEditOpen(!textEditOpen); }
-      // Shift+? (i.e. Shift+/ on most keyboards) toggles hotkeys panel
-      if (e.shiftKey && e.key === '?' && !textEditOpen) { setHotkeysOpen(!hotkeysOpen); }
+      if (ctrl && e.key === 'e') { e.preventDefault(); setActiveLayer(activeLayer === 'outline' ? 'nodes' : 'outline'); }
+      if (e.shiftKey && e.key === '?' && activeLayer !== 'outline') { setHotkeysOpen(!hotkeysOpen); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [undo, redo, textEditOpen, setTextEditOpen, hotkeysOpen, setHotkeysOpen]);
+  }, [undo, redo, activeLayer, setActiveLayer, hotkeysOpen, setHotkeysOpen]);
 
   // ── Edge picker state ─────────────────────────────────────────────────────
   const [pickerState, setPickerState] = useState<PickerState>(PICKER_INIT);
@@ -78,14 +79,16 @@ export function App() {
   return (
     <div id="app">
       <FlowTabs />
-      <Toolbar onTextEdit={() => setTextEditOpen(!textEditOpen)} />
+      <Toolbar />
+      <LayerTabs />
       <Viewport
         onShowEdgePicker={handleShowEdgePicker}
         onShowCrossEdgePicker={handleShowCrossEdgePicker}
         pickerState={pickerState}
         onSetPickerMode={setPickerMode}
       />
-      {textEditOpen && <TextEditPanel />}
+      {activeLayer === 'outline' && <TextEditPanel />}
+      {activeLayer === 'events'  && <EventsMap />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <ZoomControls />
       {/* Floating ? button — bottom-right, left of retention marker */}

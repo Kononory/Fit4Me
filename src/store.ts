@@ -76,8 +76,8 @@ interface AppStore {
   clearDrag: () => void;
 
   // ── UI flags ───────────────────────────────────────────────────────
-  textEditOpen: boolean;
-  setTextEditOpen: (open: boolean) => void;
+  activeLayer: 'nodes' | 'outline' | 'events';
+  setActiveLayer: (layer: 'nodes' | 'outline' | 'events') => void;
   animateEdgesNext: boolean;
   triggerEdgeAnim: () => void;
   clearEdgeAnim: () => void;
@@ -183,8 +183,8 @@ export const useStore = create<AppStore>((set, get) => {
     clearDrag: () => set({ drag: { ...DRAG_INIT } }),
 
     // ── UI flags ─────────────────────────────────────────────────────
-    textEditOpen: false,
-    setTextEditOpen: (textEditOpen) => set({ textEditOpen }),
+    activeLayer: 'nodes',
+    setActiveLayer: (activeLayer) => set({ activeLayer }),
     animateEdgesNext: false,
     triggerEdgeAnim: () => set({ animateEdgesNext: true }),
     clearEdgeAnim: () => set({ animateEdgesNext: false }),

@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, AlignJustify, Move, KeyRound } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree } from '../tree';
 import { DEFAULT_TREE } from '../data';
 
-export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, textEditOpen, getActive, freeMode, setFreeMode, setFigmaTokenOpen } = useStore();
+export function Toolbar() {
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, freeMode, setFreeMode, setFigmaTokenOpen } = useStore();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -50,7 +50,6 @@ export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
       )}
       <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}><RotateCcw size={14} /></button>
       <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}><RotateCw size={14} /></button>
-      <button id="tb-text" title="Edit as text (⌘E)" className={textEditOpen ? 'tb-active' : ''} onClick={onTextEdit}><AlignJustify size={14} /></button>
       <button
         id="tb-free"
         title="Free positioning — drag nodes anywhere, snap to grid"

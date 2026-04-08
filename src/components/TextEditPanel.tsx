@@ -34,7 +34,7 @@ function computeBreadcrumbs(value: string, cursorPos: number): string[] {
 }
 
 export function TextEditPanel() {
-  const { getActive, setTextEditOpen, pushUndo, updateActiveTree } = useStore();
+  const { getActive, setActiveLayer, pushUndo, updateActiveTree } = useStore();
   const taRef      = useRef<HTMLTextAreaElement>(null);
   const dimRef     = useRef<HTMLDivElement>(null);
   const errRef     = useRef<HTMLSpanElement>(null);
@@ -74,13 +74,13 @@ export function TextEditPanel() {
       const tree = parseOutline(ta.value);
       pushUndo();
       updateActiveTree(tree);
-      setTextEditOpen(false);
+      setActiveLayer('nodes');
     } catch (e) {
       if (errEl) errEl.textContent = String(e);
     }
   };
 
-  const close = () => setTextEditOpen(false);
+  const close = () => setActiveLayer('nodes');
 
   const updateBreadcrumbs = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;

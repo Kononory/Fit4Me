@@ -741,6 +741,45 @@ svg#svgl.dimmed { opacity: 0.3; }
   html {
     @apply font-sans; } }
 
+/* ── Layer tabs (segment control) ────────────────────────────────────────── */
+#layer-tabs {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 100;
+}
+.layer-tabs-list {
+  background: #F2F1ED !important;
+  border: 1.5px solid #DEDDDA !important;
+  border-radius: 4px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+  height: auto !important;
+}
+.layer-tab {
+  font-family: 'LatteraMonoLL','Space Mono',monospace !important;
+  font-size: 9px !important; font-weight: 700 !important;
+  letter-spacing: 0.07em !important; text-transform: uppercase !important;
+  color: #9A9995 !important;
+  padding: 4px 14px !important; border-radius: 3px !important;
+  height: auto !important;
+  transition: background 0.12s, color 0.12s !important;
+}
+.layer-tab[data-state="active"] {
+  background: #1A1A1A !important; color: #F5F4F0 !important;
+  box-shadow: none !important;
+}
+.layer-tab:hover:not([data-state="active"]) { color: #1A1A1A !important; }
+
+/* ── Events map placeholder ───────────────────────────────────────────────── */
+#events-map {
+  position: fixed; inset: 0; top: 48px; left: 156px;
+  display: flex; align-items: center; justify-content: center;
+  background: #F8F7F4;
+}
+#events-map-placeholder {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 11px; color: #AEADA8; letter-spacing: 0.05em;
+}
+
 /* ── Figma integration (fig-) ─────────────────────────────────────────────── */
 
 /* Node figma action bar */
