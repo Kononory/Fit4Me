@@ -5,7 +5,7 @@ import { cloneTree } from '../tree';
 import { DEFAULT_TREE } from '../data';
 
 export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, textEditOpen, getActive, freeMode, setFreeMode, zoom, setZoom, hotkeysOpen, setHotkeysOpen } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, textEditOpen, getActive, freeMode, setFreeMode } = useStore();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -52,16 +52,12 @@ export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
       <button id="tb-text" title="Edit as text (⌘E)" className={textEditOpen ? 'tb-active' : ''} onClick={onTextEdit}>≡</button>
       <button
         id="tb-free"
-        title="Free positioning mode — drag nodes anywhere, snap to grid"
+        title="Free positioning — drag nodes anywhere, snap to grid"
         className={freeMode ? 'tb-active' : ''}
         onClick={() => setFreeMode(!freeMode)}
       >⊕</button>
-      <button id="tb-zoom-out" title="Zoom out" onClick={() => setZoom(zoom - 0.1)}>−</button>
-      <span id="tb-zoom-label">{Math.round(zoom * 100)}%</span>
-      <button id="tb-zoom-in" title="Zoom in" onClick={() => setZoom(zoom + 0.1)}>+</button>
       <button id="tb-save" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save'}</button>
       <button id="tb-reset" onClick={handleReset}>Reset</button>
-      <button id="tb-hotkeys" title="Keyboard shortcuts (?)" className={hotkeysOpen ? 'tb-active' : ''} onClick={() => setHotkeysOpen(!hotkeysOpen)}>?</button>
     </div>
   );
 }

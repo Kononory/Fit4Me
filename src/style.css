@@ -355,55 +355,6 @@ svg#svgl.dimmed { opacity: 0.08; }
 }
 .ft-modal-btn-create:hover { background: #fff; color: #1A1A1A; }
 
-/* ── Hotkeys panel ──────────────────────────────────────────────── */
-#hk-overlay {
-  position: fixed; inset: 0; z-index: 500;
-  background: rgba(26,26,26,0.32);
-  display: flex; align-items: flex-end; justify-content: flex-end;
-  padding: 20px;
-}
-#hk-panel {
-  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
-  width: 300px; max-height: 80vh; overflow-y: auto;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-}
-#hk-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px 8px;
-  border-bottom: 1px solid #E2E1DC;
-}
-#hk-title {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
-  text-transform: uppercase; color: #1A1A1A;
-}
-#hk-close {
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; color: #9A9995; line-height: 1;
-  padding: 0 2px;
-}
-#hk-close:hover { color: #1A1A1A; }
-.hk-group { padding: 8px 12px 6px; border-bottom: 1px solid #EEEDE9; }
-.hk-group:last-child { border-bottom: none; }
-.hk-group-title {
-  font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #AEADA8; margin-bottom: 5px;
-}
-.hk-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; padding: 2px 0;
-}
-.hk-label { font-size: 9.5px; color: #1A1A1A; flex: 1; }
-.hk-keys { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
-.hk-or { font-size: 8px; color: #AEADA8; margin: 0 2px; }
-.hk-kbd {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: #F2F1ED; border: 1px solid #DEDDDA; border-radius: 2px;
-  font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 8.5px; color: #1A1A1A;
-  padding: 1px 5px; min-width: 20px; text-align: center;
-  box-shadow: 0 1px 0 #DEDDDA;
-}
-
 /* ── Retention marker (fixed corner) ────────────────────────────── */
 #ret-marker {
   position: fixed; z-index: 60;
@@ -505,21 +456,78 @@ svg#svgl.dimmed { opacity: 0.08; }
 
 
 
-/* ── Toolbar text-edit / free / hotkeys buttons ─────────────────── */
+/* ── Toolbar special buttons ─────────────────────────────────────── */
 #tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }
 #tb-text.tb-active { background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A; }
 
 #tb-free { font-size: 14px; padding: 0 7px; }
 #tb-free.tb-active { background: #6B9B5E; color: #fff; border-color: #6B9B5E; }
 
-#tb-hotkeys { font-size: 12px; padding: 0 8px; font-weight: 700; }
-#tb-hotkeys.tb-active { background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A; }
-
-#tb-zoom-out, #tb-zoom-in { font-size: 14px; padding: 0 7px; }
-#tb-zoom-label {
+/* ── Floating ? button (bottom-right, beside ret-marker) ─────────── */
+#hk-float-btn {
+  position: fixed; z-index: 60;
+  right: 52px; bottom: 20px;
+  width: 26px; height: 26px;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; cursor: pointer;
   font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 9px; color: #9A9995; letter-spacing: 0.04em; min-width: 36px; text-align: center;
+  transition: background 0.15s, color 0.15s; color: #1A1A1A;
 }
+#hk-float-btn:hover, #hk-float-btn.tb-active { background: #1A1A1A; color: #fff; }
+
+/* ── Zoom controls (bottom-left) ─────────────────────────────────── */
+#zoom-controls {
+  position: fixed; z-index: 60;
+  left: 156px; bottom: 20px;
+  display: flex; align-items: center; gap: 0;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  overflow: hidden;
+}
+.zoom-btn {
+  background: #FEFCF8; border: none; border-radius: 0;
+  width: 24px; height: 26px; font-size: 14px; line-height: 1;
+  cursor: pointer; color: #1A1A1A; font-family: inherit;
+  transition: background 0.12s;
+}
+.zoom-btn:hover { background: #1A1A1A; color: #fff; }
+#zoom-label {
+  font-size: 9px; color: #9A9995; letter-spacing: 0.04em;
+  min-width: 36px; text-align: center; cursor: pointer;
+  border-left: 1px solid #E2E1DC; border-right: 1px solid #E2E1DC;
+  padding: 0 2px; line-height: 26px;
+}
+#zoom-label:hover { color: #1A1A1A; }
+
+/* ── Swap action bar (floats inside canvas when 2 nodes selected) ─── */
+#swap-bar {
+  position: fixed; z-index: 50;
+  left: 50%; bottom: 60px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 4px;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+}
+#swap-bar-label {
+  font-size: 8.5px; color: #AEADA8; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 0 4px;
+}
+.swap-btn {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+  background: #1A1A1A; color: #F5F4F0;
+  border: 1.5px solid #1A1A1A; border-radius: 2px;
+  padding: 4px 10px; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.swap-btn:hover { background: #fff; color: #1A1A1A; }
+.swap-btn-cancel {
+  background: transparent; color: #9A9995; border-color: #DEDDDA;
+  font-size: 11px; padding: 4px 8px;
+}
+.swap-btn-cancel:hover { background: #FCECEA; color: #B52B1E; border-color: #B52B1E; }
 
 /* ── Hotkeys panel ──────────────────────────────────────────────── */
 #hk-backdrop {
@@ -535,20 +543,15 @@ svg#svgl.dimmed { opacity: 0.08; }
 }
 #hk-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 11px 14px 9px;
-  border-bottom: 1px solid #E2E1DC;
+  padding: 11px 14px 9px; border-bottom: 1px solid #E2E1DC;
 }
-#hk-title {
-  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #5A5955;
-}
+#hk-title { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #5A5955; }
 #hk-close {
   background: none; border: none; font-size: 16px; color: #AEADA8;
   cursor: pointer; padding: 0 2px; line-height: 1; font-family: inherit;
 }
 #hk-close:hover { color: #1A1A1A; }
-#hk-tabs {
-  display: flex; border-bottom: 1px solid #E2E1DC;
-}
+#hk-tabs { display: flex; border-bottom: 1px solid #E2E1DC; }
 .hk-tab {
   flex: 1; padding: 8px; font-family: inherit; font-size: 9px;
   letter-spacing: 0.08em; text-transform: uppercase; color: #9A9995;
@@ -558,13 +561,8 @@ svg#svgl.dimmed { opacity: 0.08; }
 .hk-tab:last-child { border-right: none; }
 .hk-tab:hover { background: #F0EFEb; color: #1A1A1A; }
 .hk-tab-active { background: #1A1A1A !important; color: #F5F4F0 !important; }
-#hk-list {
-  padding: 6px 0; max-height: 320px; overflow-y: auto;
-}
-.hk-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 5px 14px;
-}
+#hk-list { padding: 6px 0; max-height: 320px; overflow-y: auto; }
+.hk-row { display: flex; align-items: center; gap: 10px; padding: 5px 14px; }
 .hk-row:hover { background: #F5F4F0; }
 .hk-key {
   flex-shrink: 0; min-width: 110px;
@@ -572,9 +570,7 @@ svg#svgl.dimmed { opacity: 0.08; }
   background: #F0EFEB; border: 1px solid #DEDDDA; border-radius: 2px;
   padding: 2px 6px; color: #1A1A1A; text-align: center;
 }
-.hk-desc {
-  font-size: 9.5px; color: #5A5955; letter-spacing: 0.02em;
-}
+.hk-desc { font-size: 9.5px; color: #5A5955; letter-spacing: 0.02em; }
 
 /* ── Text-edit panel ────────────────────────────────────────────── */
 #text-edit-panel {

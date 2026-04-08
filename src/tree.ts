@@ -78,7 +78,18 @@ export function addSiblingNode(root: TreeNode, nodeId: string): TreeNode | null 
   return node;
 }
 
-/** Swap two sibling-or-cousin nodes in the tree. */
+/** Swap only the label/sublabel of two nodes, keeping each node's children in place. */
+export function swapNodeMetadata(root: TreeNode, aId: string, bId: string): boolean {
+  const a = findNode(root, aId);
+  const b = findNode(root, bId);
+  if (!a || !b) return false;
+  if (a.type === 'root' || b.type === 'root') return false;
+  const tmp = a.label; a.label = b.label; b.label = tmp;
+  const tmpS = a.sublabel; a.sublabel = b.sublabel; b.sublabel = tmpS;
+  return true;
+}
+
+/** Swap two sibling-or-cousin nodes in the tree (entire subtree moves). */
 export function swapNodes(root: TreeNode, a: TreeNode, b: TreeNode): boolean {
   if (a.type === 'root' || a.type === 'nav') return false;
   if (b.type === 'root' || b.type === 'nav') return false;

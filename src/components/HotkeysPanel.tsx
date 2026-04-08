@@ -20,6 +20,7 @@ const SHORTCUTS: Record<Tab, { key: string; desc: string }[]> = {
     { key: 'Delete',       desc: 'Delete selected node' },
     { key: '⌘E',           desc: 'Open / close text editor' },
     { key: 'Shift+click',  desc: 'Multi-select nodes' },
+    { key: '2 selected',   desc: 'Swap nodes or swap subtrees' },
     { key: 'Drag',         desc: 'Swap / connect nodes' },
     { key: 'Alt+drag',     desc: 'Force reference edge' },
   ],
@@ -29,7 +30,7 @@ const SHORTCUTS: Record<Tab, { key: string; desc: string }[]> = {
     { key: 'Pinch',         desc: 'Zoom in / out (touch)' },
     { key: '⊕ (toolbar)',   desc: 'Toggle free position mode' },
     { key: '−/+ (toolbar)', desc: 'Zoom out / in' },
-    { key: '? or toolbar',  desc: 'Toggle this panel' },
+    { key: 'Shift+?',       desc: 'Toggle this panel' },
     { key: 'Esc',           desc: 'Close this panel' },
   ],
   flow: [

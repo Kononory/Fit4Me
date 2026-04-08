@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useStore, flushCloudSaves } from './store';
+import { ZoomControls } from './components/ZoomControls';
 import { decodeSharedFlow } from './utils';
 import { saveFlowRemote, loadFlowsRemote } from './storage';
 import { Toolbar } from './components/Toolbar';
@@ -50,7 +51,8 @@ export function App() {
       if (ctrl && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
       if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
       if (ctrl && e.key === 'e') { e.preventDefault(); setTextEditOpen(!textEditOpen); }
-      if (e.key === '?' && !textEditOpen) { setHotkeysOpen(!hotkeysOpen); }
+      // Shift+? (i.e. Shift+/ on most keyboards) toggles hotkeys panel
+      if (e.shiftKey && e.key === '?' && !textEditOpen) { setHotkeysOpen(!hotkeysOpen); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -85,6 +87,14 @@ export function App() {
       />
       {textEditOpen && <TextEditPanel />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
+      <ZoomControls />
+      {/* Floating ? button — bottom-right, left of retention marker */}
+      <button
+        id="hk-float-btn"
+        title="Keyboard shortcuts (Shift+?)"
+        className={hotkeysOpen ? 'tb-active' : ''}
+        onClick={() => setHotkeysOpen(!hotkeysOpen)}
+      >?</button>
       <EdgePicker
         pickerState={pickerState}
         onClose={closePicker}

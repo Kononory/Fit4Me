@@ -6,7 +6,7 @@ import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { useDrag } from '../hooks/useDrag';
-import { removeNode, addSiblingNode } from '../tree';
+import { removeNode, addSiblingNode, swapNodes, swapNodeMetadata, findNode } from '../tree';
 import type { PickerState, PickerMode } from './EdgePicker';
 
 interface Props {
@@ -117,6 +117,24 @@ export function Canvas({
     if (newNode) requestAnimationFrame(() => setEditNodeId(newNode.id));
   }, [getActive, pushUndo, triggerEdgeAnim, updateActiveTree]);
 
+  // ── Swap actions (2-node multi-select) ──────────────────────────────────────
+  const handleSwap = useCallback((mode: 'meta' | 'subtree') => {
+    if (multiSelIds.size !== 2) return;
+    const [aId, bId] = [...multiSelIds];
+    const flow = getActive();
+    pushUndo();
+    if (mode === 'meta') {
+      swapNodeMetadata(flow.tree, aId, bId);
+    } else {
+      const a = findNode(flow.tree, aId);
+      const b = findNode(flow.tree, bId);
+      if (a && b) swapNodes(flow.tree, a, b);
+    }
+    triggerEdgeAnim();
+    updateActiveTree(flow.tree);
+    clearMultiSel();
+  }, [multiSelIds, getActive, pushUndo, triggerEdgeAnim, updateActiveTree, clearMultiSel]);
+
   const nodeState = useCallback((n: TreeNode) => {
     if (n.id === selNodeId)      return 'act' as const;
     if (!sel)                    return 'def' as const;
@@ -165,6 +183,20 @@ export function Canvas({
       ))}
 
       <DragOverlay width={cw} height={ch} />
+
+      {/* Swap action bar — visible when exactly 2 nodes are multi-selected */}
+      {multiSelIds.size === 2 && (
+        <div id="swap-bar" onClick={e => e.stopPropagation()}>
+          <span id="swap-bar-label">2 selected</span>
+          <button className="swap-btn" onClick={() => handleSwap('meta')} title="Swap only node labels — children stay in place">
+            Swap nodes
+          </button>
+          <button className="swap-btn" onClick={() => handleSwap('subtree')} title="Swap entire subtrees including children">
+            Swap subtrees
+          </button>
+          <button className="swap-btn swap-btn-cancel" onClick={clearMultiSel}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
