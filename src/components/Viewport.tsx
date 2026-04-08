@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TreeNode, CrossEdge } from '../types';
 import { doLayout, flattenTree, collectEdges, PAD, RH } from '../layout';
 import { useStore } from '../store';
@@ -13,29 +13,26 @@ interface Props {
   onSetPickerMode: (mode: PickerMode, extra?: Partial<PickerState>) => void;
 }
 
+/** Apply free-position overrides (px/py) after layout — n.x gets overridden by n.px */
+function applyFreePositions(nodes: TreeNode[]) {
+  for (const n of nodes) {
+    if (n.px !== undefined) n.x = n.px;
+  }
+}
+
 export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState, onSetPickerMode }: Props) {
-  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim } = useStore();
+  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows } = useStore();
   const vpRef = useRef<HTMLDivElement>(null);
-  const [tree, setTree] = useState(() => {
+  const pinchRef = useRef<{ dist: number } | null>(null);
+
+  // Recompute layout whenever flows or active id changes (zoom excluded to avoid redundant work)
+  const tree = useMemo(() => {
     const active = getActive();
     doLayout(active.tree, 0, 0);
+    applyFreePositions(flattenTree(active.tree));
     return active.tree;
-  });
-
-  // Recompute layout whenever active flow changes
-  useEffect(() => {
-    const active = getActive();
-    doLayout(active.tree, 0, 0);
-    setTree({ ...active.tree }); // shallow copy to trigger re-render
-  }, [activeId, getActive]);
-
-  // Also recompute when tree mutations happen (store flows change)
-  const flows = useStore(s => s.flows);
-  useEffect(() => {
-    const active = getActive();
-    doLayout(active.tree, 0, 0);
-    setTree({ ...active.tree });
-  }, [flows, getActive]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, flows, getActive]);
 
   // Trigger draw animation on initial mount and flow switch
   useEffect(() => { triggerEdgeAnim(); }, [activeId, triggerEdgeAnim]);
@@ -49,36 +46,76 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
     vp.scrollTop = Math.max(0, target);
   }, [activeId, getActive]);
 
+  // ── Pinch zoom (trackpad wheel + touch) ────────────────────────────────────
+  useEffect(() => {
+    const vp = vpRef.current; if (!vp) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom(zoom + e.deltaY * -0.005);
+    };
+    vp.addEventListener('wheel', onWheel, { passive: false });
+    return () => vp.removeEventListener('wheel', onWheel);
+  }, [zoom, setZoom]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const d = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY,
+      );
+      pinchRef.current = { dist: d };
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const d = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY,
+      );
+      const ratio = d / pinchRef.current.dist;
+      setZoom(zoom * ratio);
+      pinchRef.current = { dist: d };
+    }
+  }, [zoom, setZoom]);
+
+  const handleTouchEnd = useCallback(() => { pinchRef.current = null; }, []);
+
   const allNodes = flattenTree(tree);
   const allEdges = collectEdges(tree);
   const crossEdges = getActive().crossEdges ?? [];
 
   const handleShowEdgePicker = useCallback((toNode: TreeNode, lx: number, ly: number) => {
     const r = vpRef.current?.getBoundingClientRect();
-    const sx = (r?.left ?? 0) + lx - (vpRef.current?.scrollLeft ?? 0);
-    const sy = (r?.top  ?? 0) + ly - (vpRef.current?.scrollTop  ?? 0);
+    const sx = (r?.left ?? 0) + lx * zoom - (vpRef.current?.scrollLeft ?? 0);
+    const sy = (r?.top  ?? 0) + ly * zoom - (vpRef.current?.scrollTop  ?? 0);
     onShowEdgePicker(toNode, lx, ly, sx, sy);
-  }, [onShowEdgePicker]);
+  }, [onShowEdgePicker, zoom]);
 
   const handleShowCrossEdgePicker = useCallback((ce: CrossEdge, lx: number, ly: number) => {
     const r = vpRef.current?.getBoundingClientRect();
-    const sx = (r?.left ?? 0) + lx;
-    const sy = (r?.top  ?? 0) + ly;
+    const sx = (r?.left ?? 0) + lx * zoom;
+    const sy = (r?.top  ?? 0) + ly * zoom;
     onShowCrossEdgePicker(ce, lx, ly, sx, sy);
-  }, [onShowCrossEdgePicker]);
+  }, [onShowCrossEdgePicker, zoom]);
 
   return (
     <>
       <GridBackground vpRef={vpRef} />
-      <div id="vp" ref={vpRef}>
-        <div id="hint" style={{ opacity: 0 }}>
-          tap to select · drag to swap · double-tap to rename
-        </div>
+      <div
+        id="vp"
+        ref={vpRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <Canvas
           allNodes={allNodes}
           allEdges={allEdges}
           crossEdges={crossEdges}
           doAnim={animateEdgesNext}
+          zoom={zoom}
           onShowEdgePicker={handleShowEdgePicker}
           onShowCrossEdgePicker={handleShowCrossEdgePicker}
           pickerState={pickerState}

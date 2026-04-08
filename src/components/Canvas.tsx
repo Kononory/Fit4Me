@@ -6,6 +6,7 @@ import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { useDrag } from '../hooks/useDrag';
+import { removeNode, addSiblingNode } from '../tree';
 import type { PickerState, PickerMode } from './EdgePicker';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   allEdges: [TreeNode, TreeNode][];
   crossEdges: CrossEdge[];
   doAnim: boolean;
+  zoom: number;
   onShowEdgePicker: (toNode: TreeNode, lx: number, ly: number) => void;
   onShowCrossEdgePicker: (ce: CrossEdge, lx: number, ly: number) => void;
   pickerState: PickerState;
@@ -20,10 +22,10 @@ interface Props {
 }
 
 export function Canvas({
-  allNodes, allEdges, crossEdges, doAnim,
+  allNodes, allEdges, crossEdges, doAnim, zoom,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
@@ -51,7 +53,7 @@ export function Canvas({
     requestAnimationFrame(() => setEditNodeId(newNode.id));
   }, []);
 
-  const { dragBegin, dragMove, dragEnd } = useDrag(cnvRef, () => allNodes, handleCommit, handleAddAndEdit, getMultiSel);
+  const { dragBegin, dragMove, dragEnd } = useDrag(cnvRef, () => allNodes, handleCommit, handleAddAndEdit, getMultiSel, zoom);
 
   useEffect(() => {
     const onMove      = (e: MouseEvent)  => dragMove(e.clientX, e.clientY);
@@ -72,15 +74,51 @@ export function Canvas({
 
   useEffect(() => {
     if (!doAnim) return;
-    // Wait for all staggered animations to finish before clearing the flag.
-    // Each edge is delayed by ei * 0.025s; last one takes 0.35s to complete.
     const maxMs = allEdges.length * 25 + 400;
     const id = window.setTimeout(() => clearEdgeAnim(), maxMs);
     return () => clearTimeout(id);
   }, [doAnim, allEdges.length, clearEdgeAnim]);
 
+  // ── Delete key handler ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const sid = useStore.getState().selNodeId;
+      if (!sid) return;
+      const flow = getActive();
+      const node = allNodes.find(n => n.id === sid);
+      if (!node || node.type === 'root' || node.type === 'nav') return;
+      const childCount = (node.c ?? []).length;
+      const msg = childCount > 0
+        ? `Delete "${node.label}" and its ${childCount} child block(s)?`
+        : `Delete "${node.label}"?`;
+      if (!confirm(msg)) return;
+      e.preventDefault();
+      pushUndo();
+      removeNode(flow.tree, sid);
+      setSel(null); setSelNodeId(null);
+      triggerEdgeAnim();
+      updateActiveTree(flow.tree);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [allNodes, getActive, pushUndo, setSel, setSelNodeId, triggerEdgeAnim, updateActiveTree]);
+
+  // ── Add sibling ─────────────────────────────────────────────────────────────
+  const handleAddSibling = useCallback((n: TreeNode) => {
+    if (n.type === 'root' || n.type === 'nav') return;
+    const flow = getActive();
+    pushUndo();
+    const newNode = addSiblingNode(flow.tree, n.id);
+    triggerEdgeAnim();
+    updateActiveTree(flow.tree);
+    if (newNode) requestAnimationFrame(() => setEditNodeId(newNode.id));
+  }, [getActive, pushUndo, triggerEdgeAnim, updateActiveTree]);
+
   const nodeState = useCallback((n: TreeNode) => {
-    if (n.id === selNodeId)      return 'act' as const;   // always highlight selected node first
+    if (n.id === selNodeId)      return 'act' as const;
     if (!sel)                    return 'def' as const;
     if (!n.b)                    return 'par' as const;
     return n.b === sel ? 'def' as const : 'dim' as const;
@@ -90,13 +128,12 @@ export function Canvas({
     <div
       id="cnv"
       ref={cnvRef}
-      style={{ width: cw, height: ch, position: 'relative' }}
+      style={{ width: cw, height: ch, position: 'relative', zoom: zoom }}
       onClick={() => {
         if (editNodeId || drag.on) return;
         setSel(null); setSelNodeId(null); clearMultiSel();
       }}
     >
-      {/* SVG edge layer (base paths, badges, cross-edges) */}
       <EdgeLayer
         allNodes={allNodes}
         allEdges={allEdges}
@@ -121,12 +158,12 @@ export function Canvas({
           onDragBegin={dragBegin}
           onSelect={n => setEditNodeId(n.id)}
           onToggleMulti={() => toggleMultiSel(n.id)}
+          onAddSibling={handleAddSibling}
           editNodeId={editNodeId}
           onEditDone={() => setEditNodeId(null)}
         />
       ))}
 
-      {/* Drag feedback overlay */}
       <DragOverlay width={cw} height={ch} />
     </div>
   );

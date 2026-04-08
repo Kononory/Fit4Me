@@ -6,6 +6,7 @@ import { Toolbar } from './components/Toolbar';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
 import { TextEditPanel } from './components/TextEditPanel';
+import { HotkeysPanel } from './components/HotkeysPanel';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
 import { RetentionWidget } from './components/RetentionWidget';
@@ -15,6 +16,7 @@ export function App() {
   const {
     flows, setFlows, setActiveId,
     textEditOpen, setTextEditOpen,
+    hotkeysOpen, setHotkeysOpen,
     undo, redo,
   } = useStore();
 
@@ -57,11 +59,12 @@ export function App() {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
       if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
-      if (ctrl && e.key === 'e' && !textEditOpen) { e.preventDefault(); setTextEditOpen(true); }
+      if (ctrl && e.key === 'e') { e.preventDefault(); setTextEditOpen(!textEditOpen); }
+      if (e.key === '?' && !textEditOpen) { setHotkeysOpen(!hotkeysOpen); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [undo, redo, textEditOpen, setTextEditOpen]);
+  }, [undo, redo, textEditOpen, setTextEditOpen, hotkeysOpen, setHotkeysOpen]);
 
   // ── Edge picker state ─────────────────────────────────────────────────────
   const [pickerState, setPickerState] = useState<PickerState>(PICKER_INIT);
@@ -91,6 +94,7 @@ export function App() {
         onSetPickerMode={setPickerMode}
       />
       {textEditOpen && <TextEditPanel />}
+      {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <EdgePicker
         pickerState={pickerState}
         onClose={closePicker}

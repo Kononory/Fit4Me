@@ -15,6 +15,9 @@ export interface TreeNode {
   depth?: number;
   row?: number;
   x?: number;
+  // Free positioning (serialised, override auto-layout)
+  px?: number; // free x (pixel left)
+  py?: number; // free y (pixel center)
 }
 
 export interface CrossEdge {

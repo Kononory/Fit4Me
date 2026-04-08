@@ -4,6 +4,9 @@ import { NW, NH, centerY, topY } from '../layout';
 import { swapNodes, addChildNode, reparentNode } from '../tree';
 import { useStore } from '../store';
 
+const GRID = 20;
+const snap = (v: number) => Math.round(v / GRID) * GRID;
+
 const canDrag    = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 const canBeChild = (n: TreeNode) => n.type !== 'root' && n.type !== 'nav';
@@ -14,6 +17,7 @@ export function useDrag(
   onCommit: () => void,
   onAddAndEdit: (newNode: TreeNode) => void,
   getMultiSel: () => Set<string> = () => new Set(),
+  zoom = 1,
 ) {
   const store = useStore();
   const drRef = useRef({
@@ -24,6 +28,7 @@ export function useDrag(
     on: false,
     mode: 'swap' as 'swap' | 'connect',
     forceRef: false,
+    lastMx: 0, lastMy: 0,
   });
 
   // ── Ghost + class helpers (imperative, outside React render) ──────────────
@@ -70,7 +75,6 @@ export function useDrag(
       if (dr.target) { sub.textContent = '↕ ' + dr.target.label; dr.ghost.classList.add('has-target'); }
       else dr.ghost.classList.remove('has-target');
     }
-    // Update overlay via store
     store.setDrag({ cx: store.drag.cx, cy: store.drag.cy });
   }, [cnvRef, store]);
 
@@ -109,8 +113,10 @@ export function useDrag(
 
     if (!cnv) return;
     const rect = cnv.getBoundingClientRect();
-    const mx = clientX - rect.left;
-    const my = clientY - rect.top;
+    // Divide by zoom to get logical canvas coords (CSS zoom scales the DOM element)
+    const mx = (clientX - rect.left) / zoom;
+    const my = (clientY - rect.top) / zoom;
+    dr.lastMx = mx; dr.lastMy = my;
 
     if (dr.mode === 'swap') {
       if (dr.ghost) {
@@ -132,7 +138,7 @@ export function useDrag(
       setTarget(hit);
     }
     store.setDrag({ cx: mx, cy: my, on: true, target: dr.target });
-  }, [cnvRef, getAllNodes, applyDragClasses, applyConnectClasses, setTarget, store]);
+  }, [cnvRef, getAllNodes, applyDragClasses, applyConnectClasses, setTarget, store, zoom]);
 
   const dragEnd = useCallback(() => {
     const dr = drRef.current;
@@ -150,7 +156,7 @@ export function useDrag(
     dr.node = null; dr.target = null; dr.ghost = null; dr.on = false;
     store.clearDrag();
 
-    const { getActive, pushUndo, triggerEdgeAnim } = store;
+    const { getActive, pushUndo, triggerEdgeAnim, freeMode } = store;
     const flow = getActive();
 
     if (mode === 'swap') {
@@ -158,6 +164,12 @@ export function useDrag(
         pushUndo();
         swapNodes(flow.tree, src, tgt);
         triggerEdgeAnim();
+        onCommit();
+      } else if (wasOn && !tgt && freeMode) {
+        // Free positioning — snap to grid
+        pushUndo();
+        src.px = snap(dr.lastMx - NW / 2);
+        src.py = snap(dr.lastMy);
         onCommit();
       }
     } else {
@@ -172,15 +184,12 @@ export function useDrag(
         if (!flow.crossEdges) flow.crossEdges = [];
         const multiIds = getMultiSel();
         if (multiIds.size > 0) {
-          // Multi-select: create ref edges from all selected nodes → target
           for (const id of multiIds) {
             if (id !== tgt.id) flow.crossEdges.push({ id: `ce-${Date.now()}-${id}`, fromId: id, toId: tgt.id, type: 'ref' });
           }
         } else if (dr.forceRef) {
-          // Alt+drag: always ref cross-edge, never reparent
           flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'ref' });
         } else {
-          // Cross-branch drag → ref edge; same-branch drag → try reparent (back on cycle)
           const crossBranch = src.b && tgt.b && src.b !== tgt.b;
           if (crossBranch) {
             flow.crossEdges.push({ id: `ce-${Date.now()}`, fromId: src.id, toId: tgt.id, type: 'ref' });

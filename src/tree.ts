@@ -67,6 +67,17 @@ export function findParent(root: TreeNode, id: string): ParentRef | null {
   return null;
 }
 
+/** Add a new sibling node immediately after the given node. Returns the new node or null if nodeId is root. */
+export function addSiblingNode(root: TreeNode, nodeId: string): TreeNode | null {
+  const ref = findParent(root, nodeId);
+  if (!ref) return null;
+  const { parent, index } = ref;
+  const b = parent.c![index].b;
+  const node: TreeNode = { id: `n-${Date.now()}`, label: 'New Block', b };
+  parent.c!.splice(index + 1, 0, node);
+  return node;
+}
+
 /** Swap two sibling-or-cousin nodes in the tree. */
 export function swapNodes(root: TreeNode, a: TreeNode, b: TreeNode): boolean {
   if (a.type === 'root' || a.type === 'nav') return false;
