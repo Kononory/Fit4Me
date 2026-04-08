@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Pencil, Check, Play } from 'lucide-react';
 import { useStore } from '../store';
 import { flattenTree } from '../layout';
+
+const FF = 'LatteraMonoLL,Space Mono,monospace';
 import type { EventEdge, TreeNode } from '../types';
 import { EventCard, CARD_W, TITLE_H } from './EventCard';
 import { PreviewPanel } from './PreviewPanel';
@@ -28,7 +30,8 @@ interface EdgeForm {
 }
 
 export function EventsMap() {
-  const { getActive, flows, setFlows } = useStore();
+  const { getActive, flows, setFlows, evmZoom, setEvmZoom } = useStore();
+  const containerRef = useRef<HTMLDivElement>(null);
   const flow = getActive();
   const nodes = flattenTree(flow.tree);
   const eventEdges = flow.eventEdges ?? [];
@@ -97,6 +100,19 @@ export function EventsMap() {
     };
   }, [flows, flow.id, setFlows]);
 
+  // ── Ctrl+Scroll zoom ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setEvmZoom(evmZoom + e.deltaY * -0.005);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [evmZoom, setEvmZoom]);
+
   // ── Hotspot / edge creation ───────────────────────────────────────────────
   const [pendingHotspot, setPendingHotspot] = useState<PendingHotspot | null>(null);
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({ buttonLabel: '', eventName: 'tap', toNodeId: '' });
@@ -146,8 +162,8 @@ export function EventsMap() {
   }));
 
   return (
-    <div id="evm-container">
-      <div id="evm-canvas" style={{ width: canvasW, height: canvasH }}>
+    <div id="evm-container" ref={containerRef}>
+      <div id="evm-canvas" style={{ width: canvasW, height: canvasH, zoom: evmZoom }}>
 
         {/* SVG edge layer */}
         <svg
@@ -155,8 +171,8 @@ export function EventsMap() {
           width={canvasW} height={canvasH}
         >
           <defs>
-            <marker id="evm-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-              <polygon points="0 0, 7 3.5, 0 7" fill="#1A1A1A" />
+            <marker id="evm-arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#ABABAA" />
             </marker>
           </defs>
           {eventEdges.map(edge => {
@@ -172,26 +188,28 @@ export function EventsMap() {
             const y1 = fromPos.y + TITLE_H + edge.by * fromIH;
             const x2 = toPos.x + CARD_W / 2;
             const y2 = toPos.y + TITLE_H + toIH / 2;
+            const R  = Math.max(80, Math.abs(x1 - x2) * 0.35 + 60);
+            const d  = `M${x1} ${y1} C${x1 + R} ${y1} ${x2 + R} ${y2} ${x2} ${y2}`;
 
-            const mx = (x1 + x2) / 2;
-            const my = (y1 + y2) / 2;
+            const lx = (x1 + x1 + R + x2 + R + x2) / 4;
+            const ly = (y1 + y2) / 2;
+            const color = '#ABABAA';
+            const labelStr = edge.buttonLabel;
+            const eventStr = edge.eventName !== 'tap' ? edge.eventName : null;
+            const tw = labelStr.length * 6 + 12;
 
             return (
               <g key={edge.id}>
-                <path
-                  d={`M ${x1} ${y1} C ${x1 + 60} ${y1} ${x2 - 60} ${y2} ${x2} ${y2}`}
-                  stroke="#1A1A1A" strokeWidth={1.5} fill="none"
-                  markerEnd="url(#evm-arrow)"
-                />
-                <text x={mx} y={my - 7} textAnchor="middle"
-                  fontSize={9} fill="#1A1A1A"
-                  fontFamily="'LatteraMonoLL','Space Mono',monospace"
-                  fontWeight="700"
-                >{edge.buttonLabel}</text>
-                <text x={mx} y={my + 4} textAnchor="middle"
-                  fontSize={8} fill="#9A9995"
-                  fontFamily="'LatteraMonoLL','Space Mono',monospace"
-                >{edge.eventName}</text>
+                <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3 4"
+                  markerEnd="url(#evm-arr)" pointerEvents="none" />
+                <rect x={lx - tw / 2} y={ly - 9} width={tw} height={14} rx={3}
+                  fill="#FEFCF8" stroke={color} strokeWidth={1} pointerEvents="none" />
+                <text x={lx} y={ly + 4} textAnchor="middle" fill={color}
+                  fontSize={9} fontFamily={FF} pointerEvents="none">{labelStr}</text>
+                {eventStr && (
+                  <text x={lx} y={ly + 18} textAnchor="middle" fill="#BCBBB7"
+                    fontSize={8} fontFamily={FF} pointerEvents="none">{eventStr}</text>
+                )}
               </g>
             );
           })}

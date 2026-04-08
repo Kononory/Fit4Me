@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { X, ExternalLink, RefreshCw } from 'lucide-react';
+import { X, ExternalLink, RefreshCw, Play } from 'lucide-react';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
 
@@ -7,6 +7,7 @@ interface Props {
   figmaRef: string;
   nodeLabel: string;
   onClose: () => void;
+  onPreview?: () => void;
 }
 
 type LoadState =
@@ -15,7 +16,7 @@ type LoadState =
   | { status: 'err'; msg: string }
   | { status: 'no_pat' };
 
-export function FigmaPreview({ figmaRef, nodeLabel, onClose }: Props) {
+export function FigmaPreview({ figmaRef, nodeLabel, onClose, onPreview }: Props) {
   const { setFigmaTokenOpen, figmaTokenOpen } = useStore();
   const [ls, setLs] = useState<LoadState>({ status: 'loading' });
   const prevTokenOpen = useRef(figmaTokenOpen);
@@ -52,6 +53,11 @@ export function FigmaPreview({ figmaRef, nodeLabel, onClose }: Props) {
       <div id="fig-preview-header">
         <span id="fig-preview-title">{nodeLabel}</span>
         <div className="fig-preview-actions">
+          {onPreview && (
+            <button className="fig-preview-icon-btn" onClick={onPreview} title="Preview prototype">
+              <Play size={13} />
+            </button>
+          )}
           {figmaUrl && (
             <a href={figmaUrl} target="_blank" rel="noreferrer" className="fig-preview-icon-btn" title="Open in Figma">
               <ExternalLink size={13} />

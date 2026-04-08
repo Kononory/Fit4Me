@@ -7,6 +7,7 @@ import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { FigmaPreview } from './FigmaPreview';
 import { FigmaTokenModal } from './FigmaTokenModal';
+import { PreviewPanel } from './PreviewPanel';
 import { useDrag } from '../hooks/useDrag';
 import { removeNode, addSiblingNode, swapNodes, swapNodeMetadata, findNode } from '../tree';
 import type { PickerState, PickerMode } from './EdgePicker';
@@ -32,6 +33,7 @@ export function Canvas({
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
   const [figmaPreviewNode, setFigmaPreviewNode] = useState<TreeNode | null>(null);
+  const [previewStartId, setPreviewStartId] = useState<string | null>(null);
 
   // Toggle a node + all its descendants in multi-select
   const toggleSubtree = useCallback((node: TreeNode) => {
@@ -219,13 +221,29 @@ export function Canvas({
       )}
     </div>
 
-    {figmaPreviewNode && (
-      <FigmaPreview
-        figmaRef={figmaPreviewNode.figmaRef!}
-        nodeLabel={figmaPreviewNode.label}
-        onClose={() => setFigmaPreviewNode(null)}
-      />
-    )}
+    {figmaPreviewNode && (() => {
+      const eventEdges = getActive().eventEdges ?? [];
+      const hasEdges = eventEdges.some(e => e.fromNodeId === figmaPreviewNode.id);
+      return (
+        <FigmaPreview
+          figmaRef={figmaPreviewNode.figmaRef!}
+          nodeLabel={figmaPreviewNode.label}
+          onClose={() => setFigmaPreviewNode(null)}
+          onPreview={hasEdges ? () => setPreviewStartId(figmaPreviewNode.id) : undefined}
+        />
+      );
+    })()}
+    {previewStartId && (() => {
+      const flow = getActive();
+      return (
+        <PreviewPanel
+          startNodeId={previewStartId}
+          nodes={allNodes}
+          eventEdges={flow.eventEdges ?? []}
+          onClose={() => setPreviewStartId(null)}
+        />
+      );
+    })()}
     {figmaTokenOpen && <FigmaTokenModal />}
     </>
   );
