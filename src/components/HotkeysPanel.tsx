@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { Kbd } from './ui/kbd';
 
 interface Props {
   onClose: () => void;
@@ -73,7 +74,7 @@ export function HotkeysPanel({ onClose }: Props) {
         <div id="hk-list">
           {SHORTCUTS[tab].map(s => (
             <div key={s.key} className="hk-row">
-              <kbd className="hk-key">{s.key}</kbd>
+              <Kbd className="hk-key">{s.key}</Kbd>
               <span className="hk-desc">{s.desc}</span>
             </div>
           ))}

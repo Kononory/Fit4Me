@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
+import { Kbd } from './ui/kbd';
 import { parseOutline, treeToOutline, normalizeArrows, splitInlineArrows, normalizeOutline } from '../parser';
 
 function getLabel(raw: string): string {
@@ -169,7 +170,7 @@ export function TextEditPanel() {
     <div id="text-edit-panel">
       <div id="text-edit-header">
         <span id="text-edit-title">
-          Edit outline — <kbd>Shift+↵</kbd> new block · <kbd>Tab</kbd> indent · <kbd>-&gt;</kbd> level down · <kbd>Ctrl+↵</kbd> apply · <kbd>Esc</kbd> cancel
+          Edit outline — <Kbd>Shift+↵</Kbd> new block · <Kbd>Tab</Kbd> indent · <Kbd>-&gt;</Kbd> level down · <Kbd>Ctrl+↵</Kbd> apply · <Kbd>Esc</Kbd> cancel
         </span>
         <button
           className={`te-btn te-steps-toggle${showSteps ? ' te-steps-on' : ''}`}
