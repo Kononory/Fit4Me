@@ -23,9 +23,11 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     return {
       id:            r.id,
       name:          r.name ?? 'Untitled',
-      tree:          isCompound ? r.tree.tree          : r.tree,
-      crossEdges:    isCompound ? (r.tree.crossEdges   ?? []) : [],
-      retentionData: isCompound ? (r.tree.retentionData ?? []) : [],
+      tree:           isCompound ? r.tree.tree              : r.tree,
+      crossEdges:     isCompound ? (r.tree.crossEdges     ?? []) : [],
+      retentionData:  isCompound ? (r.tree.retentionData  ?? []) : [],
+      eventEdges:     isCompound ? (r.tree.eventEdges     ?? []) : [],
+      eventPositions: isCompound ? (r.tree.eventPositions ?? {}) : {},
       savedAt:       r.saved_at,
     };
   });

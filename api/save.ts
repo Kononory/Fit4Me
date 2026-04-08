@@ -9,11 +9,16 @@ const supabase = createClient(
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { flowId, name, tree, crossEdges, retentionData, savedAt } = req.body ?? {};
+  const { flowId, name, tree, crossEdges, retentionData, eventEdges, eventPositions, savedAt } = req.body ?? {};
   if (!flowId || !tree) return res.status(400).json({ error: 'Missing flowId or tree' });
 
-  // Store full flow data in the tree column as a compound object
-  const payload = { tree, crossEdges: crossEdges ?? [], retentionData: retentionData ?? [] };
+  const payload = {
+    tree,
+    crossEdges:     crossEdges     ?? [],
+    retentionData:  retentionData  ?? [],
+    eventEdges:     eventEdges     ?? [],
+    eventPositions: eventPositions ?? {},
+  };
 
   const { error } = await supabase
     .from('flowchart_trees')

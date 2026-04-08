@@ -769,16 +769,149 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .layer-tab:hover:not([data-state="active"]) { color: #1A1A1A !important; }
 
-/* ── Events map placeholder ───────────────────────────────────────────────── */
-#events-map {
+/* ── Events map (evm-) ────────────────────────────────────────────────────── */
+#evm-container {
   position: fixed; inset: 0; top: 48px; left: 156px;
-  display: flex; align-items: center; justify-content: center;
-  background: #F8F7F4;
+  overflow: auto; background: #F8F7F4;
 }
-#events-map-placeholder {
+#evm-canvas {
+  position: relative; min-width: 100%; min-height: 100%;
+}
+
+/* Cards */
+.evm-card {
+  position: absolute; background: #FEFCF8;
+  border: 1.5px solid #DEDDDA; border-radius: 4px;
+  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: border-color 0.15s;
+}
+.evm-card-pending { border-color: #1A1A1A; }
+.evm-card-title {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; height: 32px;
+  background: #F2F1ED; border-bottom: 1px solid #E2E1DC;
+  cursor: grab; user-select: none;
+}
+.evm-card-title:active { cursor: grabbing; }
+.evm-card-label {
   font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 11px; color: #AEADA8; letter-spacing: 0.05em;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  color: #1A1A1A; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.evm-card-type {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; color: #9A9995; flex-shrink: 0; margin-left: 6px;
+}
+.evm-card-img-wrap { position: relative; }
+.evm-card-img {
+  width: 100%; display: block; cursor: crosshair;
+}
+.evm-card-loading {
+  width: 100%; height: 200px;
+  display: flex; align-items: center; justify-content: center;
+  background: #F2F1ED;
+}
+.evm-card-no-screen {
+  padding: 24px 10px; text-align: center;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: #AEADA8;
+}
+
+/* Hotspot dots */
+.evm-hotspot {
+  position: absolute; width: 12px; height: 12px;
+  background: #1A1A1A; border-radius: 50%;
+  border: 2px solid #FEFCF8;
+  box-shadow: 0 0 0 1px #1A1A1A;
+  cursor: default;
+}
+.evm-hotspot-label {
+  position: absolute; left: 14px; top: -2px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; font-weight: 700; color: #1A1A1A;
+  white-space: nowrap; background: rgba(254,252,248,0.9);
+  padding: 1px 3px; border-radius: 2px; pointer-events: none;
+}
+
+/* Edge creation popover */
+.evm-popover {
+  position: absolute; z-index: 90;
+  background: #FEFCF8; border: 1.5px solid #1A1A1A; border-radius: 5px;
+  padding: 10px; display: flex; flex-direction: column; gap: 6px;
+  width: 200px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.evm-popover-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.evm-popover-title {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #1A1A1A;
+}
+.evm-popover-input {
+  height: 26px; border: 1.5px solid #DEDDDA; border-radius: 3px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; padding: 0 7px; background: #fff; color: #1A1A1A; outline: none;
+  width: 100%; box-sizing: border-box;
+}
+.evm-popover-input:focus { border-color: #1A1A1A; }
+.evm-popover-input::placeholder { color: #AEADA8; }
+.evm-popover-label {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; color: #9A9995; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.evm-popover-targets {
+  display: flex; flex-direction: column; gap: 3px; max-height: 120px; overflow-y: auto;
+}
+.evm-target-btn {
+  text-align: left; padding: 4px 8px; border-radius: 3px;
+  border: 1px solid #E2E1DC; background: #fff; cursor: pointer;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: #5A5955;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.evm-target-btn:hover { border-color: #1A1A1A; color: #1A1A1A; }
+.evm-target-btn-active { background: #1A1A1A !important; color: #FEFCF8 !important; border-color: #1A1A1A !important; }
+.evm-confirm-btn {
+  height: 26px; background: #1A1A1A; color: #FEFCF8; border: none;
+  border-radius: 3px; cursor: pointer;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.evm-confirm-btn:hover:not(:disabled) { background: #333; }
+.evm-confirm-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Events sidebar list */
+#evm-edge-list {
+  position: fixed; right: 0; top: 48px; bottom: 0;
+  width: 220px; background: #FEFCF8;
+  border-left: 1px solid #E2E1DC;
+  padding: 12px; overflow-y: auto; z-index: 10;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.evm-edge-list-title {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: #9A9995;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.evm-edge-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; border-radius: 3px;
+  border: 1px solid #E2E1DC; background: #fff;
+}
+.evm-edge-info {
+  flex: 1; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; color: #5A5955; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.evm-edge-btn-label { color: #1A1A1A; font-weight: 700; }
+.evm-edge-del {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 2px;
+  border: none; background: none; cursor: pointer; color: #AEADA8; padding: 0;
+}
+.evm-edge-del:hover { color: #B52B1E; background: #FFF0EF; }
 
 /* ── Figma integration (fig-) ─────────────────────────────────────────────── */
 

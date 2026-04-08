@@ -30,12 +30,24 @@ export interface CrossEdge {
   type: 'back' | 'ref'; // back=return arrow, ref=cross-reference
 }
 
+export interface EventEdge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  buttonLabel: string;
+  eventName: string;   // e.g. "tap", "swipe", "long press"
+  bx: number;          // hotspot x within source card image (0–1)
+  by: number;          // hotspot y within source card image (0–1)
+}
+
 export interface Flow {
   id: string;
   name: string;
   tree: TreeNode;
   crossEdges?: CrossEdge[];
   retentionData?: RetentionPoint[]; // custom per-flow retention chart data
+  eventEdges?: EventEdge[];
+  eventPositions?: Record<string, { x: number; y: number }>; // free card positions in events map
   savedAt?: string;
 }
 

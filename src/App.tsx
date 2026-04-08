@@ -81,12 +81,14 @@ export function App() {
       <FlowTabs />
       <Toolbar />
       <LayerTabs />
-      <Viewport
-        onShowEdgePicker={handleShowEdgePicker}
-        onShowCrossEdgePicker={handleShowCrossEdgePicker}
-        pickerState={pickerState}
-        onSetPickerMode={setPickerMode}
-      />
+      {activeLayer !== 'events' && (
+        <Viewport
+          onShowEdgePicker={handleShowEdgePicker}
+          onShowCrossEdgePicker={handleShowCrossEdgePicker}
+          pickerState={pickerState}
+          onSetPickerMode={setPickerMode}
+        />
+      )}
       {activeLayer === 'outline' && <TextEditPanel />}
       {activeLayer === 'events'  && <EventsMap />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}

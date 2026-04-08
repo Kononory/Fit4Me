@@ -46,8 +46,10 @@ export async function saveFlowRemote(flow: Flow): Promise<string | null> {
         flowId:       flow.id,
         name:         flow.name,
         tree:         cloneTree(flow.tree),
-        crossEdges:   flow.crossEdges   ?? [],
-        retentionData: flow.retentionData ?? [],
+        crossEdges:     flow.crossEdges     ?? [],
+        retentionData:  flow.retentionData  ?? [],
+        eventEdges:     flow.eventEdges     ?? [],
+        eventPositions: flow.eventPositions ?? {},
         savedAt:      new Date().toISOString(),
       }),
     });
