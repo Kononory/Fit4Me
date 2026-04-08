@@ -913,6 +913,43 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .evm-edge-del:hover { color: #B52B1E; background: #FFF0EF; }
 
+/* Element hover highlight */
+.evm-el-highlight {
+  position: absolute; pointer-events: none;
+  border: 1.5px solid #4A90E2; border-radius: 2px;
+  background: rgba(74,144,226,0.08);
+}
+.evm-el-name {
+  position: absolute; top: -18px; left: 0;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; font-weight: 700; color: #4A90E2;
+  white-space: nowrap; background: rgba(255,255,255,0.9);
+  padding: 1px 4px; border-radius: 2px; pointer-events: none;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Edge row actions */
+.evm-edge-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.evm-edge-event { color: #AEADA8; }
+.evm-edge-from { color: #1A1A1A; }
+
+/* Edit mode */
+.evm-edge-row-edit { flex-direction: column; align-items: stretch; gap: 4px; }
+.evm-edit-input {
+  height: 22px; border: 1px solid #DEDDDA; border-radius: 2px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; padding: 0 5px; background: #fff; color: #1A1A1A; outline: none;
+  width: 100%; box-sizing: border-box;
+}
+.evm-edit-input:focus { border-color: #1A1A1A; }
+.evm-edit-select {
+  height: 22px; border: 1px solid #DEDDDA; border-radius: 2px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 8px; padding: 0 4px; background: #fff; color: #1A1A1A; outline: none;
+  width: 100%; box-sizing: border-box;
+}
+.evm-edit-actions { display: flex; justify-content: flex-end; gap: 3px; }
+
 /* ── Figma integration (fig-) ─────────────────────────────────────────────── */
 
 /* Node figma action bar */

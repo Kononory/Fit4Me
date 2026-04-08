@@ -1,6 +1,16 @@
 const PAT_KEY = 'figma_pat';
 const TTL = 25 * 60 * 1000; // 25 min — Figma signed URLs expire ~30 min
 const cache = new Map<string, { url: string; ts: number }>();
+const nodeCache = new Map<string, { data: FrameData; ts: number }>();
+
+export interface FigmaElement {
+  id: string; name: string; type: string;
+  x: number; y: number; w: number; h: number;
+}
+export interface FrameData {
+  frameW: number; frameH: number;
+  elements: FigmaElement[];
+}
 
 export const getPAT = (): string => localStorage.getItem(PAT_KEY) ?? '';
 export const setPAT = (t: string): void => {
@@ -54,4 +64,32 @@ export async function fetchPreviewUrl(fileKey: string, nodeId: string): Promise<
 
   cache.set(cacheKey, { url: body.url!, ts: Date.now() });
   return body.url!;
+}
+
+/** Fetch Figma frame element tree (for hit-testing on click). Cached 5 min. */
+export async function fetchFrameElements(fileKey: string, nodeId: string): Promise<FrameData> {
+  const cacheKey = `${fileKey}:${nodeId}`;
+  const hit = nodeCache.get(cacheKey);
+  if (hit && Date.now() - hit.ts < 5 * 60 * 1000) return hit.data;
+
+  const token = getPAT();
+  if (!token) throw new Error('no_pat');
+
+  const params = new URLSearchParams({ fileKey, nodeId, token });
+  const res = await fetch(`/api/figma-nodes?${params}`);
+  const body = await res.json() as FrameData & { error?: string };
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+
+  nodeCache.set(cacheKey, { data: body, ts: Date.now() });
+  return body;
+}
+
+/** Find the most specific Figma element at (px, py) in frame-local coords. */
+export function hitTest(elements: FigmaElement[], px: number, py: number): FigmaElement | null {
+  const hits = elements.filter(el =>
+    px >= el.x && px <= el.x + el.w && py >= el.y && py <= el.y + el.h,
+  );
+  // Smallest area = most specific
+  hits.sort((a, b) => a.w * a.h - b.w * b.h);
+  return hits[0] ?? null;
 }

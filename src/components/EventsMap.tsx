@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Pencil, Check } from 'lucide-react';
 import { useStore } from '../store';
 import { flattenTree } from '../layout';
 import type { EventEdge, TreeNode } from '../types';
@@ -99,15 +99,16 @@ export function EventsMap() {
   // ── Hotspot / edge creation ───────────────────────────────────────────────
   const [pendingHotspot, setPendingHotspot] = useState<PendingHotspot | null>(null);
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({ buttonLabel: '', eventName: 'tap', toNodeId: '' });
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EdgeForm>({ buttonLabel: '', eventName: '', toNodeId: '' });
 
-  const handleHotspotClick = useCallback((nodeId: string, idx: number, bx: number, by: number, imgH: number) => {
+  const handleHotspotClick = useCallback((nodeId: string, idx: number, bx: number, by: number, imgH: number, elementName?: string) => {
     const pos = getPos(nodeId, idx);
     const canvasX = pos.x + bx * CARD_W;
     const canvasY = pos.y + TITLE_H + by * imgH;
-    // Pre-select first other node as target
     const firstOther = nodes.find(n => n.id !== nodeId);
     setPendingHotspot({ nodeId, bx, by, canvasX, canvasY });
-    setEdgeForm({ buttonLabel: '', eventName: 'tap', toNodeId: firstOther?.id ?? '' });
+    setEdgeForm({ buttonLabel: elementName ?? '', eventName: 'tap', toNodeId: firstOther?.id ?? '' });
   }, [getPos, nodes]);
 
   const confirmEdge = useCallback(() => {
@@ -203,7 +204,7 @@ export function EventsMap() {
             edges={eventEdges.filter(e => e.fromNodeId === n.id)}
             allNodes={nodes}
             onDragStart={e => handleDragStart(n.id, i, e)}
-            onHotspotClick={(bx, by, imgH) => handleHotspotClick(n.id, i, bx, by, imgH)}
+            onHotspotClick={(bx, by, imgH, name) => handleHotspotClick(n.id, i, bx, by, imgH, name)}
             onImgLoad={h => setImgHeights(prev => ({ ...prev, [n.id]: h }))}
             isPending={pendingHotspot?.nodeId === n.id}
           />
@@ -253,19 +254,61 @@ export function EventsMap() {
         )}
       </div>
 
-      {/* Edge delete buttons (fixed overlay) */}
+      {/* Events sidebar */}
       {eventEdges.length > 0 && (
         <div id="evm-edge-list">
           <div className="evm-edge-list-title">Events</div>
           {eventEdges.map(edge => {
             const from = nodes.find(n => n.id === edge.fromNodeId);
             const to   = nodes.find(n => n.id === edge.toNodeId);
+            const isEditing = editingEdgeId === edge.id;
+
+            if (isEditing) {
+              return (
+                <div key={edge.id} className="evm-edge-row evm-edge-row-edit">
+                  <input className="evm-edit-input" value={editForm.buttonLabel}
+                    placeholder="Button label"
+                    onChange={e => setEditForm(f => ({ ...f, buttonLabel: e.target.value }))} />
+                  <input className="evm-edit-input" value={editForm.eventName}
+                    placeholder="Event (tap)"
+                    onChange={e => setEditForm(f => ({ ...f, eventName: e.target.value }))} />
+                  <select className="evm-edit-select" value={editForm.toNodeId}
+                    onChange={e => setEditForm(f => ({ ...f, toNodeId: e.target.value }))}>
+                    {nodes.filter(n => n.id !== edge.fromNodeId).map(n => (
+                      <option key={n.id} value={n.id}>{n.label}</option>
+                    ))}
+                  </select>
+                  <div className="evm-edit-actions">
+                    <button className="evm-edge-del" title="Save" onClick={() => {
+                      const updated = flows.map(f => f.id === flow.id ? {
+                        ...f, eventEdges: (f.eventEdges ?? []).map(e =>
+                          e.id === edge.id ? { ...e, ...editForm, eventName: editForm.eventName || 'tap' } : e
+                        )
+                      } : f);
+                      setFlows(updated);
+                      setEditingEdgeId(null);
+                    }}><Check size={10} /></button>
+                    <button className="evm-edge-del" title="Cancel" onClick={() => setEditingEdgeId(null)}><X size={10} /></button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={edge.id} className="evm-edge-row">
                 <span className="evm-edge-info">
-                  {from?.label} <span className="evm-edge-btn-label">"{edge.buttonLabel}"</span> → {to?.label}
+                  <span className="evm-edge-from">{from?.label}</span>
+                  {' '}<span className="evm-edge-btn-label">"{edge.buttonLabel}"</span>
+                  {' '}→{' '}<span className="evm-edge-from">{to?.label}</span>
+                  <span className="evm-edge-event"> · {edge.eventName}</span>
                 </span>
-                <button className="evm-edge-del" onClick={() => removeEdge(edge.id)}><X size={10} /></button>
+                <div className="evm-edge-actions">
+                  <button className="evm-edge-del" title="Edit" onClick={() => {
+                    setEditingEdgeId(edge.id);
+                    setEditForm({ buttonLabel: edge.buttonLabel, eventName: edge.eventName, toNodeId: edge.toNodeId });
+                  }}><Pencil size={10} /></button>
+                  <button className="evm-edge-del" title="Delete" onClick={() => removeEdge(edge.id)}><X size={10} /></button>
+                </div>
               </div>
             );
           })}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { X, ExternalLink, RefreshCw } from 'lucide-react';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
@@ -16,8 +16,15 @@ type LoadState =
   | { status: 'no_pat' };
 
 export function FigmaPreview({ figmaRef, nodeLabel, onClose }: Props) {
-  const { setFigmaTokenOpen } = useStore();
+  const { setFigmaTokenOpen, figmaTokenOpen } = useStore();
   const [ls, setLs] = useState<LoadState>({ status: 'loading' });
+  const prevTokenOpen = useRef(figmaTokenOpen);
+
+  // Re-load when token modal closes (user just saved a token)
+  useEffect(() => {
+    if (prevTokenOpen.current && !figmaTokenOpen && ls.status === 'no_pat') load();
+    prevTokenOpen.current = figmaTokenOpen;
+  }); // runs every render, intentionally — checks ref transition
 
   const load = useCallback(() => {
     if (!getPAT()) { setLs({ status: 'no_pat' }); return; }
