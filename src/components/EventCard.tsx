@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Play } from 'lucide-react';
 import type { TreeNode, EventEdge } from '../types';
 import { decodeRef, fetchPreviewUrl, fetchFrameElements, hitTest } from '../lib/figma';
 import type { FigmaElement, FrameData } from '../lib/figma';
@@ -16,9 +16,10 @@ interface Props {
   onHotspotClick: (bx: number, by: number, imgH: number, elementName?: string) => void;
   onImgLoad: (h: number) => void;
   isPending: boolean;
+  onPreview: () => void;
 }
 
-export function EventCard({ node, pos, edges, allNodes, onDragStart, onHotspotClick, onImgLoad, isPending }: Props) {
+export function EventCard({ node, pos, edges, allNodes, onDragStart, onHotspotClick, onImgLoad, isPending, onPreview }: Props) {
   const [imgUrl,   setImgUrl]   = useState<string | null>(null);
   const [imgH,     setImgH]     = useState(0);
   const [frame,    setFrame]    = useState<FrameData | null>(null);
@@ -94,7 +95,11 @@ export function EventCard({ node, pos, edges, allNodes, onDragStart, onHotspotCl
     >
       <div className="evm-card-title" onMouseDown={onDragStart}>
         <span className="evm-card-label">{node.label}</span>
-        {node.type && <span className="evm-card-type">{node.type}</span>}
+        <button className="evm-card-play" title="Preview from here"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onPreview(); }}>
+          <Play size={9} />
+        </button>
       </div>
 
       {node.figmaRef ? (

@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Pencil, Check } from 'lucide-react';
+import { X, Pencil, Check, Play } from 'lucide-react';
 import { useStore } from '../store';
 import { flattenTree } from '../layout';
 import type { EventEdge, TreeNode } from '../types';
 import { EventCard, CARD_W, TITLE_H } from './EventCard';
+import { PreviewPanel } from './PreviewPanel';
 
 // Default card positions — arranged in a loose grid
 function defaultPos(idx: number): { x: number; y: number } {
@@ -101,6 +102,7 @@ export function EventsMap() {
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({ buttonLabel: '', eventName: 'tap', toNodeId: '' });
   const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EdgeForm>({ buttonLabel: '', eventName: '', toNodeId: '' });
+  const [previewStartId, setPreviewStartId] = useState<string | null>(null);
 
   const handleHotspotClick = useCallback((nodeId: string, idx: number, bx: number, by: number, imgH: number, elementName?: string) => {
     const pos = getPos(nodeId, idx);
@@ -205,6 +207,7 @@ export function EventsMap() {
             allNodes={nodes}
             onDragStart={e => handleDragStart(n.id, i, e)}
             onHotspotClick={(bx, by, imgH, name) => handleHotspotClick(n.id, i, bx, by, imgH, name)}
+            onPreview={() => setPreviewStartId(n.id)}
             onImgLoad={h => setImgHeights(prev => ({ ...prev, [n.id]: h }))}
             isPending={pendingHotspot?.nodeId === n.id}
           />
@@ -254,10 +257,29 @@ export function EventsMap() {
         )}
       </div>
 
+      {/* Preview panel */}
+      {previewStartId && (
+        <PreviewPanel
+          startNodeId={previewStartId}
+          nodes={nodes}
+          eventEdges={eventEdges}
+          onClose={() => setPreviewStartId(null)}
+        />
+      )}
+
       {/* Events sidebar */}
       {eventEdges.length > 0 && (
         <div id="evm-edge-list">
-          <div className="evm-edge-list-title">Events</div>
+          <div id="evm-edge-list-header">
+            <div className="evm-edge-list-title">Events</div>
+            <button id="evm-preview-btn"
+              title="Preview prototype"
+              onClick={() => {
+                const first = nodes.find(n => n.figmaRef) ?? nodes[0];
+                if (first) setPreviewStartId(first.id);
+              }}
+            ><Play size={10} /> Preview</button>
+          </div>
           {eventEdges.map(edge => {
             const from = nodes.find(n => n.id === edge.fromNodeId);
             const to   = nodes.find(n => n.id === edge.toNodeId);
