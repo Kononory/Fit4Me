@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TreeNode, CrossEdge } from '../types';
-import { canvasSize } from '../layout';
+import { canvasSize, flattenTree } from '../layout';
 import { useStore } from '../store';
 import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
@@ -30,10 +30,16 @@ export function Canvas({
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
 
-  const toggleMultiSel = useCallback((id: string) => {
+  // Toggle a node + all its descendants in multi-select
+  const toggleSubtree = useCallback((node: TreeNode) => {
+    const ids = flattenTree(node).map(n => n.id);
     setMultiSelIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(node.id)) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
       return next;
     });
   }, []);
@@ -175,7 +181,7 @@ export function Canvas({
           multiSel={multiSelIds.has(n.id)}
           onDragBegin={dragBegin}
           onSelect={n => setEditNodeId(n.id)}
-          onToggleMulti={() => toggleMultiSel(n.id)}
+          onToggleMulti={() => toggleSubtree(n)}
           onAddSibling={handleAddSibling}
           editNodeId={editNodeId}
           onEditDone={() => setEditNodeId(null)}
