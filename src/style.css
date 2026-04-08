@@ -228,6 +228,15 @@ svg#svgl.dimmed { opacity: 0.08; }
 }
 .nd-target .sub { opacity: 0.38 !important; color: #FAFAF8 !important; }
 
+/* Group-drag: other selected nodes stay visible while one is being dragged */
+.nd-group-drag {
+  outline: 1.5px dashed #6B9B5E !important;
+  outline-offset: 2px;
+  opacity: 0.7 !important;
+  transition: none !important;
+  pointer-events: none !important;
+}
+
 /* ── Drag ghost ─────────────────────────────────────────────────── */
 #ghost {
   position: fixed; pointer-events: none; z-index: 1000;

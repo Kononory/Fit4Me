@@ -29,16 +29,28 @@ export function useDrag(
     mode: 'swap' as 'swap' | 'connect',
     forceRef: false,
     lastMx: 0, lastMy: 0,
+    // Start canvas position of dragged node (for delta calculation)
+    startNodeX: 0, startNodeY: 0,
   });
 
-  // ── Ghost + class helpers (imperative, outside React render) ──────────────
+  // ── Ghost + class helpers ─────────────────────────────────────────────────
   const applyDragClasses = useCallback(() => {
     const cnv = cnvRef.current; if (!cnv) return;
+    const multiIds = getMultiSel();
+    const dr = drRef.current;
+    const isGroupDrag = store.freeMode && multiIds.size > 0 && dr.node && multiIds.has(dr.node.id);
     cnv.querySelectorAll<HTMLElement>('.nd').forEach(el => {
-      if (el.dataset['nid'] === drRef.current.node?.id) el.classList.add('nd-source');
-      else el.classList.add('nd-dim');
+      const nid = el.dataset['nid'];
+      if (nid === dr.node?.id) {
+        el.classList.add('nd-source');
+      } else if (isGroupDrag && nid && multiIds.has(nid)) {
+        // Keep other selected nodes highlighted during group drag — don't dim them
+        el.classList.add('nd-group-drag');
+      } else {
+        el.classList.add('nd-dim');
+      }
     });
-  }, [cnvRef]);
+  }, [cnvRef, getMultiSel, store]);
 
   const applyConnectClasses = useCallback(() => {
     const cnv = cnvRef.current; if (!cnv) return;
@@ -49,8 +61,8 @@ export function useDrag(
 
   const clearDragClasses = useCallback(() => {
     const cnv = cnvRef.current; if (!cnv) return;
-    cnv.querySelectorAll('.nd-source, .nd-dim, .nd-target').forEach(e =>
-      e.classList.remove('nd-source', 'nd-dim', 'nd-target'),
+    cnv.querySelectorAll('.nd-source, .nd-dim, .nd-target, .nd-group-drag').forEach(e =>
+      e.classList.remove('nd-source', 'nd-dim', 'nd-target', 'nd-group-drag'),
     );
   }, [cnvRef]);
 
@@ -84,6 +96,8 @@ export function useDrag(
     if (mode === 'connect' && !canConnect(n)) return;
     const dr = drRef.current;
     dr.node = n; dr.sx = clientX; dr.sy = clientY; dr.on = false; dr.mode = mode; dr.target = null; dr.forceRef = forceRef;
+    dr.startNodeX = n.px ?? n.x ?? 0;
+    dr.startNodeY = n.py ?? centerY(n);
     store.setDrag({ node: n, el, on: false, mode, sx: clientX, sy: clientY, cx: 0, cy: 0, target: null, ghost: null });
   }, [store]);
 
@@ -98,9 +112,12 @@ export function useDrag(
         const svgl = document.getElementById('svgl');
         svgl?.classList.add('dimmed');
         applyDragClasses();
+        const multiIds = getMultiSel();
+        const isGroupDrag = store.freeMode && multiIds.size > 0 && multiIds.has(dr.node.id);
         const ghost = document.createElement('div');
         ghost.id = 'ghost';
-        ghost.innerHTML = `<span class="g-lbl">${dr.node.label}</span><span class="g-sub"></span>`;
+        const lbl = isGroupDrag ? `${multiIds.size} nodes` : dr.node.label;
+        ghost.innerHTML = `<span class="g-lbl">${lbl}</span><span class="g-sub"></span>`;
         ghost.style.width = NW + 'px';
         document.body.appendChild(ghost);
         dr.ghost = ghost;
@@ -110,10 +127,9 @@ export function useDrag(
       document.body.style.cursor = 'crosshair';
     }
     if (!dr.on) return;
-
     if (!cnv) return;
+
     const rect = cnv.getBoundingClientRect();
-    // Divide by zoom to get logical canvas coords (CSS zoom scales the DOM element)
     const mx = (clientX - rect.left) / zoom;
     const my = (clientY - rect.top) / zoom;
     dr.lastMx = mx; dr.lastMy = my;
@@ -122,6 +138,11 @@ export function useDrag(
       if (dr.ghost) {
         dr.ghost.style.left = (clientX - NW / 2) + 'px';
         dr.ghost.style.top  = (clientY - NH / 2) + 'px';
+      }
+      // In free mode with group drag, skip swap-target detection
+      if (store.freeMode && getMultiSel().size > 0 && getMultiSel().has(dr.node.id)) {
+        store.setDrag({ cx: mx, cy: my, on: true, target: null });
+        return;
       }
       let hit: TreeNode | null = null;
       for (const n of getAllNodes()) {
@@ -138,7 +159,7 @@ export function useDrag(
       setTarget(hit);
     }
     store.setDrag({ cx: mx, cy: my, on: true, target: dr.target });
-  }, [cnvRef, getAllNodes, applyDragClasses, applyConnectClasses, setTarget, store, zoom]);
+  }, [cnvRef, getAllNodes, applyDragClasses, applyConnectClasses, setTarget, store, zoom, getMultiSel]);
 
   const dragEnd = useCallback(() => {
     const dr = drRef.current;
@@ -148,7 +169,6 @@ export function useDrag(
     const src   = dr.node;
     const tgt   = dr.target;
 
-    // Cleanup
     dr.ghost?.remove();
     document.getElementById('svgl')?.classList.remove('dimmed');
     clearDragClasses();
@@ -166,10 +186,26 @@ export function useDrag(
         triggerEdgeAnim();
         onCommit();
       } else if (wasOn && !tgt && freeMode) {
-        // Free positioning — snap to grid
+        // Free positioning — snap to grid, move all selected nodes by same delta
+        const newX = snap(dr.lastMx - NW / 2);
+        const newY = snap(dr.lastMy);
+        const dx = newX - dr.startNodeX;
+        const dy = newY - dr.startNodeY;
         pushUndo();
-        src.px = snap(dr.lastMx - NW / 2);
-        src.py = snap(dr.lastMy);
+        const multiIds = getMultiSel();
+        if (multiIds.size > 0 && multiIds.has(src.id)) {
+          // Group move: apply delta to all selected nodes
+          for (const id of multiIds) {
+            const node = getAllNodes().find(n => n.id === id);
+            if (node && canDrag(node)) {
+              node.px = snap((node.px ?? node.x ?? 0) + dx);
+              node.py = snap((node.py ?? centerY(node)) + dy);
+            }
+          }
+        } else {
+          src.px = newX;
+          src.py = newY;
+        }
         onCommit();
       }
     } else {
@@ -208,7 +244,7 @@ export function useDrag(
         onAddAndEdit(newNode);
       }
     }
-  }, [store, clearDragClasses, onCommit, onAddAndEdit]);
+  }, [store, clearDragClasses, onCommit, onAddAndEdit, getMultiSel, getAllNodes]);
 
   return { dragBegin, dragMove, dragEnd, drRef };
 }
