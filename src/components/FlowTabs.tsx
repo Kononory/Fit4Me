@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { Download, Upload, Plus, X, Link, Check } from 'lucide-react';
 import type { Flow } from '../types';
 import { parseOutline, treeToOutline, BLANK_OUTLINE } from '../parser';
 import { useStore } from '../store';
@@ -24,6 +25,7 @@ export function FlowTabs() {
   const [textInput, setTextInput] = useState('');
   const [parseErr, setParseErr] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,12 +52,11 @@ export function FlowTabs() {
     setRenamingId(null);
   }, [flows, renameVal, setFlows]);
 
-  const handleShare = useCallback((flow: Flow, btn: HTMLButtonElement) => {
+  const handleShare = useCallback((flow: Flow) => {
     const url = `${location.origin}${location.pathname}#share=${encodeFlow(flow)}`;
     navigator.clipboard.writeText(url).catch(() => prompt('Copy share link:', url));
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(() => { btn.textContent = orig; }, 1800);
+    setCopiedId(flow.id);
+    setTimeout(() => setCopiedId(null), 1800);
   }, []);
 
   const addFlow = useCallback((flow: Flow) => {
@@ -134,20 +135,20 @@ export function FlowTabs() {
                 <span className="flow-tab-name">{flow.name}</span>
               )}
               <button className="flow-tab-btn" title="Download as .txt"
-                onClick={e => { e.stopPropagation(); downloadFlowAsOutline(flow); }}>↓</button>
+                onClick={e => { e.stopPropagation(); downloadFlowAsOutline(flow); }}><Download size={11} /></button>
               <button className="flow-tab-btn" title="Copy share link"
-                onClick={e => { e.stopPropagation(); handleShare(flow, e.currentTarget); }}>⎘</button>
+                onClick={e => { e.stopPropagation(); handleShare(flow); }}>{copiedId === flow.id ? <Check size={11} /> : <Link size={11} />}</button>
               {flows.length > 1 && (
                 <button className="flow-tab-btn flow-tab-del" title="Delete flow"
-                  onClick={e => { e.stopPropagation(); handleDelete(flow.id, flow.name); }}>×</button>
+                  onClick={e => { e.stopPropagation(); handleDelete(flow.id, flow.name); }}><X size={11} /></button>
               )}
             </div>
           ))}
         </div>
         <div id="flow-tabs-footer">
           <input ref={fileInputRef} type="file" accept=".txt,.md" style={{ display: 'none' }} onChange={handleImport} />
-          <button className="flow-footer-btn" onClick={() => fileInputRef.current?.click()}>↑ Import</button>
-          <button className="flow-footer-btn" onClick={() => setModal('new-choice')}>+ New</button>
+          <button className="flow-footer-btn" onClick={() => fileInputRef.current?.click()}><Upload size={11} /> Import</button>
+          <button className="flow-footer-btn" onClick={() => setModal('new-choice')}><Plus size={11} /> New</button>
         </div>
       </div>
 

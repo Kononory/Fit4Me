@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -58,7 +59,7 @@ export function HotkeysPanel({ onClose }: Props) {
       <div id="hk-panel" onClick={e => e.stopPropagation()}>
         <div id="hk-header">
           <span id="hk-title">Keyboard Shortcuts</span>
-          <button id="hk-close" onClick={onClose}>×</button>
+          <button id="hk-close" onClick={onClose}><X size={14} /></button>
         </div>
         <div id="hk-tabs">
           {TABS.map(t => (

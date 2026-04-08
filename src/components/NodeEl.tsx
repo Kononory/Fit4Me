@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { Plus } from 'lucide-react';
 import type { TreeNode } from '../types';
 import { NW, NH, topY } from '../layout';
 import { useStore } from '../store';
@@ -111,7 +112,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
               onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect', e.altKey);
             }}
             onClick={e => e.stopPropagation()}
-          >+</div>
+          ><Plus size={10} /></div>
         )}
 
         {/* Bottom-center + handle — click adds sibling below */}
@@ -120,7 +121,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
             className="nd-handle nd-handle-add-sib"
             onClick={e => { e.stopPropagation(); onAddSibling(n); }}
             onMouseDown={e => e.stopPropagation()}
-          >+</div>
+          ><Plus size={10} /></div>
         )}
       </div>
     );

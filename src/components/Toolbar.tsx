@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { RotateCcw, RotateCw, AlignJustify, Move } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree } from '../tree';
@@ -47,15 +48,15 @@ export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
           {status.msg}
         </span>
       )}
-      <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}>⟲</button>
-      <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}>⟳</button>
-      <button id="tb-text" title="Edit as text (⌘E)" className={textEditOpen ? 'tb-active' : ''} onClick={onTextEdit}>≡</button>
+      <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}><RotateCcw size={14} /></button>
+      <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}><RotateCw size={14} /></button>
+      <button id="tb-text" title="Edit as text (⌘E)" className={textEditOpen ? 'tb-active' : ''} onClick={onTextEdit}><AlignJustify size={14} /></button>
       <button
         id="tb-free"
         title="Free positioning — drag nodes anywhere, snap to grid"
         className={freeMode ? 'tb-active' : ''}
         onClick={() => setFreeMode(!freeMode)}
-      >⊕</button>
+      ><Move size={14} /></button>
       <button id="tb-save" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save'}</button>
       <button id="tb-reset" onClick={handleReset}>Reset</button>
     </div>
