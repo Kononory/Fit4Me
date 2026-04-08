@@ -168,7 +168,7 @@ svg#svgl, svg#drag-ov {
 }
 svg#svgl    { transition: opacity 0.18s; z-index: 1; pointer-events: visiblePainted; }
 svg#drag-ov { z-index: 6; }
-svg#svgl.dimmed { opacity: 0.08; }
+svg#svgl.dimmed { opacity: 0.3; }
 
 /* ── Nodes ──────────────────────────────────────────────────────── */
 .nd {
@@ -198,24 +198,24 @@ svg#svgl.dimmed { opacity: 0.08; }
 
 /* ── Drag states ────────────────────────────────────────────────── */
 .nd-source {
-  opacity: 0.12 !important;
+  opacity: 0.35 !important;
   border: 1.5px dashed #BCBBB7 !important;
   background: #F2F1ED !important;
-  color: transparent !important;
+  color: #BCBBB7 !important;
   transition: none !important;
   pointer-events: none !important;
 }
-.nd-source .sub { color: transparent !important; }
+.nd-source .sub { opacity: 0.4 !important; }
 
 .nd-dim {
-  opacity: 0.14 !important;
-  border-color: #E2E1DC !important;
-  color: #E2E1DC !important;
-  background: #F5F4F0 !important;
+  opacity: 0.45 !important;
+  border-color: #DEDDDA !important;
+  color: #9A9995 !important;
+  background: #F8F7F4 !important;
   transition: none !important;
   pointer-events: none !important;
 }
-.nd-dim .sub { opacity: 0 !important; }
+.nd-dim .sub { opacity: 0.4 !important; }
 
 .nd-target {
   background: #1A1A1A !important;
