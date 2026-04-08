@@ -43,10 +43,12 @@ export async function saveFlowRemote(flow: Flow): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        flowId:  flow.id,
-        name:    flow.name,
-        tree:    cloneTree(flow.tree),
-        savedAt: new Date().toISOString(),
+        flowId:       flow.id,
+        name:         flow.name,
+        tree:         cloneTree(flow.tree),
+        crossEdges:   flow.crossEdges   ?? [],
+        retentionData: flow.retentionData ?? [],
+        savedAt:      new Date().toISOString(),
       }),
     });
     if (res.ok) return null;

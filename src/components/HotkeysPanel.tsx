@@ -1,59 +1,51 @@
-import { useEffect } from 'react';
-
-interface HotkeyRow {
-  keys: string[];
-  label: string;
-}
-
-interface HotkeyGroup {
-  title: string;
-  rows: HotkeyRow[];
-}
-
-const GROUPS: HotkeyGroup[] = [
-  {
-    title: 'Global',
-    rows: [
-      { keys: ['⌘Z'],       label: 'Undo' },
-      { keys: ['⌘Y', '⌘⇧Z'], label: 'Redo' },
-      { keys: ['⌘E'],       label: 'Open outline editor' },
-    ],
-  },
-  {
-    title: 'Outline editor',
-    rows: [
-      { keys: ['⌘↵'],   label: 'Apply changes' },
-      { keys: ['Esc'],   label: 'Close' },
-      { keys: ['Tab'],   label: 'Indent node (add level)' },
-      { keys: ['->'],    label: '->, -->, =>, →, "then" → indent level or split inline' },
-      { keys: ['⇧Tab'],  label: 'Unindent node' },
-      { keys: ['⇧↵'],   label: 'New line' },
-    ],
-  },
-  {
-    title: 'Nodes',
-    rows: [
-      { keys: ['Click'],  label: 'Select node' },
-      { keys: ['↵'],      label: 'Confirm inline edit' },
-      { keys: ['Esc'],    label: 'Cancel inline edit' },
-      { keys: ['+ drag'], label: 'Add child / connect nodes' },
-    ],
-  },
-  {
-    title: 'Flow tabs',
-    rows: [
-      { keys: ['↵'],   label: 'Confirm rename' },
-      { keys: ['Esc'], label: 'Cancel rename' },
-      { keys: ['⌘↵'], label: 'Create flow from text' },
-    ],
-  },
-];
+import { useState, useEffect } from 'react';
 
 interface Props {
   onClose: () => void;
 }
 
+type Tab = 'nodes' | 'canvas' | 'flow';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'nodes',  label: 'Nodes' },
+  { id: 'canvas', label: 'Canvas' },
+  { id: 'flow',   label: 'Flow' },
+];
+
+const SHORTCUTS: Record<Tab, { key: string; desc: string }[]> = {
+  nodes: [
+    { key: 'Right +',      desc: 'Add child node' },
+    { key: 'Bottom +',     desc: 'Add sibling node' },
+    { key: 'Double-click', desc: 'Rename node inline' },
+    { key: 'Delete',       desc: 'Delete selected node' },
+    { key: '⌘E',           desc: 'Open / close text editor' },
+    { key: 'Shift+click',  desc: 'Multi-select nodes' },
+    { key: 'Drag',         desc: 'Swap / connect nodes' },
+    { key: 'Alt+drag',     desc: 'Force reference edge' },
+  ],
+  canvas: [
+    { key: 'Scroll',        desc: 'Pan canvas' },
+    { key: 'Ctrl+Scroll',   desc: 'Zoom in / out' },
+    { key: 'Pinch',         desc: 'Zoom in / out (touch)' },
+    { key: '⊕ (toolbar)',   desc: 'Toggle free position mode' },
+    { key: '−/+ (toolbar)', desc: 'Zoom out / in' },
+    { key: '? or toolbar',  desc: 'Toggle this panel' },
+    { key: 'Esc',           desc: 'Close this panel' },
+  ],
+  flow: [
+    { key: '⌘Z',           desc: 'Undo' },
+    { key: '⌘Y / ⌘⇧Z',    desc: 'Redo' },
+    { key: 'Save',         desc: 'Save to cloud' },
+    { key: '⌘E',           desc: 'Open outline editor' },
+    { key: 'Tab',          desc: 'Indent in outline editor' },
+    { key: '⇧Tab',         desc: 'Outdent in outline editor' },
+    { key: '⌘↵',          desc: 'Apply outline changes' },
+  ],
+};
+
 export function HotkeysPanel({ onClose }: Props) {
+  const [tab, setTab] = useState<Tab>('nodes');
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -61,30 +53,29 @@ export function HotkeysPanel({ onClose }: Props) {
   }, [onClose]);
 
   return (
-    <div id="hk-overlay" onClick={onClose}>
+    <div id="hk-backdrop" onClick={onClose}>
       <div id="hk-panel" onClick={e => e.stopPropagation()}>
         <div id="hk-header">
-          <span id="hk-title">Hotkeys</span>
+          <span id="hk-title">Keyboard Shortcuts</span>
           <button id="hk-close" onClick={onClose}>×</button>
         </div>
-        {GROUPS.map(group => (
-          <div key={group.title} className="hk-group">
-            <div className="hk-group-title">{group.title}</div>
-            {group.rows.map(row => (
-              <div key={row.label} className="hk-row">
-                <span className="hk-label">{row.label}</span>
-                <span className="hk-keys">
-                  {row.keys.map((k, i) => (
-                    <span key={k}>
-                      {i > 0 && <span className="hk-or">or</span>}
-                      <kbd className="hk-kbd">{k}</kbd>
-                    </span>
-                  ))}
-                </span>
-              </div>
-            ))}
-          </div>
-        ))}
+        <div id="hk-tabs">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              className={`hk-tab${tab === t.id ? ' hk-tab-active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >{t.label}</button>
+          ))}
+        </div>
+        <div id="hk-list">
+          {SHORTCUTS[tab].map(s => (
+            <div key={s.key} className="hk-row">
+              <kbd className="hk-key">{s.key}</kbd>
+              <span className="hk-desc">{s.desc}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

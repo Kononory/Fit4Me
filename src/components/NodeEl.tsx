@@ -1,7 +1,6 @@
 import { useRef, useCallback } from 'react';
 import type { TreeNode } from '../types';
 import { NW, NH, topY } from '../layout';
-import { removeNode } from '../tree';
 import { useStore } from '../store';
 
 interface Props {
@@ -10,6 +9,7 @@ interface Props {
   onDragBegin: (n: TreeNode, el: HTMLElement, cx: number, cy: number, mode?: 'swap' | 'connect', forceRef?: boolean) => void;
   onSelect: (n: TreeNode) => void;
   onToggleMulti: () => void;
+  onAddSibling: (n: TreeNode) => void;
   multiSel: boolean;
   editNodeId: string | null;
   onEditDone: () => void;
@@ -17,8 +17,8 @@ interface Props {
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, editNodeId, onEditDone }: Props) {
-    const { pushUndo, updateActiveTree, getActive, setSel, setSelNodeId, triggerEdgeAnim } = useStore();
+export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone }: Props) {
+    const { updateActiveTree, getActive, setSel, setSelNodeId } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -33,20 +33,6 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
     else if (state === 'par')  cls.push('s-partial');
     else if (state === 'dim')  cls.push('s-dim');
     if (multiSel)              cls.push('s-multi');
-
-    const handleDelete = useCallback((e: React.MouseEvent) => {
-      e.stopPropagation();
-      const childCount = (n.c ?? []).length;
-      const msg = childCount > 0
-        ? `Delete "${n.label}" and its ${childCount} child block(s)?`
-        : `Delete "${n.label}"?`;
-      if (!confirm(msg)) return;
-      pushUndo();
-      const flow = getActive();
-      removeNode(flow.tree, n.id);
-      triggerEdgeAnim();
-      updateActiveTree(flow.tree);
-    }, [n, pushUndo, getActive, updateActiveTree, triggerEdgeAnim]);
 
     const commitEdit = useCallback(() => {
       const val = (inputRef.current?.value ?? '').trim() || n.label;
@@ -73,7 +59,6 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
           if (sel === n.b && selNodeId === n.id) { setSel(null); setSelNodeId(null); }
           else { setSel(n.b); setSelNodeId(n.id); }
         } else {
-          // No branch: use node id as selection key so the node still highlights
           const { selNodeId: sid } = useStore.getState();
           if (sid === n.id) { setSel(null); setSelNodeId(null); }
           else              { setSel(n.id); setSelNodeId(n.id); }
@@ -86,8 +71,6 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         className={cls.join(' ')}
         data-nid={n.id}
         style={{ left: n.x, top: topY(n), width: NW, height: NH, position: 'absolute' }}
-        onMouseEnter={() => { const h = document.getElementById('hint'); if (h) h.style.opacity = '1'; }}
-        onMouseLeave={() => { const h = document.getElementById('hint'); if (h) h.style.opacity = '0'; }}
         onMouseDown={e => {
           if (e.button !== 0) return;
           e.stopPropagation();
@@ -119,10 +102,10 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         )}
         {n.sublabel && <span className="sub">{n.sublabel}</span>}
 
-        {/* + handle — click adds child, drag connects/reparents */}
+        {/* Right-center + handle — click adds child, drag connects/reparents */}
         {canConnect(n) && (
           <div
-            className="nd-handle nd-handle-add"
+            className="nd-handle nd-handle-add-child"
             onMouseDown={e => {
               e.stopPropagation();
               onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect', e.altKey);
@@ -131,9 +114,13 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
           >+</div>
         )}
 
-        {/* × handle — deletes node */}
+        {/* Bottom-center + handle — click adds sibling below */}
         {n.type !== 'root' && n.type !== 'nav' && (
-          <div className="nd-handle nd-handle-del" onClick={handleDelete}>×</div>
+          <div
+            className="nd-handle nd-handle-add-sib"
+            onClick={e => { e.stopPropagation(); onAddSibling(n); }}
+            onMouseDown={e => e.stopPropagation()}
+          >+</div>
         )}
       </div>
     );

@@ -40,18 +40,19 @@ export function collectEdges(n: TreeNode, acc: [TreeNode, TreeNode][] = []): [Tr
   return acc;
 }
 
-/** Canvas size based on tree dimensions. */
+/** Canvas size based on tree dimensions (accounts for free-positioned nodes). */
 export function canvasSize(allNodes: TreeNode[]): { cw: number; ch: number } {
-  const maxDepth = Math.max(...allNodes.map(n => n.depth ?? 0));
-  const maxRow   = Math.max(...allNodes.map(n => n.row   ?? 0));
+  const maxX  = Math.max(...allNodes.map(n => (n.x ?? 0)));
+  const maxCY = Math.max(...allNodes.map(n => centerY(n)));
   return {
-    cw: PAD * 2 + maxDepth * LW + NW,
-    ch: PAD * 2 + (maxRow + 1) * RH,
+    cw: maxX  + NW  + PAD * 2,
+    ch: maxCY + NH / 2 + PAD * 2,
   };
 }
 
-/** Center Y of a node. */
-export const centerY = (n: TreeNode): number => PAD + (n.row ?? 0) * RH + RH / 2;
+/** Center Y of a node (respects free py override). */
+export const centerY = (n: TreeNode): number =>
+  n.py !== undefined ? n.py : PAD + (n.row ?? 0) * RH + RH / 2;
 
 /** Top Y of a node element. */
 export const topY = (n: TreeNode): number => centerY(n) - NH / 2;

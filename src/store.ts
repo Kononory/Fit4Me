@@ -55,9 +55,9 @@ interface AppStore {
   updateActiveTree: (tree: TreeNode) => void;
 
   // ── Selection ──────────────────────────────────────────────────────
-  sel: string | null;       // selected branch id
-  selNodeId: string | null; // selected node id
-  selTick: number;          // increments on every selection — use as animation key
+  sel: string | null;
+  selNodeId: string | null;
+  selTick: number;
   setSel: (sel: string | null) => void;
   setSelNodeId: (id: string | null) => void;
 
@@ -81,6 +81,12 @@ interface AppStore {
   animateEdgesNext: boolean;
   triggerEdgeAnim: () => void;
   clearEdgeAnim: () => void;
+  zoom: number;
+  setZoom: (zoom: number) => void;
+  freeMode: boolean;
+  setFreeMode: (v: boolean) => void;
+  hotkeysOpen: boolean;
+  setHotkeysOpen: (v: boolean) => void;
 }
 
 export const useStore = create<AppStore>((set, get) => {
@@ -180,5 +186,11 @@ export const useStore = create<AppStore>((set, get) => {
     animateEdgesNext: false,
     triggerEdgeAnim: () => set({ animateEdgesNext: true }),
     clearEdgeAnim: () => set({ animateEdgesNext: false }),
+    zoom: 1,
+    setZoom: (zoom) => set({ zoom: Math.min(3, Math.max(0.25, zoom)) }),
+    freeMode: false,
+    setFreeMode: (freeMode) => set({ freeMode }),
+    hotkeysOpen: false,
+    setHotkeysOpen: (hotkeysOpen) => set({ hotkeysOpen }),
   };
 });
