@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, AlignJustify, Move } from 'lucide-react';
+import { RotateCcw, RotateCw, AlignJustify, Move, KeyRound } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree } from '../tree';
 import { DEFAULT_TREE } from '../data';
 
 export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, textEditOpen, getActive, freeMode, setFreeMode } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, textEditOpen, getActive, freeMode, setFreeMode, setFigmaTokenOpen } = useStore();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -57,6 +57,7 @@ export function Toolbar({ onTextEdit }: { onTextEdit: () => void }) {
         className={freeMode ? 'tb-active' : ''}
         onClick={() => setFreeMode(!freeMode)}
       ><Move size={14} /></button>
+      <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
       <button id="tb-save" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save'}</button>
       <button id="tb-reset" onClick={handleReset}>Reset</button>
     </div>

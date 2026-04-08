@@ -5,6 +5,8 @@ import { useStore } from '../store';
 import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
+import { FigmaPreview } from './FigmaPreview';
+import { FigmaTokenModal } from './FigmaTokenModal';
 import { useDrag } from '../hooks/useDrag';
 import { removeNode, addSiblingNode, swapNodes, swapNodeMetadata, findNode } from '../tree';
 import type { PickerState, PickerMode } from './EdgePicker';
@@ -25,10 +27,11 @@ export function Canvas({
   allNodes, allEdges, crossEdges, doAnim, zoom,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
+  const [figmaPreviewNode, setFigmaPreviewNode] = useState<TreeNode | null>(null);
 
   // Toggle a node + all its descendants in multi-select
   const toggleSubtree = useCallback((node: TreeNode) => {
@@ -141,6 +144,13 @@ export function Canvas({
     clearMultiSel();
   }, [multiSelIds, getActive, pushUndo, triggerEdgeAnim, updateActiveTree, clearMultiSel]);
 
+  const handleFigmaLink = useCallback((n: TreeNode, ref: string | null) => {
+    pushUndo();
+    if (ref === null) delete n.figmaRef;
+    else n.figmaRef = ref;
+    updateActiveTree(getActive().tree);
+  }, [pushUndo, getActive, updateActiveTree]);
+
   const nodeState = useCallback((n: TreeNode) => {
     if (n.id === selNodeId)      return 'act' as const;
     if (!sel)                    return 'def' as const;
@@ -149,6 +159,7 @@ export function Canvas({
   }, [sel, selNodeId]);
 
   return (
+    <>
     <div
       id="cnv"
       ref={cnvRef}
@@ -156,6 +167,7 @@ export function Canvas({
       onClick={() => {
         if (editNodeId || drag.on) return;
         setSel(null); setSelNodeId(null); clearMultiSel();
+        setFigmaPreviewNode(null);
       }}
     >
       <EdgeLayer
@@ -185,6 +197,8 @@ export function Canvas({
           onAddSibling={handleAddSibling}
           editNodeId={editNodeId}
           onEditDone={() => setEditNodeId(null)}
+          onFigmaPreview={setFigmaPreviewNode}
+          onFigmaLink={handleFigmaLink}
         />
       ))}
 
@@ -204,5 +218,15 @@ export function Canvas({
         </div>
       )}
     </div>
+
+    {figmaPreviewNode && (
+      <FigmaPreview
+        figmaRef={figmaPreviewNode.figmaRef!}
+        nodeLabel={figmaPreviewNode.label}
+        onClose={() => setFigmaPreviewNode(null)}
+      />
+    )}
+    {figmaTokenOpen && <FigmaTokenModal />}
+    </>
   );
 }

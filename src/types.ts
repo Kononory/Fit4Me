@@ -18,6 +18,8 @@ export interface TreeNode {
   // Free positioning (serialised, override auto-layout)
   px?: number; // free x (pixel left)
   py?: number; // free y (pixel center)
+  // Figma link (serialised) — format: `${fileKey}||${nodeId}`
+  figmaRef?: string;
 }
 
 export interface CrossEdge {

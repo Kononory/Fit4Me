@@ -1,0 +1,46 @@
+import { useState } from 'react';
+import { Eye, EyeOff, X } from 'lucide-react';
+import { getPAT, setPAT } from '../lib/figma';
+import { useStore } from '../store';
+
+export function FigmaTokenModal() {
+  const { setFigmaTokenOpen } = useStore();
+  const [val, setVal] = useState(getPAT());
+  const [show, setShow] = useState(false);
+
+  const close = () => setFigmaTokenOpen(false);
+  const save = () => { setPAT(val); close(); };
+
+  return (
+    <div className="fig-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+      <div className="fig-modal-card" onClick={e => e.stopPropagation()}>
+        <div className="fig-modal-header">
+          <span className="fig-modal-title">Figma Access Token</span>
+          <button className="fig-preview-icon-btn" onClick={close}><X size={14} /></button>
+        </div>
+        <p className="fig-modal-hint">
+          Figma → Account Settings → Personal access tokens → Generate new token.
+        </p>
+        <div className="fig-modal-input-row">
+          <input
+            className="fig-modal-input"
+            type={show ? 'text' : 'password'}
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            placeholder="figd_..."
+            autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); }}
+          />
+          <button className="fig-preview-icon-btn" onClick={() => setShow(s => !s)} title={show ? 'Hide' : 'Show'}>
+            {show ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+        <div className="fig-modal-actions">
+          {getPAT() && <button className="fig-modal-btn fig-modal-btn-clear" onClick={() => { setPAT(''); setVal(''); }}>Clear</button>}
+          <button className="fig-modal-btn fig-modal-btn-cancel" onClick={close}>Cancel</button>
+          <button className="fig-modal-btn fig-modal-btn-save" onClick={save}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}

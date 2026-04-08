@@ -87,6 +87,8 @@ interface AppStore {
   setFreeMode: (v: boolean) => void;
   hotkeysOpen: boolean;
   setHotkeysOpen: (v: boolean) => void;
+  figmaTokenOpen: boolean;
+  setFigmaTokenOpen: (v: boolean) => void;
 }
 
 export const useStore = create<AppStore>((set, get) => {
@@ -192,5 +194,7 @@ export const useStore = create<AppStore>((set, get) => {
     setFreeMode: (freeMode) => set({ freeMode }),
     hotkeysOpen: false,
     setHotkeysOpen: (hotkeysOpen) => set({ hotkeysOpen }),
+    figmaTokenOpen: false,
+    setFigmaTokenOpen: (figmaTokenOpen) => set({ figmaTokenOpen }),
   };
 });
