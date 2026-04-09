@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { AnimatePresence } from 'motion/react';
 import type { TreeNode, CrossEdge } from '../types';
 import { canvasSize, flattenTree } from '../layout';
 import { useStore } from '../store';
@@ -7,6 +8,7 @@ import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { FigmaPreview } from './FigmaPreview';
 import { FigmaTokenModal } from './FigmaTokenModal';
+import { ExpandedNode } from './ExpandedNode';
 import { PreviewPanel } from './PreviewPanel';
 import { useDrag } from '../hooks/useDrag';
 import { removeNode, addSiblingNode, swapNodes, swapNodeMetadata, findNode } from '../tree';
@@ -34,6 +36,7 @@ export function Canvas({
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
   const [figmaPreviewNode, setFigmaPreviewNode] = useState<TreeNode | null>(null);
   const [previewStartId, setPreviewStartId] = useState<string | null>(null);
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
   // Toggle a node + all its descendants in multi-select
   const toggleSubtree = useCallback((node: TreeNode) => {
@@ -187,7 +190,7 @@ export function Canvas({
         onShowCrossEdgePicker={onShowCrossEdgePicker}
       />
 
-      {allNodes.map((n) => (
+      {allNodes.map((n) => expandedNodeId === n.id ? null : (
         <NodeEl
           key={n.id}
           node={n}
@@ -201,6 +204,7 @@ export function Canvas({
           onEditDone={() => setEditNodeId(null)}
           onFigmaPreview={setFigmaPreviewNode}
           onFigmaLink={handleFigmaLink}
+          onLongPress={n => setExpandedNodeId(n.id)}
         />
       ))}
 
@@ -245,6 +249,12 @@ export function Canvas({
       );
     })()}
     {figmaTokenOpen && <FigmaTokenModal />}
+    <AnimatePresence>
+      {expandedNodeId && (() => {
+        const node = allNodes.find(n => n.id === expandedNodeId);
+        return node ? <ExpandedNode key={expandedNodeId} node={node} onClose={() => setExpandedNodeId(null)} /> : null;
+      })()}
+    </AnimatePresence>
     </>
   );
 }

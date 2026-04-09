@@ -1,9 +1,11 @@
 import { useRef, useCallback, useState } from 'react';
+import { motion } from 'motion/react';
 import { Plus, Link2, ImageIcon, X } from 'lucide-react';
 import type { TreeNode } from '../types';
 import { parseFigmaInput, encodeRef } from '../lib/figma';
 import { NW, NH, topY } from '../layout';
 import { useStore } from '../store';
+import { useLongPress } from '../hooks/useLongPress';
 
 interface Props {
   node: TreeNode;
@@ -17,14 +19,16 @@ interface Props {
   onEditDone: () => void;
   onFigmaPreview: (n: TreeNode) => void;
   onFigmaLink: (n: TreeNode, ref: string | null) => void;
+  onLongPress?: (n: TreeNode) => void;
 }
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaPreview, onFigmaLink }: Props) {
+export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaPreview, onFigmaLink, onLongPress }: Props) {
     const { updateActiveTree, getActive, setSel, setSelNodeId } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
+    const lp = useLongPress(() => onLongPress?.(n), 400);
     const inputRef = useRef<HTMLInputElement>(null);
     const linkInputRef = useRef<HTMLInputElement>(null);
     const [isLinking, setIsLinking] = useState(false);
@@ -50,6 +54,8 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
 
     const handleClick = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
+      // Suppress click that fires immediately after a long press
+      if (lp.didFireRef.current) { lp.didFireRef.current = false; return; }
       // Shift+click → toggle multi-selection
       if (e.shiftKey) { onToggleMulti(); return; }
       if (tapTimer.current && tapId.current === n.id) {
@@ -75,10 +81,15 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
     }, [n, onSelect, onToggleMulti, setSel, setSelNodeId]);
 
     return (
-      <div
+      <motion.div
+        layoutId={`node-morph-${n.id}`}
         className={cls.join(' ')}
         data-nid={n.id}
         style={{ left: n.x, top: topY(n), width: NW, height: NH, position: 'absolute' }}
+        onPointerDown={lp.onPointerDown}
+        onPointerUp={lp.onPointerUp}
+        onPointerLeave={lp.onPointerLeave}
+        onPointerMove={lp.onPointerMove}
         onMouseDown={e => {
           if (e.button !== 0) return;
           e.stopPropagation();
@@ -86,7 +97,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         }}
         onTouchStart={e => {
           const t = e.touches[0];
-          onDragBegin(n, e.currentTarget, t.clientX, t.clientY);
+          onDragBegin(n, e.currentTarget as HTMLElement, t.clientX, t.clientY);
         }}
         onClick={handleClick}
       >
@@ -178,6 +189,6 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
             <button className="nd-figma-btn" title="Cancel" onClick={() => setIsLinking(false)}><X size={10} /></button>
           </div>
         )}
-      </div>
+      </motion.div>
     );
 }
