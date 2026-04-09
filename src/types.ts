@@ -20,6 +20,8 @@ export interface TreeNode {
   py?: number; // free y (pixel center)
   // Figma link (serialised) — format: `${fileKey}||${nodeId}`
   figmaRef?: string;
+  // Rich notes edited in the expanded (full-screen) panel
+  content?: string;
 }
 
 export interface CrossEdge {

@@ -123,10 +123,12 @@ This keeps CLAUDE.md as a living document and prevents repeating the same mistak
 - Trigger: `useLongPress` hook (400ms, cancels on >3px movement) on NodeEl
 - Compact node: `motion.div` with `layoutId=\`node-morph-${n.id}\`` — filtered from allNodes.map() while expanded
 - Expanded node: `ExpandedNode` — full-screen `motion.div.en-panel` (position:fixed;inset:0) with `layoutId`, rendered as sibling of `#cnv` (outside CSS zoom context), wrapped in `AnimatePresence`
-- Inner canvas: `SubFlow` component — clones subtree via `cloneTree()`, runs `doLayout()` from (0,0), renders simplified `.nd` nodes + `EdgeLayer` in a scrollable `en-flow-wrap`
+- Inner canvas: `SubFlow` component — own layout (`computeLayout`, constants SNW=240 SNH=120 SLW=296 SRH=144 SPAD=40), SVG bezier edges, card nodes with inline label editor + `content` textarea
 - Inner content (flow canvas) fades in with `transition.delay:0.15` after the panel morph settles
 - CSS zoom note: motion FLIP uses `getBoundingClientRect()` (screen coords) — works at any zoom level
-- SubFlow nodes are click-to-select only (no drag/edit); pass no-op callbacks to EdgeLayer pickers
+- SubFlow nodes: click-to-select, double-click header to rename label inline, textarea body for `n.content` (saves to main tree on blur)
+- `TreeNode.content?: string` — rich notes field, only visible/editable in the expanded panel; preserved by `cloneTree` / undo / Supabase
+- SubFlow does NOT use EdgeLayer or `doLayout` from layout.ts; it has its own layout function to support larger card sizes
 
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code
