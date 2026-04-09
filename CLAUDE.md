@@ -123,12 +123,15 @@ This keeps CLAUDE.md as a living document and prevents repeating the same mistak
 - Trigger: `useLongPress` hook (400ms, cancels on >3px movement) on NodeEl
 - Compact node: `motion.div` with `layoutId=\`node-morph-${n.id}\`` — filtered from allNodes.map() while expanded
 - Expanded node: `ExpandedNode` — full-screen `motion.div.en-panel` (position:fixed;inset:0) with `layoutId`, rendered as sibling of `#cnv` (outside CSS zoom context), wrapped in `AnimatePresence`
-- Inner canvas: `SubFlow` component — own layout (`computeLayout`, constants SNW=240 SNH=120 SLW=296 SRH=144 SPAD=40), SVG bezier edges, card nodes with inline label editor + `content` textarea
-- Inner content (flow canvas) fades in with `transition.delay:0.15` after the panel morph settles
+- Inner canvas: `SubFlow` component — own layout (`computeLayout`, constants SNW=240 SNH=120 SLW=296 SRH=144 SPAD=40), SVG bezier edges, independent card nodes
+- Inner content fades in with `transition.delay:0.15` after morph settles
 - CSS zoom note: motion FLIP uses `getBoundingClientRect()` (screen coords) — works at any zoom level
-- SubFlow nodes: click-to-select, double-click header to rename label inline, textarea body for `n.content` (saves to main tree on blur)
-- `TreeNode.content?: string` — rich notes field, only visible/editable in the expanded panel; preserved by `cloneTree` / undo / Supabase
-- SubFlow does NOT use EdgeLayer or `doLayout` from layout.ts; it has its own layout function to support larger card sizes
+- SubFlow does NOT use EdgeLayer or `doLayout` from layout.ts — fully self-contained
+- `TreeNode.innerFlow?: TreeNode` — root of a completely independent mini-flowchart owned by the node; edited only in the expanded panel; stored as nested JSON within the main tree (persists through undo/Supabase via `cloneTree` + JSON.stringify)
+- `TreeNode.content?: string` — per-node notes textarea (inside expanded panel cards)
+- SubFlow state: `flow` (local useState, initialized from `root.innerFlow`); synced when `root` reference changes via render-phase guard (`prevRoot` ref pattern)
+- Card interactions: click=select, double-click label=inline rename, `+` button=add child, `×` button=delete; content textarea saves on blur
+- Add child uses `addChildNode(parent)` from tree.ts on a `cloneTree(flow)` copy, then `saveFlow(cloned)`; delete uses `removeNode`; label/content use `findNode` to patch a clone
 
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code

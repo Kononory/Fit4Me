@@ -1258,34 +1258,55 @@ svg#svgl.dimmed { opacity: 0.3; }
   flex: 1; overflow: auto; padding: 40px;
 }
 
-/* ── SubFlow card nodes ─────────────────────────────────────────────────── */
-.sf-card {
-  background: #FEFCF8;
-  border: 1px solid #DEDDDA;
-  border-radius: 5px;
-  display: flex; flex-direction: column;
-  cursor: pointer;
-  transition: border-color 0.1s, box-shadow 0.1s;
-  overflow: hidden;
+/* ── SubFlow ────────────────────────────────────────────────────────────── */
+.sf-empty {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 260px;
+}
+.sf-add-root {
   font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 11px; font-weight: 600; color: #5A5955;
+  background: #F8F7F4; border: 1.5px dashed #DEDDDA; border-radius: 5px;
+  padding: 10px 20px; cursor: pointer; transition: border-color 0.1s, color 0.1s;
+}
+.sf-add-root:hover { border-color: #AEADA8; color: #1A1A1A; }
+
+.sf-card {
+  background: #FEFCF8; border: 1px solid #DEDDDA; border-radius: 5px;
+  display: flex; flex-direction: column;
+  cursor: pointer; transition: border-color 0.1s, box-shadow 0.1s;
+  overflow: hidden; font-family: 'LatteraMonoLL','Space Mono',monospace;
 }
 .sf-card:hover { border-color: #AEADA8; }
 .sf-card.sf-active { border-color: #1A1A1A; box-shadow: 0 0 0 1px #1A1A1A; }
+
 .sf-card-header {
-  padding: 7px 10px 6px;
+  padding: 6px 6px 5px 10px;
   border-bottom: 1px solid #EEEDE9;
-  flex-shrink: 0;
+  flex-shrink: 0; display: flex; align-items: center; gap: 4px;
 }
 .sf-label {
-  font-size: 11px; font-weight: 600; color: #1A1A1A;
-  line-height: 1.3; display: block;
-  user-select: none;
+  flex: 1; font-size: 11px; font-weight: 600; color: #1A1A1A;
+  line-height: 1.3; user-select: none;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sf-label-input {
-  width: 100%; font-family: inherit; font-size: 11px; font-weight: 600;
+  flex: 1; font-family: inherit; font-size: 11px; font-weight: 600;
   color: #1A1A1A; background: transparent; border: none; outline: none; padding: 0;
+  min-width: 0;
 }
+.sf-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.sf-btn {
+  width: 18px; height: 18px; padding: 0;
+  font-family: inherit; font-size: 12px; line-height: 1;
+  border: 1px solid #DEDDDA; border-radius: 2px;
+  background: #F8F7F4; color: #9A9995; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, color 0.1s;
+}
+.sf-btn:hover { background: #F2F1ED; color: #1A1A1A; }
+.sf-btn-del:hover { background: #FCECEA; color: #B52B1E; border-color: #D98A83; }
+
 .sf-content {
   flex: 1; width: 100%; resize: none;
   border: none; outline: none; background: transparent;

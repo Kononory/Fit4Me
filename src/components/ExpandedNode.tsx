@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import type { TreeNode } from '../types';
 import { flattenTree, collectEdges } from '../layout';
+import { addChildNode, removeNode, findNode, cloneTree } from '../tree';
 import { useStore } from '../store';
 
 interface Props {
@@ -10,11 +11,11 @@ interface Props {
   onClose: () => void;
 }
 
-// SubFlow layout constants — card-sized nodes with room for content
+// SubFlow layout constants — card-sized nodes
 const SNW  = 240;  // card width
 const SNH  = 120;  // card height
-const SLW  = 296;  // column spacing (SNW + 56px gap)
-const SRH  = 144;  // row spacing   (SNH + 24px gap)
+const SLW  = 296;  // column spacing
+const SRH  = 144;  // row spacing
 const SPAD = 40;   // canvas padding
 
 interface SFPos { x: number; cy: number; row: number }
@@ -43,34 +44,95 @@ function computeLayout(root: TreeNode): Map<string, SFPos> {
 
 function SubFlow({ root }: { root: TreeNode }) {
   const { updateActiveTree, getActive, pushUndo } = useStore();
+
+  // Inner flow is completely independent from the main tree structure
+  const [flow, setFlow] = useState<TreeNode | null>(() => root.innerFlow ?? null);
   const [selId,  setSelId]  = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef   = useRef<HTMLInputElement>(null);
+  const prevRoot   = useRef(root);
 
-  const layout = useMemo(() => computeLayout(root), [root]);
-  const nodes  = useMemo(() => flattenTree(root),   [root]);
-  const edges  = useMemo(() => collectEdges(root),  [root]);
+  // Sync with root.innerFlow when the parent re-renders (e.g. after main-tree undo)
+  if (prevRoot.current !== root) {
+    prevRoot.current = root;
+    setFlow(root.innerFlow ?? null);
+  }
 
-  const vals = [...layout.values()];
-  const cw = Math.max(...vals.map(p => p.x + SNW)) + SPAD;
-  const ch = Math.max(...vals.map(p => p.cy + SNH / 2)) + SPAD;
+  // Keep root.innerFlow in sync whenever flow state changes
+  const saveFlow = useCallback((f: TreeNode | null) => {
+    setFlow(f);
+    root.innerFlow = f ?? undefined;
+    updateActiveTree(getActive().tree);
+  }, [root, getActive, updateActiveTree]);
 
-  const commitLabel = useCallback((n: TreeNode) => {
-    const val = (inputRef.current?.value ?? '').trim() || n.label;
-    if (val !== n.label) {
-      pushUndo();
-      n.label = val;
-      updateActiveTree(getActive().tree);
-    }
+  const addChild = useCallback((parentId: string) => {
+    if (!flow) return;
+    pushUndo();
+    const cloned = cloneTree(flow);
+    const parent = findNode(cloned, parentId);
+    if (parent) addChildNode(parent);
+    saveFlow(cloned);
+  }, [flow, pushUndo, saveFlow]);
+
+  const deleteNodeById = useCallback((nodeId: string) => {
+    if (!flow) return;
+    pushUndo();
+    if (nodeId === flow.id) { saveFlow(null); setSelId(null); return; }
+    const cloned = cloneTree(flow);
+    removeNode(cloned, nodeId);
+    saveFlow(cloned);
+    if (selId === nodeId) setSelId(null);
+  }, [flow, pushUndo, saveFlow, selId]);
+
+  const commitLabel = useCallback((nodeId: string) => {
+    const val = (inputRef.current?.value ?? '').trim();
     setEditId(null);
-  }, [getActive, pushUndo, updateActiveTree]);
+    if (!flow || !val) return;
+    const original = findNode(flow, nodeId);
+    if (!original || val === original.label) return;
+    pushUndo();
+    const cloned = cloneTree(flow);
+    const target = findNode(cloned, nodeId);
+    if (target) target.label = val;
+    saveFlow(cloned);
+  }, [flow, pushUndo, saveFlow]);
+
+  const commitContent = useCallback((nodeId: string, val: string) => {
+    if (!flow) return;
+    const original = findNode(flow, nodeId);
+    if (!original || val === (original.content ?? '')) return;
+    pushUndo();
+    const cloned = cloneTree(flow);
+    const target = findNode(cloned, nodeId);
+    if (target) target.content = val;
+    saveFlow(cloned);
+  }, [flow, pushUndo, saveFlow]);
+
+  const layout = useMemo(() => flow ? computeLayout(flow) : new Map<string, SFPos>(), [flow]);
+  const nodes  = useMemo(() => flow ? flattenTree(flow)  : [], [flow]);
+  const edges  = useMemo(() => flow ? collectEdges(flow) : [], [flow]);
+
+  const posVals = [...layout.values()];
+  const cw = posVals.length ? Math.max(...posVals.map(p => p.x + SNW)) + SPAD : 320;
+  const ch = posVals.length ? Math.max(...posVals.map(p => p.cy + SNH / 2)) + SPAD : 260;
+
+  if (!flow) {
+    return (
+      <div className="sf-empty">
+        <button
+          className="sf-add-root"
+          onClick={() => saveFlow({ id: `sf-${Date.now()}`, label: 'Node' })}
+        >
+          + Start flow
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: 'relative', width: cw, height: ch }}>
       {/* SVG edge layer */}
-      <svg
-        style={{ position: 'absolute', inset: 0, width: cw, height: ch, overflow: 'visible', pointerEvents: 'none' }}
-      >
+      <svg style={{ position: 'absolute', inset: 0, width: cw, height: ch, overflow: 'visible', pointerEvents: 'none' }}>
         {edges.map(([parent, child], i) => {
           const fp = layout.get(parent.id);
           const cp = layout.get(child.id);
@@ -79,13 +141,8 @@ function SubFlow({ root }: { root: TreeNode }) {
           const x2 = cp.x,       y2 = cp.cy;
           const mx = (x1 + x2) / 2;
           return (
-            <path
-              key={i}
-              d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-              fill="none"
-              stroke="#DEDDDA"
-              strokeWidth={1.5}
-            />
+            <path key={i} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
+              fill="none" stroke="#DEDDDA" strokeWidth={1.5} />
           );
         })}
       </svg>
@@ -103,7 +160,7 @@ function SubFlow({ root }: { root: TreeNode }) {
             style={{ left: pos.x, top: pos.cy - SNH / 2, width: SNW, height: SNH, position: 'absolute' }}
             onClick={() => setSelId(isSel ? null : n.id)}
           >
-            {/* Label row */}
+            {/* Header: label + action buttons */}
             <div className="sf-card-header">
               {isEditing ? (
                 <input
@@ -113,10 +170,10 @@ function SubFlow({ root }: { root: TreeNode }) {
                   defaultValue={n.label}
                   onClick={e => e.stopPropagation()}
                   onMouseDown={e => e.stopPropagation()}
-                  onBlur={() => commitLabel(n)}
+                  onBlur={() => commitLabel(n.id)}
                   onKeyDown={e => {
                     e.stopPropagation();
-                    if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n); }
+                    if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
                     if (e.key === 'Escape') setEditId(null);
                   }}
                 />
@@ -128,23 +185,24 @@ function SubFlow({ root }: { root: TreeNode }) {
                   {n.label}
                 </span>
               )}
+              <div
+                className="sf-card-actions"
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
+                <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
+              </div>
             </div>
 
-            {/* Content area */}
+            {/* Content textarea */}
             <textarea
               className="sf-content"
               defaultValue={n.content ?? ''}
               placeholder="Notes…"
               onClick={e => e.stopPropagation()}
               onMouseDown={e => e.stopPropagation()}
-              onBlur={e => {
-                const val = e.target.value;
-                if (val !== (n.content ?? '')) {
-                  pushUndo();
-                  n.content = val;
-                  updateActiveTree(getActive().tree);
-                }
-              }}
+              onBlur={e => commitContent(n.id, e.target.value)}
             />
           </div>
         );
@@ -156,7 +214,6 @@ function SubFlow({ root }: { root: TreeNode }) {
 export function ExpandedNode({ node, onClose }: Props) {
   return (
     <>
-      {/* Blurred backdrop — click collapses */}
       <motion.div
         className="en-backdrop"
         initial={{ opacity: 0 }}
@@ -165,8 +222,6 @@ export function ExpandedNode({ node, onClose }: Props) {
         transition={{ duration: 0.18 }}
         onClick={onClose}
       />
-
-      {/* Full-screen panel — morphs from compact node via layoutId FLIP */}
       <motion.div
         layoutId={`node-morph-${node.id}`}
         className="en-panel"
@@ -175,8 +230,6 @@ export function ExpandedNode({ node, onClose }: Props) {
           <span className="en-title">{node.label}</span>
           <button className="en-close" onClick={onClose}><X size={13} /></button>
         </div>
-
-        {/* Flow canvas fades in after the morph animation settles */}
         <motion.div
           className="en-flow-wrap"
           initial={{ opacity: 0 }}

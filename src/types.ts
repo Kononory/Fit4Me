@@ -20,8 +20,10 @@ export interface TreeNode {
   py?: number; // free y (pixel center)
   // Figma link (serialised) — format: `${fileKey}||${nodeId}`
   figmaRef?: string;
-  // Rich notes edited in the expanded (full-screen) panel
+  // Rich notes shown in the expanded panel card body
   content?: string;
+  // Independent mini-flowchart owned by this node (edited in the expanded panel)
+  innerFlow?: TreeNode;
 }
 
 export interface CrossEdge {
