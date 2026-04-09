@@ -77,7 +77,7 @@ src/
 - All styles in `src/style.css` — no separate files, no CSS modules
 - ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
 - Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar
-- Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 160 en-outer (expanded node card) → 150 en-backdrop → 100 sidebar → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
+- Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebar → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
 - Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
 - Node handle sizing: `width:18px; height:18px` — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`
 
@@ -122,9 +122,11 @@ This keeps CLAUDE.md as a living document and prevents repeating the same mistak
 - State: `expandedNodeId: string | null` in Canvas local state
 - Trigger: `useLongPress` hook (400ms, cancels on >3px movement) on NodeEl
 - Compact node: `motion.div` with `layoutId=\`node-morph-${n.id}\`` — filtered from allNodes.map() while expanded
-- Expanded node: `ExpandedNode` component, rendered as sibling of `#cnv` (outside CSS zoom context), wrapped in `AnimatePresence`
-- Inner content: separate `motion.div` with `initial/animate/exit` + `transition.delay:0.15` for staggered fade-in
-- CSS zoom note: motion FLIP uses `getBoundingClientRect()` (screen coords) for both nodes — works correctly at any zoom level
+- Expanded node: `ExpandedNode` — full-screen `motion.div.en-panel` (position:fixed;inset:0) with `layoutId`, rendered as sibling of `#cnv` (outside CSS zoom context), wrapped in `AnimatePresence`
+- Inner canvas: `SubFlow` component — clones subtree via `cloneTree()`, runs `doLayout()` from (0,0), renders simplified `.nd` nodes + `EdgeLayer` in a scrollable `en-flow-wrap`
+- Inner content (flow canvas) fades in with `transition.delay:0.15` after the panel morph settles
+- CSS zoom note: motion FLIP uses `getBoundingClientRect()` (screen coords) — works at any zoom level
+- SubFlow nodes are click-to-select only (no drag/edit); pass no-op callbacks to EdgeLayer pickers
 
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code
