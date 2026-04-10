@@ -4,9 +4,10 @@ import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree } from '../tree';
 import { DEFAULT_TREE } from '../data';
+import { autoArrange, doLayout, flattenTree } from '../layout';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, freeMode, setFreeMode, setFigmaTokenOpen } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, overlapCount } = useStore();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -38,6 +39,17 @@ export function Toolbar() {
     setFlows(updated);
   }, [flows, activeId, setFlows]);
 
+  const handleAutoArrange = useCallback(() => {
+    const flow = getActive();
+    const freeCount = flattenTree(flow.tree).filter(n => n.px !== undefined || n.py !== undefined).length;
+    if (freeCount > 3 && !confirm(`Auto-arrange will reset ${freeCount} free-positioned nodes. Continue?`)) return;
+    pushUndo();
+    autoArrange(flow.tree);
+    doLayout(flow.tree, 0, 0);
+    triggerEdgeAnim();
+    updateActiveTree(flow.tree);
+  }, [getActive, pushUndo, triggerEdgeAnim, updateActiveTree]);
+
   const undoOk = canUndo();
   const redoOk = canRedo();
 
@@ -57,6 +69,11 @@ export function Toolbar() {
         onClick={() => setFreeMode(!freeMode)}
       ><Move size={14} /></button>
       <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
+      {overlapCount > 0 && (
+        <button id="tb-overlap" title="Edge crossings detected — click to auto-arrange" onClick={handleAutoArrange}>
+          ⚠ {overlapCount} crossing{overlapCount > 1 ? 's' : ''} · Fix
+        </button>
+      )}
       <button id="tb-save" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save'}</button>
       <button id="tb-reset" onClick={handleReset}>Reset</button>
     </div>

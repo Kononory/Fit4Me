@@ -91,6 +91,8 @@ interface AppStore {
   setHotkeysOpen: (v: boolean) => void;
   figmaTokenOpen: boolean;
   setFigmaTokenOpen: (v: boolean) => void;
+  overlapCount: number;
+  setOverlapCount: (n: number) => void;
 }
 
 export const useStore = create<AppStore>((set, get) => {
@@ -200,5 +202,7 @@ export const useStore = create<AppStore>((set, get) => {
     setHotkeysOpen: (hotkeysOpen) => set({ hotkeysOpen }),
     figmaTokenOpen: false,
     setFigmaTokenOpen: (figmaTokenOpen) => set({ figmaTokenOpen }),
+    overlapCount: 0,
+    setOverlapCount: (overlapCount) => set({ overlapCount }),
   };
 });

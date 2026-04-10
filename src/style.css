@@ -143,6 +143,14 @@ html, body {
   background: #1A1A1A; color: #F5F4F0; border-color: #1A1A1A;
 }
 
+#toolbar button#tb-overlap {
+  background: #FDF4E7; color: #C8963C; border-color: #DEB87A;
+  font-size: 11px; padding: 0 8px; white-space: nowrap;
+}
+#toolbar button#tb-overlap:hover {
+  background: #C8963C; color: #fff; border-color: #C8963C;
+}
+
 #tb-status {
   font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
 }

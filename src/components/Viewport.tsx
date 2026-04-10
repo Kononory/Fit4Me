@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TreeNode, CrossEdge } from '../types';
-import { doLayout, flattenTree, collectEdges, PAD, RH } from '../layout';
+import { doLayout, flattenTree, collectEdges, detectOverlaps, PAD, RH } from '../layout';
 import { useStore } from '../store';
 import { Canvas } from './Canvas';
 import { GridBackground } from './GridBackground';
@@ -21,7 +21,7 @@ function applyFreePositions(nodes: TreeNode[]) {
 }
 
 export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState, onSetPickerMode }: Props) {
-  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows } = useStore();
+  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows, setOverlapCount } = useStore();
   const vpRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number } | null>(null);
 
@@ -30,6 +30,10 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
     const active = getActive();
     doLayout(active.tree, 0, 0);
     applyFreePositions(flattenTree(active.tree));
+    const nodes = flattenTree(active.tree);
+    const edges = collectEdges(active.tree);
+    const overlaps = detectOverlaps(edges, active.crossEdges ?? [], nodes);
+    setOverlapCount(overlaps.length);
     return active.tree;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, flows, getActive]);

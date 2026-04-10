@@ -135,6 +135,13 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - Don't add CSS for removed elements — search for stale IDs before adding new ones
 
 ## Known pitfalls
+## Edge overlap detection
+- `detectOverlaps(allEdges, crossEdges, allNodes)` in `layout.ts` — returns `Overlap[]`; uses O(n²) segment-intersection; skips shared-endpoint pairs
+- `autoArrange(root)` in `layout.ts` — clears `px`/`py`, calls `doLayout`; caller must call `triggerEdgeAnim()` + `updateActiveTree()`
+- `overlapCount` / `setOverlapCount` in `store.ts` — updated by `Viewport.tsx` `useMemo` after each layout
+- `#tb-overlap` button in `Toolbar.tsx` — shown when `overlapCount > 0`; prompts confirm if >3 free nodes
+
+## Known pitfalls
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
 - [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
