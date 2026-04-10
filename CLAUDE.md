@@ -6,7 +6,9 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 ## Stack
 - React 19 + TypeScript, Vite 5, Tailwind CSS 4, Zustand 5
 - Font: `LatteraMonoLL` / `Space Mono` (monospace everywhere)
-- No external component libraries — all UI is hand-crafted
+- shadcn/ui is installed (`components.json` configured, style: base-nova) — add components with `npx shadcn add <component>`; they land in `src/components/ui/`
+- Supporting packages: `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`
+- Hand-crafted bespoke components live in `src/components/` (Canvas, NodeEl, etc.); shadcn UI primitives live in `src/components/ui/`
 
 ## Storage pattern
 - **Local** (`localStorage`) — written on every change, instant, machine-specific
@@ -119,19 +121,7 @@ After every completed feature, bugfix, or refactor — before closing the task �
 This keeps CLAUDE.md as a living document and prevents repeating the same mistakes.
 
 ## Semantic Zoom / Shared Element Transition
-- State: `expandedNodeId: string | null` in Canvas local state
-- Trigger: `useLongPress` hook (400ms, cancels on >3px movement) on NodeEl
-- Compact node: `motion.div` with `layoutId=\`node-morph-${n.id}\`` — filtered from allNodes.map() while expanded
-- Expanded node: `ExpandedNode` — full-screen `motion.div.en-panel` (position:fixed;inset:0) with `layoutId`, rendered as sibling of `#cnv` (outside CSS zoom context), wrapped in `AnimatePresence`
-- Inner canvas: `SubFlow` component — own layout (`computeLayout`, constants SNW=240 SNH=120 SLW=296 SRH=144 SPAD=40), SVG bezier edges, independent card nodes
-- Inner content fades in with `transition.delay:0.15` after morph settles
-- CSS zoom note: motion FLIP uses `getBoundingClientRect()` (screen coords) — works at any zoom level
-- SubFlow does NOT use EdgeLayer or `doLayout` from layout.ts — fully self-contained
-- `TreeNode.innerFlow?: TreeNode` — root of a completely independent mini-flowchart owned by the node; edited only in the expanded panel; stored as nested JSON within the main tree (persists through undo/Supabase via `cloneTree` + JSON.stringify)
-- `TreeNode.content?: string` — per-node notes textarea (inside expanded panel cards)
-- SubFlow state: `flow` (local useState, initialized from `root.innerFlow`); synced when `root` reference changes via render-phase guard (`prevRoot` ref pattern)
-- Card interactions: click=select, double-click label=inline rename, `+` button=add child, `×` button=delete; content textarea saves on blur
-- Add child uses `addChildNode(parent)` from tree.ts on a `cloneTree(flow)` copy, then `saveFlow(cloned)`; delete uses `removeNode`; label/content use `findNode` to patch a clone
+See `docs/semantic-zoom.md` — only read when modifying long-press expand, ExpandedNode, or SubFlow.
 
 ## What NOT to do
 - Don't add docstrings/comments to unchanged code
@@ -145,11 +135,7 @@ This keeps CLAUDE.md as a living document and prevents repeating the same mistak
 - Don't add CSS for removed elements — search for stale IDs before adding new ones
 
 ## Known pitfalls
-- [TextEditPanel dim overlay]: Initial `ta.focus()` in useEffect fires `onFocus` — do NOT activate dim there. Dim must only activate on explicit user `onClick`. Gate with a `dimActive` ref (default false); set true on click, false on blur.
-- [TextEditPanel dim overlay]: `transparent` in CSS gradients resolves to `rgba(0,0,0,0)` causing dark fringe. Always use `rgba(R,G,B,0)` matching the background color for the transparent stop.
-- [CSS textarea sizing]: A textarea inside a flex column needs `width:100%; height:100%` once wrapped in a `position:relative` div — `flex:1` alone stops working on the textarea itself.
-- [CSS zoom + drag coordinates]: CSS `zoom` scales `getBoundingClientRect()` — always divide `(clientX - rect.left) / zoom` in `useDrag` to get logical canvas coords.
-- [Duplicate CSS on merge]: main branch can have its own styles for the same element IDs. Before adding styles, `Grep` for the selector — if found, edit in place rather than appending a second block.
-- [JSX syntax in multi-line button]: Splitting `>?</button>` across lines creates parser errors — keep the tag content on one line or use a React fragment.
-- [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` time (not from cursor position). Compute `dx/dy` as `(snapEndX - startNodeX)` to get the correct movement delta for all grouped nodes.
-- [Multi-select stale closure in useDrag]: Pass `getMultiSel` as a callback, not the Set itself — the Set captured at `useCallback` creation time would be stale by `dragEnd`.
+- [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
+- [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
+- [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
+- [Multi-select stale closure]: Pass `getMultiSel` callback to `useDrag`, not the Set — Set captured at `useCallback` time is stale by `dragEnd`.
