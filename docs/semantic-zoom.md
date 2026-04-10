@@ -24,3 +24,14 @@ Read this file when modifying long-press expand, ExpandedNode, or SubFlow.
 - click=select, double-click label=inline rename, `+` button=add child, `×` button=delete; content textarea saves on blur
 - Add child: `addChildNode(parent)` on `cloneTree(flow)` copy, then `saveFlow(cloned)`
 - Delete: `removeNode`; label/content: `findNode` to patch a clone
+
+## Shape system (FlowShape)
+- `TreeNode.shape?: FlowShape` — `'rect' | 'stadium' | 'diamond' | 'circle' | 'parallelogram'`
+- Shapes rendered via CSS `clip-path: polygon(4 points)` + `border-radius` on the card div
+- All 5 shapes use 4-point polygon clip-paths so CSS can interpolate between them; spring easing `cubic-bezier(0.34,1.56,0.64,1)` gives the morph feel
+- `SHAPE_CLIP` / `SHAPE_RADIUS` maps live in ExpandedNode.tsx
+- Diamond special case: no textarea, centered label layout (`.sf-card-diamond`)
+- `ShapePicker` component: AnimatePresence fade-in below selected card; shows 5 shape icon buttons
+- `Legend` component: toggle panel at bottom-right of SubFlow canvas
+- `PresetBar`: User Flow / User Story / Decision Tree — builds full TreeNode trees with preset shapes
+- `cloneTree` auto-propagates `shape` (it's in `...rest`)
