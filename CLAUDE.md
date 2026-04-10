@@ -5,8 +5,9 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 
 ## Stack
 - React 19 + TypeScript, Vite 5, Tailwind CSS 4, Zustand 5
+- shadcn/ui "base-nova" style using `@base-ui/react` (NOT Radix UI) — components in `src/components/ui/`
 - Font: `LatteraMonoLL` / `Space Mono` (monospace everywhere)
-- No external component libraries — all UI is hand-crafted
+- UI: shadcn components + Tailwind utilities for all shell/chrome; custom CSS only for canvas (nodes, edges, drag)
 
 ## Storage pattern
 - **Local** (`localStorage`) — written on every change, instant, machine-specific
@@ -73,12 +74,18 @@ src/
 - **Bottom-right** (`right: 20px, bottom: 20px`, z-index 60): `#ret-marker` — retention widget
 - **Swap bar** (`position:fixed, left:50%, bottom:60px`, z-index 50): appears when exactly 2 nodes are multi-selected
 
-## CSS conventions
-- All styles in `src/style.css` — no separate files, no CSS modules
-- ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
-- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar
-- Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebar → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
-- Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
+## shadcn / Tailwind conventions
+- Shell UI (toolbar, panels, modals, sidebar) → shadcn components + Tailwind utilities; NO custom CSS classes
+- Canvas UI (nodes, edges, drag, retention) → custom CSS in `src/style.css`; do NOT use shadcn here
+- Available shadcn components: `Button`, `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, `Kbd`, `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`/`DialogFooter`, `Input`, `Textarea`, `Card`, `Separator`, `Tooltip`/`TooltipTrigger`/`TooltipContent`/`TooltipProvider`, `Badge`, `ScrollArea`
+- Button sizes: `xs` h-6, `sm` h-7, `default` h-8, `lg` h-9, `icon-xs` 24px, `icon-sm` 28px, `icon` 32px
+- Button variants: `default`, `outline`, `ghost`, `secondary`, `destructive`, `link`
+- `TooltipProvider delay={300}` wraps the whole app in `App.tsx`
+- Dialogs: rendered when component mounts with `open` always true + `onOpenChange={open => !open && close()}`; controlled by store flags (`figmaTokenOpen`, `hotkeysOpen`)
+- `cn()` utility at `@/lib/utils` (import as `'../lib/utils'` from components)
+- CSS still in `src/style.css` — only canvas-specific prefixes remain: `nd-` nodes, `ep-` edge picker, `ea-` edge analytics, `ret-` retention, `evm-`/`evc-` events, `pvw-` preview panel
+- Z-index (Tailwind arbitrary values): `z-[155]` en-panel → `z-[150]` en-backdrop → `z-[100]` sidebar/toolbar → `z-[90]` pickers → `z-[60]` fixed corners → `z-[50]` swap bar → `z-[40]` text-edit
+- Color palette (still used in canvas CSS): bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
 - Node handle sizing: `width:18px; height:18px` — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`
 
 ## State patterns

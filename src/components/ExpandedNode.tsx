@@ -5,6 +5,8 @@ import type { TreeNode } from '../types';
 import { flattenTree, collectEdges } from '../layout';
 import { addChildNode, removeNode, findNode, cloneTree } from '../tree';
 import { useStore } from '../store';
+import { Button } from './ui/button';
+import { cn } from '../lib/utils';
 
 interface Props {
   node: TreeNode;
@@ -118,13 +120,14 @@ function SubFlow({ root }: { root: TreeNode }) {
 
   if (!flow) {
     return (
-      <div className="sf-empty">
-        <button
-          className="sf-add-root"
+      <div className="flex min-h-[260px] items-center justify-center">
+        <Button
+          variant="outline"
+          className="border-dashed text-muted-foreground hover:text-foreground"
           onClick={() => saveFlow({ id: `sf-${Date.now()}`, label: 'Node' })}
         >
           + Start flow
-        </button>
+        </Button>
       </div>
     );
   }
@@ -156,16 +159,19 @@ function SubFlow({ root }: { root: TreeNode }) {
         return (
           <div
             key={n.id}
-            className={`sf-card${isSel ? ' sf-active' : ''}`}
+            className={cn(
+              "absolute flex flex-col overflow-hidden rounded-md border bg-card font-mono text-card-foreground transition-colors hover:border-muted-foreground",
+              isSel && "border-foreground shadow-[0_0_0_1px] shadow-foreground"
+            )}
             style={{ left: pos.x, top: pos.cy - SNH / 2, width: SNW, height: SNH, position: 'absolute' }}
             onClick={() => setSelId(isSel ? null : n.id)}
           >
             {/* Header: label + action buttons */}
-            <div className="sf-card-header">
+            <div className="flex shrink-0 items-center gap-1 border-b border-border px-2.5 py-[6px]">
               {isEditing ? (
                 <input
                   ref={inputRef}
-                  className="sf-label-input"
+                  className="min-w-0 flex-1 bg-transparent text-[11px] font-semibold outline-none border-none p-0"
                   autoFocus
                   defaultValue={n.label}
                   onClick={e => e.stopPropagation()}
@@ -179,25 +185,25 @@ function SubFlow({ root }: { root: TreeNode }) {
                 />
               ) : (
                 <span
-                  className="sf-label"
+                  className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-semibold select-none"
                   onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
                 >
                   {n.label}
                 </span>
               )}
               <div
-                className="sf-card-actions"
+                className="flex shrink-0 gap-0.5"
                 onClick={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}
               >
-                <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
-                <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
+                <Button variant="ghost" size="icon-xs" className="hover:bg-transparent hover:text-foreground" title="Add child" onClick={() => addChild(n.id)}>+</Button>
+                <Button variant="ghost" size="icon-xs" className="hover:bg-destructive/10 hover:text-destructive" title="Delete" onClick={() => deleteNodeById(n.id)}>×</Button>
               </div>
             </div>
 
             {/* Content textarea */}
             <textarea
-              className="sf-content"
+              className="flex-1 w-full resize-none border-none bg-transparent p-2.5 text-[10px] leading-relaxed text-muted-foreground outline-none placeholder:text-muted-foreground/50"
               defaultValue={n.content ?? ''}
               placeholder="Notes…"
               onClick={e => e.stopPropagation()}
@@ -215,7 +221,7 @@ export function ExpandedNode({ node, onClose }: Props) {
   return (
     <>
       <motion.div
-        className="en-backdrop"
+        className="fixed inset-0 z-[150] bg-black/[0.18] backdrop-blur-[3px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -224,14 +230,14 @@ export function ExpandedNode({ node, onClose }: Props) {
       />
       <motion.div
         layoutId={`node-morph-${node.id}`}
-        className="en-panel"
+        className="fixed inset-0 z-[155] flex flex-col overflow-hidden bg-background font-mono"
       >
-        <div className="en-header">
-          <span className="en-title">{node.label}</span>
-          <button className="en-close" onClick={onClose}><X size={13} /></button>
+        <div className="flex h-11 shrink-0 items-center gap-3 border-b-[1.5px] border-foreground px-4">
+          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold tracking-[0.02em]">{node.label}</span>
+          <Button variant="outline" size="icon-xs" onClick={onClose}><X size={13} /></Button>
         </div>
         <motion.div
-          className="en-flow-wrap"
+          className="flex-1 overflow-auto p-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

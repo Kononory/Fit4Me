@@ -1,57 +1,50 @@
 import { useState } from 'react';
-import { Eye, EyeOff, X, Check } from 'lucide-react';
+import { Eye, EyeOff, Check } from 'lucide-react';
 import { getPAT, setPAT } from '../lib/figma';
 import { useStore } from '../store';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 export function FigmaTokenModal() {
   const { setFigmaTokenOpen } = useStore();
-  const [val, setVal]     = useState(getPAT());
+  const [val, setVal]     = useState(getPAT);
   const [show, setShow]   = useState(false);
   const [saved, setSaved] = useState(false);
-
   const close = () => setFigmaTokenOpen(false);
-
-  const save = () => {
-    setPAT(val);
-    setSaved(true);
-    setTimeout(close, 700);
-  };
-
+  const save  = () => { setPAT(val); setSaved(true); setTimeout(close, 700); };
   const clear = () => { setPAT(''); setVal(''); setSaved(false); };
 
   return (
-    <div className="fig-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
-      <div className="fig-modal-card" onClick={e => e.stopPropagation()}>
-        <div className="fig-modal-header">
-          <span className="fig-modal-title">Figma Access Token</span>
-          <button className="fig-preview-icon-btn" onClick={close}><X size={14} /></button>
-        </div>
-        <p className="fig-modal-hint">
+    <Dialog open onOpenChange={open => !open && close()}>
+      <DialogContent showCloseButton={false} className="max-w-sm font-mono">
+        <DialogHeader>
+          <DialogTitle className="font-mono text-sm">Figma Access Token</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground leading-relaxed">
           Figma → Account Settings → Personal access tokens → Generate new token.
-          Saved to browser only — never sent anywhere except Figma's API.
+          Saved to browser only.
         </p>
-        <div className="fig-modal-input-row">
-          <input
-            className="fig-modal-input"
+        <div className="flex gap-1.5">
+          <Input
             type={show ? 'text' : 'password'}
             value={val}
             onChange={e => { setVal(e.target.value); setSaved(false); }}
-            placeholder="figd_..."
+            placeholder="figd_…"
             autoFocus
+            className="font-mono text-xs"
             onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); }}
           />
-          <button className="fig-preview-icon-btn" onClick={() => setShow(s => !s)} title={show ? 'Hide' : 'Show'}>
-            {show ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
+          <Button variant="outline" size="icon-sm" onClick={() => setShow(s => !s)}>
+            {show ? <EyeOff size={13} /> : <Eye size={13} />}
+          </Button>
         </div>
-        <div className="fig-modal-actions">
-          {val && <button className="fig-modal-btn fig-modal-btn-clear" onClick={clear}>Clear</button>}
-          <button className="fig-modal-btn fig-modal-btn-cancel" onClick={close}>Cancel</button>
-          <button className="fig-modal-btn fig-modal-btn-save" onClick={save}>
-            {saved ? <><Check size={11} /> Saved</> : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          {val && <Button variant="ghost" size="sm" onClick={clear} className="mr-auto">Clear</Button>}
+          <Button variant="outline" size="sm" onClick={close}>Cancel</Button>
+          <Button size="sm" onClick={save}>{saved ? <><Check size={11} /> Saved</> : 'Save'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

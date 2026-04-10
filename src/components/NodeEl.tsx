@@ -6,6 +6,7 @@ import { parseFigmaInput, encodeRef } from '../lib/figma';
 import { NW, NH, topY } from '../layout';
 import { useStore } from '../store';
 import { useLongPress } from '../hooks/useLongPress';
+import { Input } from './ui/input';
 
 interface Props {
   node: TreeNode;
@@ -102,7 +103,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         onClick={handleClick}
       >
         {isEditing ? (
-          <input
+          <Input
             ref={inputRef}
             className="nd-input"
             autoFocus
