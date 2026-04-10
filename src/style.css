@@ -1272,13 +1272,10 @@ svg#svgl.dimmed { opacity: 0.3; }
 .sf-add-root:hover { border-color: #AEADA8; color: #1A1A1A; }
 
 .sf-card {
-  background: #FEFCF8; border: 1px solid #DEDDDA; border-radius: 5px;
-  display: flex; flex-direction: column;
-  cursor: pointer; transition: border-color 0.1s, box-shadow 0.1s;
-  overflow: hidden; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  /* fill/stroke/shape handled by inline SVG — this is just the interaction target */
+  cursor: pointer; font-family: 'LatteraMonoLL','Space Mono',monospace;
 }
-.sf-card:hover { border-color: #AEADA8; }
-.sf-card.sf-active { border-color: #1A1A1A; box-shadow: 0 0 0 1px #1A1A1A; }
+.sf-card-content { font-family: 'LatteraMonoLL','Space Mono',monospace; }
 
 .sf-card-header {
   padding: 6px 6px 5px 10px;

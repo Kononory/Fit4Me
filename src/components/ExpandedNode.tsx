@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback, Fragment } from 'react';
+import { useRef, useState, useMemo, useCallback, Fragment, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import type { TreeNode, FlowShape } from '../types';
@@ -41,22 +41,26 @@ function computeLayout(root: TreeNode): Map<string, SFPos> {
 }
 
 // ── Shape system ─────────────────────────────────────────────────────────────
-// All shapes use 4-point polygon clip-paths so CSS can interpolate between them.
+// All shapes use 4-cubic-bezier SVG paths (identical command structure: M C C C C Z)
+// so Framer Motion can interpolate between them as plain numbers — true path morphing.
+// Card div is transparent; the SVG draws fill+stroke behind the content.
+// Content div uses SHAPE_INSET padding to stay within the visible shape interior.
 
-const SHAPE_CLIP: Record<FlowShape, string> = {
-  rect:          'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
-  stadium:       'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
-  circle:        'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
-  diamond:       'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-  parallelogram: 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)',
+const SHAPE_PATHS: Record<FlowShape, string> = {
+  rect:          'M 120,0 C 240,0 240,0 240,60 C 240,120 240,120 120,120 C 0,120 0,120 0,60 C 0,0 0,0 120,0 Z',
+  stadium:       'M 120,0 C 216,0 240,24 240,60 C 240,96 216,120 120,120 C 24,120 0,96 0,60 C 0,24 24,0 120,0 Z',
+  circle:        'M 120,0 C 186,0 240,27 240,60 C 240,93 186,120 120,120 C 54,120 0,93 0,60 C 0,27 54,0 120,0 Z',
+  diamond:       'M 120,0 C 160,20 200,40 240,60 C 200,80 160,100 120,120 C 80,100 40,80 0,60 C 40,40 80,20 120,0 Z',
+  parallelogram: 'M 138,0 C 240,0 240,0 222,60 C 240,120 204,120 102,120 C 0,120 0,120 18,60 C 0,0 36,0 138,0 Z',
 }
 
-const SHAPE_RADIUS: Record<FlowShape, string> = {
-  rect:          '6px',
-  stadium:       '60px',
-  circle:        '50%',
-  diamond:       '0px',
-  parallelogram: '4px',
+// Content padding so text stays within the visible interior of each shape
+const SHAPE_INSET: Record<FlowShape, CSSProperties> = {
+  rect:          {},
+  stadium:       { paddingLeft: 52, paddingRight: 52 },
+  circle:        { paddingLeft: 40, paddingRight: 40, paddingTop: 10, paddingBottom: 10 },
+  diamond:       { paddingLeft: 72, paddingRight: 72, paddingTop: 28, paddingBottom: 28 },
+  parallelogram: { paddingLeft: 44, paddingRight: 10 },
 }
 
 const SHAPE_META: Record<FlowShape, [string, string]> = {
@@ -183,9 +187,10 @@ function ShapePicker({ current, onSelect }: { current: FlowShape; onSelect: (s: 
 function SubFlow({ root }: { root: TreeNode }) {
   const { updateActiveTree, getActive, pushUndo } = useStore();
 
-  const [flow,   setFlow]   = useState<TreeNode | null>(() => root.innerFlow ?? null);
-  const [selId,  setSelId]  = useState<string | null>(null);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [flow,    setFlow]    = useState<TreeNode | null>(() => root.innerFlow ?? null);
+  const [selId,   setSelId]   = useState<string | null>(null);
+  const [editId,  setEditId]  = useState<string | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
   const prevRoot  = useRef(root);
 
@@ -317,63 +322,45 @@ function SubFlow({ root }: { root: TreeNode }) {
         {nodes.map(n => {
           const pos = layout.get(n.id);
           if (!pos) return null;
-          const shape      = (n.shape ?? 'rect') as FlowShape;
-          const isSel      = selId  === n.id;
-          const isEditing  = editId === n.id;
-          const isDiamond  = shape === 'diamond';
+          const shape     = (n.shape ?? 'rect') as FlowShape;
+          const isSel     = selId   === n.id;
+          const isHovered = hoverId === n.id;
+          const isEditing = editId  === n.id;
+          const isDiamond = shape   === 'diamond';
+
+          // SVG stroke reflects selection/hover state
+          const stroke      = isSel ? '#1A1A1A' : isHovered ? '#AEADA8' : '#DEDDDA';
+          const strokeWidth = isSel ? 1.5 : 1;
 
           return (
             <Fragment key={n.id}>
-              {/* Card */}
+              {/* Card: transparent wrapper — shape lives in the SVG below */}
               <div
-                className={`sf-card${isSel ? ' sf-active' : ''}`}
-                style={{
-                  left: pos.x, top: pos.cy - SNH / 2,
-                  width: SNW, height: SNH,
-                  position: 'absolute',
-                  clipPath: SHAPE_CLIP[shape],
-                  borderRadius: SHAPE_RADIUS[shape],
-                  transition: 'clip-path 0.35s cubic-bezier(0.34,1.56,0.64,1), border-radius 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                }}
+                className="sf-card"
+                style={{ position: 'absolute', left: pos.x, top: pos.cy - SNH / 2, width: SNW, height: SNH }}
                 onClick={() => setSelId(isSel ? null : n.id)}
+                onMouseEnter={() => setHoverId(n.id)}
+                onMouseLeave={() => setHoverId(null)}
               >
-                {isDiamond ? (
-                  /* Diamond: centered label only, no textarea */
-                  <div className="sf-card-diamond">
-                    {isEditing ? (
-                      <input
-                        ref={inputRef}
-                        className="sf-label-input"
-                        autoFocus
-                        defaultValue={n.label}
-                        onClick={e => e.stopPropagation()}
-                        onMouseDown={e => e.stopPropagation()}
-                        onBlur={() => commitLabel(n.id)}
-                        onKeyDown={e => {
-                          e.stopPropagation();
-                          if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
-                          if (e.key === 'Escape') setEditId(null);
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="sf-label sf-label-diamond"
-                        onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
-                      >{n.label}</span>
-                    )}
-                    <div
-                      className="sf-card-actions"
-                      onClick={e => e.stopPropagation()}
-                      onMouseDown={e => e.stopPropagation()}
-                    >
-                      <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
-                      <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Standard card: header + textarea */
-                  <>
-                    <div className="sf-card-header">
+                {/* SVG shape background — morphs between shapes */}
+                <svg
+                  style={{ position: 'absolute', inset: 0, width: SNW, height: SNH, overflow: 'visible', pointerEvents: 'none' }}
+                >
+                  <motion.path
+                    animate={{ d: SHAPE_PATHS[shape], stroke, strokeWidth }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                    fill="#FEFCF8"
+                  />
+                </svg>
+
+                {/* Content — padded to stay within the visible shape interior */}
+                <div
+                  className="sf-card-content"
+                  style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', ...SHAPE_INSET[shape] }}
+                >
+                  {isDiamond ? (
+                    /* Diamond: centered label + actions, no textarea */
+                    <div className="sf-card-diamond">
                       {isEditing ? (
                         <input
                           ref={inputRef}
@@ -391,7 +378,7 @@ function SubFlow({ root }: { root: TreeNode }) {
                         />
                       ) : (
                         <span
-                          className="sf-label"
+                          className="sf-label sf-label-diamond"
                           onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
                         >{n.label}</span>
                       )}
@@ -404,16 +391,51 @@ function SubFlow({ root }: { root: TreeNode }) {
                         <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
                       </div>
                     </div>
-                    <textarea
-                      className="sf-content"
-                      defaultValue={n.content ?? ''}
-                      placeholder="Notes…"
-                      onClick={e => e.stopPropagation()}
-                      onMouseDown={e => e.stopPropagation()}
-                      onBlur={e => commitContent(n.id, e.target.value)}
-                    />
-                  </>
-                )}
+                  ) : (
+                    /* Standard: header + textarea */
+                    <>
+                      <div className="sf-card-header">
+                        {isEditing ? (
+                          <input
+                            ref={inputRef}
+                            className="sf-label-input"
+                            autoFocus
+                            defaultValue={n.label}
+                            onClick={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
+                            onBlur={() => commitLabel(n.id)}
+                            onKeyDown={e => {
+                              e.stopPropagation();
+                              if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
+                              if (e.key === 'Escape') setEditId(null);
+                            }}
+                          />
+                        ) : (
+                          <span
+                            className="sf-label"
+                            onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
+                          >{n.label}</span>
+                        )}
+                        <div
+                          className="sf-card-actions"
+                          onClick={e => e.stopPropagation()}
+                          onMouseDown={e => e.stopPropagation()}
+                        >
+                          <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
+                          <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
+                        </div>
+                      </div>
+                      <textarea
+                        className="sf-content"
+                        defaultValue={n.content ?? ''}
+                        placeholder="Notes…"
+                        onClick={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                        onBlur={e => commitContent(n.id, e.target.value)}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Shape picker — appears below selected card */}
