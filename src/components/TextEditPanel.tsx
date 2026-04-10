@@ -1,8 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
 import { Kbd } from './ui/kbd';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
 import { parseOutline, treeToOutline, normalizeArrows, splitInlineArrows, normalizeOutline } from '../parser';
 
 function getLabel(raw: string): string {
@@ -169,37 +167,36 @@ export function TextEditPanel() {
   };
 
   return (
-    <div className="fixed inset-0 top-[48px] left-[148px] z-[40] flex flex-col bg-background font-mono">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
-        <span className="flex-1 text-[10px] text-muted-foreground">
+    <div id="text-edit-panel">
+      <div id="text-edit-header">
+        <span id="text-edit-title">
           Edit outline — <Kbd>Shift+↵</Kbd> new block · <Kbd>Tab</Kbd> indent · <Kbd>-&gt;</Kbd> level down · <Kbd>Ctrl+↵</Kbd> apply · <Kbd>Esc</Kbd> cancel
         </span>
-        <Button
-          variant={showSteps ? 'default' : 'ghost'}
-          size="xs"
+        <button
+          className={`te-btn te-steps-toggle${showSteps ? ' te-steps-on' : ''}`}
           onClick={() => setShowSteps(s => !s)}
           title="Toggle path display"
         >
           steps
-        </Button>
-        <span id="text-edit-err" ref={errRef} className="font-mono text-[9px] text-destructive" />
+        </button>
+        <span id="text-edit-err" ref={errRef} />
       </div>
       {showSteps && (
-        <div className="flex shrink-0 flex-wrap items-center gap-0 border-b border-border px-4 py-1.5">
+        <div id="text-edit-steps">
           {breadcrumbs.length === 0
-            ? <span className="text-[10px] text-muted-foreground italic opacity-60">— move cursor to a line —</span>
+            ? <span className="te-step te-step-empty">— move cursor to a line —</span>
             : breadcrumbs.map((crumb, i) => (
-                <span key={i} className={cn("text-[10px] text-muted-foreground", i === breadcrumbs.length - 1 && "font-bold text-foreground")}>
-                  {i > 0 && <span className="mx-0.5 text-muted-foreground/50">›</span>}
+                <span key={i} className={`te-step${i === breadcrumbs.length - 1 ? ' te-step-cur' : ''}`}>
+                  {i > 0 && <span className="te-step-sep">›</span>}
                   {crumb}
                 </span>
               ))
           }
         </div>
       )}
-      <div className="relative flex-1">
+      <div id="text-edit-ta-wrap">
         <textarea
-          className="absolute inset-0 w-full h-full resize-none bg-transparent p-4 text-sm font-mono outline-none border-none leading-[1.7] text-foreground placeholder:text-muted-foreground"
+          id="text-edit-ta"
           ref={taRef}
           spellCheck={false}
           onKeyDown={handleKeyDown}
@@ -210,11 +207,11 @@ export function TextEditPanel() {
           onScroll={updateDim}
           onBlur={handleTaBlur}
         />
-        <div className="pointer-events-none absolute inset-0" ref={dimRef} />
+        <div id="text-edit-dim" ref={dimRef} />
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-border px-4 py-2">
-        <Button size="sm" variant="ghost" onClick={close}>Cancel</Button>
-        <Button size="sm" onClick={apply}>Apply</Button>
+      <div id="text-edit-footer">
+        <button className="te-btn te-btn-cancel" onClick={close}>Cancel</button>
+        <button className="te-btn te-btn-apply" onClick={apply}>Apply</button>
       </div>
     </div>
   );

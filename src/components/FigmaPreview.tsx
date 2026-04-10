@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { X, ExternalLink, RefreshCw, Play } from 'lucide-react';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
-import { Button, buttonVariants } from './ui/button';
 
 interface Props {
   figmaRef: string;
@@ -50,43 +49,41 @@ export function FigmaPreview({ figmaRef, nodeLabel, onClose, onPreview }: Props)
   })();
 
   return (
-    <div className="absolute z-[90] flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg font-mono" onClick={e => e.stopPropagation()} style={{ right: 20, top: 56, width: 300, maxHeight: 'calc(100vh - 80px)' }}>
-      <div className="flex h-9 shrink-0 items-center border-b border-border px-3 gap-2">
-        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold">{nodeLabel}</span>
-        <div className="flex items-center gap-1">
+    <div id="fig-preview" onClick={e => e.stopPropagation()}>
+      <div id="fig-preview-header">
+        <span id="fig-preview-title">{nodeLabel}</span>
+        <div className="fig-preview-actions">
           {onPreview && (
-            <Button variant="ghost" size="icon-xs" onClick={onPreview} title="Preview prototype">
+            <button className="fig-preview-icon-btn" onClick={onPreview} title="Preview prototype">
               <Play size={13} />
-            </Button>
+            </button>
           )}
           {figmaUrl && (
-            <a href={figmaUrl} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'ghost', size: 'icon-xs' })} title="Open in Figma">
+            <a href={figmaUrl} target="_blank" rel="noreferrer" className="fig-preview-icon-btn" title="Open in Figma">
               <ExternalLink size={13} />
             </a>
           )}
-          <Button variant="ghost" size="icon-xs" onClick={onClose} title="Close"><X size={13} /></Button>
+          <button className="fig-preview-icon-btn" onClick={onClose} title="Close"><X size={13} /></button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div id="fig-preview-body">
         {ls.status === 'loading' && (
-          <div className="flex h-full flex-col items-center justify-center gap-2">
-            <RefreshCw size={18} className="animate-spin text-muted-foreground" />
-          </div>
+          <div className="fig-center"><RefreshCw size={18} className="fig-spin" /></div>
         )}
         {ls.status === 'no_pat' && (
-          <div className="flex h-full flex-col items-center justify-center gap-2">
-            <p className="text-xs text-muted-foreground">No Figma token.</p>
-            <Button variant="outline" size="xs" onClick={() => setFigmaTokenOpen(true)}>Set token</Button>
+          <div className="fig-center fig-hint">
+            <p>No Figma token.</p>
+            <button className="fig-action-btn" onClick={() => setFigmaTokenOpen(true)}>Set token</button>
           </div>
         )}
         {ls.status === 'err' && (
-          <div className="flex h-full flex-col items-center justify-center gap-2">
-            <p className="text-xs text-muted-foreground">{ls.msg}</p>
-            <Button variant="outline" size="xs" onClick={load}>Retry</Button>
+          <div className="fig-center fig-hint">
+            <p>{ls.msg}</p>
+            <button className="fig-action-btn" onClick={load}>Retry</button>
           </div>
         )}
         {ls.status === 'ok' && (
-          <img className="block w-full" src={ls.url} alt={nodeLabel} />
+          <img id="fig-preview-img" src={ls.url} alt={nodeLabel} />
         )}
       </div>
     </div>

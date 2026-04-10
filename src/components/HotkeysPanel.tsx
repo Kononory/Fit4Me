@@ -1,10 +1,18 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { Kbd } from './ui/kbd';
 
-interface Props { onClose: () => void; }
+interface Props {
+  onClose: () => void;
+}
+
 type Tab = 'nodes' | 'canvas' | 'flow';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'nodes',  label: 'Nodes' },
+  { id: 'canvas', label: 'Canvas' },
+  { id: 'flow',   label: 'Flow' },
+];
 
 const SHORTCUTS: Record<Tab, { key: string; desc: string }[]> = {
   nodes: [
@@ -40,30 +48,38 @@ const SHORTCUTS: Record<Tab, { key: string; desc: string }[]> = {
 
 export function HotkeysPanel({ onClose }: Props) {
   const [tab, setTab] = useState<Tab>('nodes');
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   return (
-    <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-w-sm font-mono" showCloseButton>
-        <DialogHeader>
-          <DialogTitle className="font-mono text-sm">Keyboard Shortcuts</DialogTitle>
-        </DialogHeader>
-        <Tabs value={tab} onValueChange={v => setTab(v as Tab)}>
-          <TabsList className="w-full">
-            <TabsTrigger value="nodes" className="flex-1 text-xs">Nodes</TabsTrigger>
-            <TabsTrigger value="canvas" className="flex-1 text-xs">Canvas</TabsTrigger>
-            <TabsTrigger value="flow" className="flex-1 text-xs">Flow</TabsTrigger>
-          </TabsList>
-          {(['nodes','canvas','flow'] as Tab[]).map(t => (
-            <TabsContent key={t} value={t} className="mt-3 space-y-1.5">
-              {SHORTCUTS[t].map(s => (
-                <div key={s.key} className="flex items-center gap-3">
-                  <Kbd className="shrink-0 text-[10px]">{s.key}</Kbd>
-                  <span className="text-xs text-muted-foreground">{s.desc}</span>
-                </div>
-              ))}
-            </TabsContent>
+    <div id="hk-backdrop" onClick={onClose}>
+      <div id="hk-panel" onClick={e => e.stopPropagation()}>
+        <div id="hk-header">
+          <span id="hk-title">Keyboard Shortcuts</span>
+          <button id="hk-close" onClick={onClose}><X size={14} /></button>
+        </div>
+        <div id="hk-tabs">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              className={`hk-tab${tab === t.id ? ' hk-tab-active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >{t.label}</button>
           ))}
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+        </div>
+        <div id="hk-list">
+          {SHORTCUTS[tab].map(s => (
+            <div key={s.key} className="hk-row">
+              <Kbd className="hk-key">{s.key}</Kbd>
+              <span className="hk-desc">{s.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

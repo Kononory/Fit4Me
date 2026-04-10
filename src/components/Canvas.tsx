@@ -13,7 +13,6 @@ import { PreviewPanel } from './PreviewPanel';
 import { useDrag } from '../hooks/useDrag';
 import { removeNode, addSiblingNode, swapNodes, swapNodeMetadata, findNode } from '../tree';
 import type { PickerState, PickerMode } from './EdgePicker';
-import { Button } from './ui/button';
 
 interface Props {
   allNodes: TreeNode[];
@@ -213,15 +212,15 @@ export function Canvas({
 
       {/* Swap action bar — visible when exactly 2 nodes are multi-selected */}
       {multiSelIds.size === 2 && (
-        <div className="fixed bottom-[60px] left-1/2 z-[50] -translate-x-1/2 flex items-center gap-1 rounded-sm border-[1.5px] border-foreground bg-background px-1.5 py-1 shadow-md font-mono" onClick={e => e.stopPropagation()}>
-          <span className="px-1 text-[8.5px] uppercase tracking-[0.06em] text-muted-foreground">2 selected</span>
-          <Button size="xs" onClick={() => handleSwap('meta')} title="Swap only node labels — children stay in place">
+        <div id="swap-bar" onClick={e => e.stopPropagation()}>
+          <span id="swap-bar-label">2 selected</span>
+          <button className="swap-btn" onClick={() => handleSwap('meta')} title="Swap only node labels — children stay in place">
             Swap nodes
-          </Button>
-          <Button size="xs" onClick={() => handleSwap('subtree')} title="Swap entire subtrees including children">
+          </button>
+          <button className="swap-btn" onClick={() => handleSwap('subtree')} title="Swap entire subtrees including children">
             Swap subtrees
-          </Button>
-          <Button variant="ghost" size="xs" onClick={clearMultiSel}>✕</Button>
+          </button>
+          <button className="swap-btn swap-btn-cancel" onClick={clearMultiSel}>✕</button>
         </div>
       )}
     </div>
