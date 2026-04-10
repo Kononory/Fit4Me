@@ -1,4 +1,5 @@
 export type NodeType = 'root' | 'nav' | 'tab' | 'leaf';
+export type FlowShape = 'rect' | 'stadium' | 'diamond' | 'circle' | 'parallelogram';
 export type BranchId = string; // open-ended so imported flows can use any branch name
 
 export interface TreeNode {
@@ -24,6 +25,8 @@ export interface TreeNode {
   content?: string;
   // Independent mini-flowchart owned by this node (edited in the expanded panel)
   innerFlow?: TreeNode;
+  // Shape of the node in the inner SubFlow
+  shape?: FlowShape;
 }
 
 export interface CrossEdge {

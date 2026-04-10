@@ -1,7 +1,7 @@
-import { useRef, useState, useMemo, useCallback } from 'react';
-import { motion } from 'motion/react';
+import { useRef, useState, useMemo, useCallback, Fragment } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
-import type { TreeNode } from '../types';
+import type { TreeNode, FlowShape } from '../types';
 import { flattenTree, collectEdges } from '../layout';
 import { addChildNode, removeNode, findNode, cloneTree } from '../tree';
 import { useStore } from '../store';
@@ -11,18 +11,17 @@ interface Props {
   onClose: () => void;
 }
 
-// SubFlow layout constants — card-sized nodes
-const SNW  = 240;  // card width
-const SNH  = 120;  // card height
-const SLW  = 296;  // column spacing
-const SRH  = 144;  // row spacing
-const SPAD = 40;   // canvas padding
+// SubFlow layout constants
+const SNW  = 240;
+const SNH  = 120;
+const SLW  = 296;
+const SRH  = 144;
+const SPAD = 40;
 
 interface SFPos { x: number; cy: number; row: number }
 
 function computeLayout(root: TreeNode): Map<string, SFPos> {
   const map = new Map<string, SFPos>();
-
   function lay(n: TreeNode, depth: number, startRow: number): number {
     const x = SPAD + depth * SLW;
     if (!n.c || n.c.length === 0) {
@@ -37,28 +36,164 @@ function computeLayout(root: TreeNode): Map<string, SFPos> {
     map.set(n.id, { x, cy: SPAD + row * SRH + SRH / 2, row });
     return total;
   }
-
   lay(root, 0, 0);
   return map;
 }
 
+// ── Shape system ─────────────────────────────────────────────────────────────
+// All shapes use 4-point polygon clip-paths so CSS can interpolate between them.
+
+const SHAPE_CLIP: Record<FlowShape, string> = {
+  rect:          'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+  stadium:       'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+  circle:        'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+  diamond:       'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+  parallelogram: 'polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%)',
+}
+
+const SHAPE_RADIUS: Record<FlowShape, string> = {
+  rect:          '6px',
+  stadium:       '60px',
+  circle:        '50%',
+  diamond:       '0px',
+  parallelogram: '4px',
+}
+
+const SHAPE_META: Record<FlowShape, [string, string]> = {
+  rect:          ['Rectangle',     'Process / Screen'],
+  stadium:       ['Stadium',       'Action / Button'],
+  diamond:       ['Diamond',       'Decision (Yes/No)'],
+  circle:        ['Circle',        'Start / End'],
+  parallelogram: ['Parallelogram', 'Input / Output'],
+}
+
+const SHAPE_ORDER: FlowShape[] = ['rect', 'stadium', 'diamond', 'circle', 'parallelogram']
+
+function ShapeIcon({ shape, size = 20 }: { shape: FlowShape; size?: number }) {
+  const h = Math.round(size * 0.7);
+  switch (shape) {
+    case 'rect':
+      return <svg width={size} height={h} viewBox="0 0 20 14"><rect x="1" y="1" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'stadium':
+      return <svg width={size} height={h} viewBox="0 0 20 14"><rect x="1" y="1" width="18" height="12" rx="6" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'diamond':
+      return <svg width={size} height={h} viewBox="0 0 20 14"><polygon points="10,1 19,7 10,13 1,7" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'circle':
+      return <svg width={size} height={h} viewBox="0 0 20 14"><ellipse cx="10" cy="7" rx="9" ry="6" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
+    case 'parallelogram':
+      return <svg width={size} height={h} viewBox="0 0 20 14"><polygon points="4,1 19,1 16,13 1,13" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
+  }
+}
+
+// ── Presets ──────────────────────────────────────────────────────────────────
+
+let _pid = 0;
+function pid() { return `sf-${Date.now()}-${_pid++}`; }
+function n(label: string, shape: FlowShape, children?: TreeNode[]): TreeNode {
+  return { id: pid(), label, shape, c: children };
+}
+
+const PRESETS: Record<string, { label: string; build: () => TreeNode }> = {
+  userflow: {
+    label: 'User Flow',
+    build: () => n('Start', 'circle', [
+      n('Browse', 'rect', [
+        n('Sign Up?', 'diamond', [
+          n('Register', 'rect',          [n('Home', 'stadium')]),
+          n('Login',    'parallelogram', [n('Home', 'stadium')]),
+        ]),
+      ]),
+    ]),
+  },
+  userstory: {
+    label: 'User Story',
+    build: () => n('As a user…', 'stadium', [
+      n('I want to…', 'parallelogram', [
+        n('So that…', 'rect', [
+          n('✓ Accepted', 'circle'),
+        ]),
+      ]),
+    ]),
+  },
+  decision: {
+    label: 'Decision Tree',
+    build: () => n('Start', 'circle', [
+      n('Question?', 'diamond', [
+        n('Yes → Action',     'rect', [n('End', 'circle')]),
+        n('No → Alternative', 'rect', [n('End', 'circle')]),
+      ]),
+    ]),
+  },
+};
+
+// ── Legend ───────────────────────────────────────────────────────────────────
+
+function Legend() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="sf-legend">
+      <button className="sf-legend-toggle" onClick={() => setOpen(v => !v)}>
+        {open ? '✕' : 'Legend'}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="sf-legend-body"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.14 }}
+          >
+            {SHAPE_ORDER.map(s => (
+              <div key={s} className="sf-legend-row">
+                <ShapeIcon shape={s} size={18} />
+                <span className="sf-legend-name">{SHAPE_META[s][0]}</span>
+                <span className="sf-legend-meaning">{SHAPE_META[s][1]}</span>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── ShapePicker ──────────────────────────────────────────────────────────────
+
+function ShapePicker({ current, onSelect }: { current: FlowShape; onSelect: (s: FlowShape) => void }) {
+  return (
+    <div className="sf-shape-picker">
+      {SHAPE_ORDER.map(s => (
+        <button
+          key={s}
+          className={`sf-shape-btn${s === current ? ' sf-shape-btn-active' : ''}`}
+          title={SHAPE_META[s][0]}
+          onClick={e => { e.stopPropagation(); onSelect(s); }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          <ShapeIcon shape={s} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── SubFlow ──────────────────────────────────────────────────────────────────
+
 function SubFlow({ root }: { root: TreeNode }) {
   const { updateActiveTree, getActive, pushUndo } = useStore();
 
-  // Inner flow is completely independent from the main tree structure
-  const [flow, setFlow] = useState<TreeNode | null>(() => root.innerFlow ?? null);
+  const [flow,   setFlow]   = useState<TreeNode | null>(() => root.innerFlow ?? null);
   const [selId,  setSelId]  = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
-  const inputRef   = useRef<HTMLInputElement>(null);
-  const prevRoot   = useRef(root);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const prevRoot  = useRef(root);
 
-  // Sync with root.innerFlow when the parent re-renders (e.g. after main-tree undo)
   if (prevRoot.current !== root) {
     prevRoot.current = root;
     setFlow(root.innerFlow ?? null);
   }
 
-  // Keep root.innerFlow in sync whenever flow state changes
   const saveFlow = useCallback((f: TreeNode | null) => {
     setFlow(f);
     root.innerFlow = f ?? undefined;
@@ -108,108 +243,212 @@ function SubFlow({ root }: { root: TreeNode }) {
     saveFlow(cloned);
   }, [flow, pushUndo, saveFlow]);
 
+  const changeShape = useCallback((nodeId: string, shape: FlowShape) => {
+    if (!flow) return;
+    pushUndo();
+    const cloned = cloneTree(flow);
+    const target = findNode(cloned, nodeId);
+    if (target) target.shape = shape;
+    saveFlow(cloned);
+  }, [flow, pushUndo, saveFlow]);
+
+  const loadPreset = useCallback((key: string) => {
+    pushUndo();
+    saveFlow(PRESETS[key].build());
+    setSelId(null);
+    setEditId(null);
+  }, [pushUndo, saveFlow]);
+
   const layout = useMemo(() => flow ? computeLayout(flow) : new Map<string, SFPos>(), [flow]);
   const nodes  = useMemo(() => flow ? flattenTree(flow)  : [], [flow]);
   const edges  = useMemo(() => flow ? collectEdges(flow) : [], [flow]);
 
   const posVals = [...layout.values()];
+  // Extra bottom padding so shape picker doesn't clip at canvas edge
   const cw = posVals.length ? Math.max(...posVals.map(p => p.x + SNW)) + SPAD : 320;
-  const ch = posVals.length ? Math.max(...posVals.map(p => p.cy + SNH / 2)) + SPAD : 260;
+  const ch = posVals.length ? Math.max(...posVals.map(p => p.cy + SNH / 2)) + SPAD + 52 : 260;
+
+  const presetBar = (
+    <div className="sf-preset-bar">
+      <span className="sf-preset-label">Presets:</span>
+      {Object.entries(PRESETS).map(([key, { label }]) => (
+        <button key={key} className="sf-preset-btn" onClick={() => loadPreset(key)}>{label}</button>
+      ))}
+    </div>
+  );
 
   if (!flow) {
     return (
-      <div className="sf-empty">
-        <button
-          className="sf-add-root"
-          onClick={() => saveFlow({ id: `sf-${Date.now()}`, label: 'Node' })}
-        >
-          + Start flow
-        </button>
+      <div className="sf-empty-wrap">
+        {presetBar}
+        <div className="sf-empty">
+          <button
+            className="sf-add-root"
+            onClick={() => saveFlow({ id: `sf-${Date.now()}`, label: 'Node' })}
+          >
+            + Start flow
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ position: 'relative', width: cw, height: ch }}>
-      {/* SVG edge layer */}
-      <svg style={{ position: 'absolute', inset: 0, width: cw, height: ch, overflow: 'visible', pointerEvents: 'none' }}>
-        {edges.map(([parent, child], i) => {
-          const fp = layout.get(parent.id);
-          const cp = layout.get(child.id);
-          if (!fp || !cp) return null;
-          const x1 = fp.x + SNW, y1 = fp.cy;
-          const x2 = cp.x,       y2 = cp.cy;
-          const mx = (x1 + x2) / 2;
+    <div className="sf-wrap">
+      {presetBar}
+      <div style={{ position: 'relative', width: cw, height: ch }}>
+        {/* SVG edge layer */}
+        <svg style={{ position: 'absolute', inset: 0, width: cw, height: ch, overflow: 'visible', pointerEvents: 'none' }}>
+          {edges.map(([parent, child], i) => {
+            const fp = layout.get(parent.id);
+            const cp = layout.get(child.id);
+            if (!fp || !cp) return null;
+            const x1 = fp.x + SNW, y1 = fp.cy;
+            const x2 = cp.x,       y2 = cp.cy;
+            const mx = (x1 + x2) / 2;
+            return (
+              <path key={i} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
+                fill="none" stroke="#DEDDDA" strokeWidth={1.5} />
+            );
+          })}
+        </svg>
+
+        {/* Cards + shape pickers */}
+        {nodes.map(n => {
+          const pos = layout.get(n.id);
+          if (!pos) return null;
+          const shape      = (n.shape ?? 'rect') as FlowShape;
+          const isSel      = selId  === n.id;
+          const isEditing  = editId === n.id;
+          const isDiamond  = shape === 'diamond';
+
           return (
-            <path key={i} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-              fill="none" stroke="#DEDDDA" strokeWidth={1.5} />
+            <Fragment key={n.id}>
+              {/* Card */}
+              <div
+                className={`sf-card${isSel ? ' sf-active' : ''}`}
+                style={{
+                  left: pos.x, top: pos.cy - SNH / 2,
+                  width: SNW, height: SNH,
+                  position: 'absolute',
+                  clipPath: SHAPE_CLIP[shape],
+                  borderRadius: SHAPE_RADIUS[shape],
+                  transition: 'clip-path 0.35s cubic-bezier(0.34,1.56,0.64,1), border-radius 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                }}
+                onClick={() => setSelId(isSel ? null : n.id)}
+              >
+                {isDiamond ? (
+                  /* Diamond: centered label only, no textarea */
+                  <div className="sf-card-diamond">
+                    {isEditing ? (
+                      <input
+                        ref={inputRef}
+                        className="sf-label-input"
+                        autoFocus
+                        defaultValue={n.label}
+                        onClick={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                        onBlur={() => commitLabel(n.id)}
+                        onKeyDown={e => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
+                          if (e.key === 'Escape') setEditId(null);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="sf-label sf-label-diamond"
+                        onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
+                      >{n.label}</span>
+                    )}
+                    <div
+                      className="sf-card-actions"
+                      onClick={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                    >
+                      <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
+                      <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard card: header + textarea */
+                  <>
+                    <div className="sf-card-header">
+                      {isEditing ? (
+                        <input
+                          ref={inputRef}
+                          className="sf-label-input"
+                          autoFocus
+                          defaultValue={n.label}
+                          onClick={e => e.stopPropagation()}
+                          onMouseDown={e => e.stopPropagation()}
+                          onBlur={() => commitLabel(n.id)}
+                          onKeyDown={e => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
+                            if (e.key === 'Escape') setEditId(null);
+                          }}
+                        />
+                      ) : (
+                        <span
+                          className="sf-label"
+                          onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
+                        >{n.label}</span>
+                      )}
+                      <div
+                        className="sf-card-actions"
+                        onClick={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                      >
+                        <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
+                        <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
+                      </div>
+                    </div>
+                    <textarea
+                      className="sf-content"
+                      defaultValue={n.content ?? ''}
+                      placeholder="Notes…"
+                      onClick={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                      onBlur={e => commitContent(n.id, e.target.value)}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Shape picker — appears below selected card */}
+              <AnimatePresence>
+                {isSel && (
+                  <div style={{
+                    position: 'absolute',
+                    left: pos.x + SNW / 2,
+                    top: pos.cy + SNH / 2 + 8,
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
+                  }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.12 }}
+                    >
+                      <ShapePicker current={shape} onSelect={s => changeShape(n.id, s)} />
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+            </Fragment>
           );
         })}
-      </svg>
 
-      {/* Card nodes */}
-      {nodes.map(n => {
-        const pos = layout.get(n.id);
-        if (!pos) return null;
-        const isSel     = selId  === n.id;
-        const isEditing = editId === n.id;
-        return (
-          <div
-            key={n.id}
-            className={`sf-card${isSel ? ' sf-active' : ''}`}
-            style={{ left: pos.x, top: pos.cy - SNH / 2, width: SNW, height: SNH, position: 'absolute' }}
-            onClick={() => setSelId(isSel ? null : n.id)}
-          >
-            {/* Header: label + action buttons */}
-            <div className="sf-card-header">
-              {isEditing ? (
-                <input
-                  ref={inputRef}
-                  className="sf-label-input"
-                  autoFocus
-                  defaultValue={n.label}
-                  onClick={e => e.stopPropagation()}
-                  onMouseDown={e => e.stopPropagation()}
-                  onBlur={() => commitLabel(n.id)}
-                  onKeyDown={e => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter')  { e.preventDefault(); commitLabel(n.id); }
-                    if (e.key === 'Escape') setEditId(null);
-                  }}
-                />
-              ) : (
-                <span
-                  className="sf-label"
-                  onDoubleClick={e => { e.stopPropagation(); setEditId(n.id); }}
-                >
-                  {n.label}
-                </span>
-              )}
-              <div
-                className="sf-card-actions"
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-              >
-                <button className="sf-btn sf-btn-add" title="Add child" onClick={() => addChild(n.id)}>+</button>
-                <button className="sf-btn sf-btn-del" title="Delete" onClick={() => deleteNodeById(n.id)}>×</button>
-              </div>
-            </div>
-
-            {/* Content textarea */}
-            <textarea
-              className="sf-content"
-              defaultValue={n.content ?? ''}
-              placeholder="Notes…"
-              onClick={e => e.stopPropagation()}
-              onMouseDown={e => e.stopPropagation()}
-              onBlur={e => commitContent(n.id, e.target.value)}
-            />
-          </div>
-        );
-      })}
+        {/* Legend toggle — bottom-right corner */}
+        <Legend />
+      </div>
     </div>
   );
 }
+
+// ── ExpandedNode ─────────────────────────────────────────────────────────────
 
 export function ExpandedNode({ node, onClose }: Props) {
   return (

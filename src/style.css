@@ -1314,3 +1314,71 @@ svg#svgl.dimmed { opacity: 0.3; }
   padding: 6px 10px; line-height: 1.6; box-sizing: border-box;
 }
 .sf-content::placeholder { color: #AEADA8; }
+
+/* ── SubFlow: shapes, presets, legend ───────────────────────────────────── */
+
+.sf-wrap { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.sf-empty-wrap { display: flex; flex-direction: column; }
+
+/* Preset bar */
+.sf-preset-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-bottom: 1px solid #EEEDE9;
+  flex-shrink: 0; font-family: 'LatteraMonoLL','Space Mono',monospace;
+}
+.sf-preset-label { font-size: 10px; color: #AEADA8; margin-right: 2px; }
+.sf-preset-btn {
+  font-family: inherit; font-size: 10px; font-weight: 600; color: #5A5955;
+  background: transparent; border: 1px solid #DEDDDA; border-radius: 4px;
+  padding: 3px 9px; cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+}
+.sf-preset-btn:hover { border-color: #AEADA8; color: #1A1A1A; background: #F8F7F4; }
+
+/* Diamond card layout */
+.sf-card-diamond {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; height: 100%; gap: 5px;
+}
+.sf-label-diamond { text-align: center; white-space: normal; }
+
+/* Shape picker */
+.sf-shape-picker {
+  display: flex; gap: 3px; padding: 4px 6px;
+  background: #FEFCF8; border: 1px solid #DEDDDA;
+  border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.09);
+  white-space: nowrap;
+}
+.sf-shape-btn {
+  width: 30px; height: 24px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 4px; cursor: pointer; color: #9A9995;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.sf-shape-btn:hover { background: #F2F1ED; color: #1A1A1A; }
+.sf-shape-btn.sf-shape-btn-active { background: #F2F1ED; color: #1A1A1A; border-color: #DEDDDA; }
+
+/* Legend */
+.sf-legend {
+  position: absolute; bottom: 12px; right: 12px;
+  display: flex; flex-direction: column; align-items: flex-end;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  z-index: 5;
+}
+.sf-legend-toggle {
+  font-family: inherit; font-size: 10px; font-weight: 600; color: #9A9995;
+  background: #FEFCF8; border: 1px solid #DEDDDA; border-radius: 4px;
+  padding: 3px 9px; cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.sf-legend-toggle:hover { color: #1A1A1A; border-color: #AEADA8; }
+.sf-legend-body {
+  margin-top: 6px; padding: 8px 10px;
+  background: #FEFCF8; border: 1px solid #DEDDDA;
+  border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.09);
+  display: flex; flex-direction: column; gap: 6px; min-width: 210px;
+}
+.sf-legend-row { display: flex; align-items: center; gap: 8px; }
+.sf-legend-name { font-size: 10px; font-weight: 600; color: #1A1A1A; min-width: 88px; }
+.sf-legend-meaning { font-size: 10px; color: #9A9995; }
