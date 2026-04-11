@@ -520,6 +520,15 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 #zoom-label:hover { color: #1A1A1A; }
 
+/* ── Marquee selection rectangle ─────────────────────────────────── */
+#marquee {
+  position: absolute;
+  border: 1.5px solid #6B9B5E;
+  background: rgba(107, 155, 94, 0.08);
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* ── Swap action bar (floats inside canvas when 2 nodes selected) ─── */
 #swap-bar {
   position: fixed; z-index: 50;

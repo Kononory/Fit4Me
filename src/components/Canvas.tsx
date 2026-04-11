@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { TreeNode, CrossEdge } from '../types';
-import { canvasSize, flattenTree } from '../layout';
+import { canvasSize, flattenTree, NW, NH, topY } from '../layout';
 import { useStore } from '../store';
 import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
@@ -38,6 +38,11 @@ export function Canvas({
   const [previewStartId, setPreviewStartId] = useState<string | null>(null);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
+  type Marquee = { x0: number; y0: number; x1: number; y1: number };
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+  const marqueeRef   = useRef<Marquee | null>(null);
+  const didMarqueeRef = useRef(false);
+
   // Toggle a node + all its descendants in multi-select
   const toggleSubtree = useCallback((node: TreeNode) => {
     const ids = flattenTree(node).map(n => n.id);
@@ -58,6 +63,36 @@ export function Canvas({
   // ── Canvas size ─────────────────────────────────────────────────────────────
   const { cw, ch } = canvasSize(allNodes);
 
+  // ── Marquee selection ───────────────────────────────────────────────────────
+  const marqueeMove = useCallback((cx: number, cy: number) => {
+    if (!marqueeRef.current) return;
+    const rect = cnvRef.current!.getBoundingClientRect();
+    const x = (cx - rect.left) / zoom;
+    const y = (cy - rect.top)  / zoom;
+    const m = { ...marqueeRef.current, x1: x, y1: y };
+    marqueeRef.current = m;
+    setMarquee({ ...m });
+  }, [zoom]);
+
+  const marqueeEnd = useCallback(() => {
+    const m = marqueeRef.current;
+    if (!m) return;
+    marqueeRef.current = null;
+    setMarquee(null);
+    const minX = Math.min(m.x0, m.x1), maxX = Math.max(m.x0, m.x1);
+    const minY = Math.min(m.y0, m.y1), maxY = Math.max(m.y0, m.y1);
+    if (maxX - minX < 4 && maxY - minY < 4) return;
+    const hit = allNodes.filter(n => {
+      const nl = n.x ?? 0, nr = (n.x ?? 0) + NW;
+      const nt = topY(n), nb = nt + NH;
+      return nr > minX && nl < maxX && nb > minY && nt < maxY;
+    });
+    if (hit.length) {
+      setMultiSelIds(new Set(hit.map(n => n.id)));
+      didMarqueeRef.current = true;
+    }
+  }, [allNodes]);
+
   // ── Drag ────────────────────────────────────────────────────────────────────
   const handleCommit = useCallback(() => {
     updateActiveTree(getActive().tree);
@@ -70,8 +105,8 @@ export function Canvas({
   const { dragBegin, dragMove, dragEnd } = useDrag(cnvRef, () => allNodes, handleCommit, handleAddAndEdit, getMultiSel, zoom);
 
   useEffect(() => {
-    const onMove      = (e: MouseEvent)  => dragMove(e.clientX, e.clientY);
-    const onUp        = ()               => dragEnd();
+    const onMove      = (e: MouseEvent)  => { dragMove(e.clientX, e.clientY); marqueeMove(e.clientX, e.clientY); };
+    const onUp        = ()               => { dragEnd(); marqueeEnd(); };
     const onTouchMove = (e: TouchEvent)  => { const t = e.touches[0]; dragMove(t.clientX, t.clientY); if (drag.on) e.preventDefault(); };
     const onTouchEnd  = ()               => dragEnd();
     document.addEventListener('mousemove',  onMove);
@@ -84,7 +119,7 @@ export function Canvas({
       document.removeEventListener('touchmove',  onTouchMove);
       document.removeEventListener('touchend',   onTouchEnd);
     };
-  }, [dragMove, dragEnd, drag.on]);
+  }, [dragMove, dragEnd, drag.on, marqueeMove, marqueeEnd]);
 
   useEffect(() => {
     if (!doAnim) return;
@@ -169,8 +204,18 @@ export function Canvas({
       id="cnv"
       ref={cnvRef}
       style={{ width: cw, height: ch, position: 'relative', zoom: zoom }}
+      onMouseDown={(e) => {
+        if (e.button !== 0) return;
+        if ((e.target as Element).closest('[data-nid]')) return;
+        const rect = cnvRef.current!.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top)  / zoom;
+        marqueeRef.current = { x0: x, y0: y, x1: x, y1: y };
+        setMarquee({ x0: x, y0: y, x1: x, y1: y });
+      }}
       onClick={() => {
         if (editNodeId || drag.on) return;
+        if (didMarqueeRef.current) { didMarqueeRef.current = false; return; }
         setSel(null); setSelNodeId(null); clearMultiSel();
         setFigmaPreviewNode(null);
       }}
@@ -209,6 +254,14 @@ export function Canvas({
       ))}
 
       <DragOverlay width={cw} height={ch} />
+
+      {marquee && (() => {
+        const l = Math.min(marquee.x0, marquee.x1);
+        const t = Math.min(marquee.y0, marquee.y1);
+        const w = Math.abs(marquee.x1 - marquee.x0);
+        const h = Math.abs(marquee.y1 - marquee.y0);
+        return <div id="marquee" style={{ left: l, top: t, width: w, height: h }} />;
+      })()}
 
       {/* Swap action bar — visible when exactly 2 nodes are multi-selected */}
       {multiSelIds.size === 2 && (

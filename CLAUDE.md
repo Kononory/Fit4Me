@@ -141,6 +141,13 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - `overlapCount` / `setOverlapCount` in `store.ts` — updated by `Viewport.tsx` `useMemo` after each layout
 - `#tb-overlap` button in `Toolbar.tsx` — shown when `overlapCount > 0`; prompts confirm if >3 free nodes
 
+## Marquee selection
+- `marqueeRef` (useRef) holds live `{x0,y0,x1,y1}` in canvas-logical coords; `setMarquee` triggers the render-rect
+- `marqueeMove` / `marqueeEnd` are piggybacked onto the existing global `mousemove`/`mouseup` listeners in Canvas — no separate listener needed
+- `onMouseDown` on `#cnv` guards with `(e.target as Element).closest('[data-nid]')` — nodes carry `data-nid` so clicks on them are excluded
+- `didMarqueeRef` prevents the `onClick` deselect-all from firing after a completed drag-selection
+- Hit test uses `n.x ?? 0` (x is optional in TreeNode pre-layout) + `topY(n)` from layout.ts
+
 ## Known pitfalls
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
