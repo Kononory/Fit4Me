@@ -25,9 +25,8 @@ export interface TreeNode {
   // Free positioning (serialised, override auto-layout)
   px?: number; // free x (pixel left)
   py?: number; // free y (pixel center)
-  // Figma link (serialised) — format: `${fileKey}||${nodeId}`
-  figmaRef?: string;
-  // Screens imported from Figma (serialised) — user flow carousel
+  // Figma screens (serialised). Single manual link → screens[0]; bulk import → screens[].
+  // Legacy figmaRef is auto-migrated to screens[0] on load.
   screens?: ScreenRef[];
   // Rich notes shown in the expanded panel card body
   content?: string;

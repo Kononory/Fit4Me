@@ -24,11 +24,12 @@ export function PreviewPanel({ startNodeId, nodes, eventEdges, onClose }: Props)
   // Load image whenever screen changes
   useEffect(() => {
     setImgUrl(null);
-    if (!currentNode?.figmaRef) return;
-    const d = decodeRef(currentNode.figmaRef);
+    const ref = currentNode?.screens?.[0]?.ref;
+    if (!ref) return;
+    const d = decodeRef(ref);
     if (!d) return;
     fetchPreviewUrl(d.fileKey, d.nodeId).then(setImgUrl).catch(() => {});
-  }, [currentId, currentNode?.figmaRef]);
+  }, [currentId, currentNode?.screens?.[0]?.ref]);
 
   // Close on Escape
   useEffect(() => {
@@ -100,7 +101,7 @@ export function PreviewPanel({ startNodeId, nodes, eventEdges, onClose }: Props)
 
         {/* Screen */}
         <div id="pvw-screen">
-          {currentNode?.figmaRef ? (
+          {currentNode?.screens?.length ? (
             imgUrl ? (
               <div id="pvw-img-wrap" style={{ opacity: fading ? 0 : 1 }}>
                 <img ref={imgRef} src={imgUrl} id="pvw-img" alt={currentNode.label} draggable={false} />

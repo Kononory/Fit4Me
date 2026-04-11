@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2, Play, ExternalLink } from 'lucide-react';
 import type { TreeNode, ScreenRef } from '../types';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
@@ -19,11 +19,13 @@ type LoadState = { status: 'loading' } | { status: 'ok'; url: string } | { statu
 interface Props {
   node: TreeNode;
   nodeRect: DOMRect;
+  hasEventEdges?: boolean;
+  onPreview?: () => void;
   onOpenFlow: () => void;
   onClose: () => void;
 }
 
-export function ScreenCarousel({ node, nodeRect, onOpenFlow, onClose }: Props) {
+export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose }: Props) {
   const { setFigmaTokenOpen, figmaTokenOpen } = useStore();
   const screens = node.screens ?? [];
   const [idx, setIdx] = useState(0);
@@ -81,6 +83,22 @@ export function ScreenCarousel({ node, nodeRect, onOpenFlow, onClose }: Props) {
         <div className="sc-header">
           <span className="sc-title">{node.label}</span>
           <div className="sc-header-actions">
+            {onPreview && (
+              <button className="sc-icon-btn" title="Preview prototype flow" onClick={onPreview}>
+                <Play size={11} />
+              </button>
+            )}
+            {screen && (() => {
+              const decoded = decodeRef(screen.ref);
+              const figmaUrl = decoded
+                ? `https://www.figma.com/design/${decoded.fileKey}?node-id=${encodeURIComponent(decoded.nodeId)}`
+                : null;
+              return figmaUrl ? (
+                <a className="sc-icon-btn" href={figmaUrl} target="_blank" rel="noreferrer" title="Open in Figma">
+                  <ExternalLink size={11} />
+                </a>
+              ) : null;
+            })()}
             <button className="sc-icon-btn" title="View full flow" onClick={onOpenFlow}>
               <Maximize2 size={11} />
             </button>

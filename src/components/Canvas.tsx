@@ -6,7 +6,6 @@ import { useStore } from '../store';
 import { NodeEl } from './NodeEl';
 import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
-import { FigmaPreview } from './FigmaPreview';
 import { FigmaTokenModal } from './FigmaTokenModal';
 import { FigmaImportModal } from './FigmaImportModal';
 import { ScreenCarousel } from './ScreenCarousel';
@@ -37,7 +36,6 @@ export function Canvas({
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
-  const [figmaPreviewNode, setFigmaPreviewNode] = useState<TreeNode | null>(null);
   const [previewStartId, setPreviewStartId] = useState<string | null>(null);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [carouselState, setCarouselState] = useState<{ node: TreeNode; rect: DOMRect } | null>(null);
@@ -191,8 +189,13 @@ export function Canvas({
 
   const handleFigmaLink = useCallback((n: TreeNode, ref: string | null) => {
     pushUndo();
-    if (ref === null) delete n.figmaRef;
-    else n.figmaRef = ref;
+    if (ref === null) {
+      delete n.screens;
+    } else {
+      // Set or replace only the primary (first) screen; preserve import screens beyond index 0
+      const rest = (n.screens ?? []).slice(1);
+      n.screens = [{ ref, name: n.label, order: 1 }, ...rest];
+    }
     updateActiveTree(getActive().tree);
   }, [pushUndo, getActive, updateActiveTree]);
 
@@ -232,7 +235,6 @@ export function Canvas({
         if (editNodeId || drag.on) return;
         if (didMarqueeRef.current) { didMarqueeRef.current = false; return; }
         setSel(null); setSelNodeId(null); clearMultiSel();
-        setFigmaPreviewNode(null);
         setCarouselState(null);
       }}
     >
@@ -263,7 +265,6 @@ export function Canvas({
           onAddSibling={handleAddSibling}
           editNodeId={editNodeId}
           onEditDone={() => setEditNodeId(null)}
-          onFigmaPreview={setFigmaPreviewNode}
           onFigmaLink={handleFigmaLink}
           onCarouselOpen={handleCarouselOpen}
           onLongPress={n => setExpandedNodeId(n.id)}
@@ -295,18 +296,6 @@ export function Canvas({
       )}
     </div>
 
-    {figmaPreviewNode && (() => {
-      const eventEdges = getActive().eventEdges ?? [];
-      const hasEdges = eventEdges.some(e => e.fromNodeId === figmaPreviewNode.id);
-      return (
-        <FigmaPreview
-          figmaRef={figmaPreviewNode.figmaRef!}
-          nodeLabel={figmaPreviewNode.label}
-          onClose={() => setFigmaPreviewNode(null)}
-          onPreview={hasEdges ? () => setPreviewStartId(figmaPreviewNode.id) : undefined}
-        />
-      );
-    })()}
     {previewStartId && (() => {
       const flow = getActive();
       return (
@@ -320,14 +309,20 @@ export function Canvas({
     })()}
     {figmaTokenOpen && <FigmaTokenModal />}
     {figmaImportOpen && <FigmaImportModal allNodes={allNodes} />}
-    {carouselState && (
-      <ScreenCarousel
-        node={carouselState.node}
-        nodeRect={carouselState.rect}
-        onOpenFlow={() => { setUserFlowNode(carouselState.node); setCarouselState(null); }}
-        onClose={() => setCarouselState(null)}
-      />
-    )}
+    {carouselState && (() => {
+      const flow = getActive();
+      const hasEdges = (flow.eventEdges ?? []).some(e => e.fromNodeId === carouselState.node.id);
+      return (
+        <ScreenCarousel
+          node={carouselState.node}
+          nodeRect={carouselState.rect}
+          hasEventEdges={hasEdges}
+          onPreview={hasEdges ? () => { setPreviewStartId(carouselState.node.id); setCarouselState(null); } : undefined}
+          onOpenFlow={() => { setUserFlowNode(carouselState.node); setCarouselState(null); }}
+          onClose={() => setCarouselState(null)}
+        />
+      );
+    })()}
     {userFlowNode && (() => {
       const flow = getActive();
       return (

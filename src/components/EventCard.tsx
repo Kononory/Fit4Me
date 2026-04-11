@@ -27,12 +27,13 @@ export function EventCard({ node, pos, edges, allNodes, onDragStart, onHotspotCl
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    if (!node.figmaRef) return;
-    const d = decodeRef(node.figmaRef);
+    const ref = node.screens?.[0]?.ref;
+    if (!ref) return;
+    const d = decodeRef(ref);
     if (!d) return;
     fetchPreviewUrl(d.fileKey, d.nodeId).then(setImgUrl).catch(() => {});
     fetchFrameElements(d.fileKey, d.nodeId).then(setFrame).catch(() => {});
-  }, [node.figmaRef]);
+  }, [node.screens?.[0]?.ref]);
 
   const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const h = e.currentTarget.offsetHeight;
@@ -102,7 +103,7 @@ export function EventCard({ node, pos, edges, allNodes, onDragStart, onHotspotCl
         </button>
       </div>
 
-      {node.figmaRef ? (
+      {node.screens?.length ? (
         <div className="evm-card-img-wrap">
           {imgUrl ? (
             <>

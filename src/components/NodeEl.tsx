@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Link2, ImageIcon, X } from 'lucide-react';
+import { Plus, Link2, X } from 'lucide-react';
 import type { TreeNode } from '../types';
 import { parseFigmaInput, encodeRef } from '../lib/figma';
 import { NW, NH, topY } from '../layout';
@@ -17,7 +17,6 @@ interface Props {
   multiSel: boolean;
   editNodeId: string | null;
   onEditDone: () => void;
-  onFigmaPreview: (n: TreeNode) => void;
   onFigmaLink: (n: TreeNode, ref: string | null) => void;
   onCarouselOpen?: (n: TreeNode, el: HTMLElement) => void;
   onLongPress?: (n: TreeNode) => void;
@@ -25,7 +24,7 @@ interface Props {
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaPreview, onFigmaLink, onCarouselOpen, onLongPress }: Props) {
+export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaLink, onCarouselOpen, onLongPress }: Props) {
     const { updateActiveTree, getActive, setSel, setSelNodeId } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
@@ -69,8 +68,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
       tapId.current = n.id;
       tapTimer.current = window.setTimeout(() => {
         tapTimer.current = 0; tapId.current = null;
-        if (n.screens?.length) { onCarouselOpen?.(n, targetEl); }
-        else if (n.figmaRef) { onFigmaPreview(n); }
+        if (n.screens?.length) onCarouselOpen?.(n, targetEl);
         if (n.b) {
           const { sel, selNodeId } = useStore.getState();
           if (sel === n.b && selNodeId === n.id) { setSel(null); setSelNodeId(null); }
@@ -82,6 +80,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         }
       }, 270);
     }, [n, onSelect, onToggleMulti, onCarouselOpen, setSel, setSelNodeId]);
+
 
     return (
       <motion.div
@@ -151,21 +150,16 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         {/* Figma action bar — visible when node is selected */}
         {state === 'act' && !isLinking && (
           <div className="nd-figma-bar" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-            {n.figmaRef && (
-              <button className="nd-figma-btn" title="Preview Figma frame" onClick={() => onFigmaPreview(n)}>
-                <ImageIcon size={10} />
-              </button>
-            )}
-            <button className="nd-figma-btn" title={n.figmaRef ? 'Change Figma link' : 'Link Figma frame'}
-              onClick={() => { setLinkVal(n.figmaRef ?? ''); setIsLinking(true); }}>
+            <button className="nd-figma-btn" title={n.screens?.length ? 'Change primary Figma frame' : 'Link Figma frame'}
+              onClick={() => { setLinkVal(n.screens?.[0]?.ref ?? ''); setIsLinking(true); }}>
               <Link2 size={10} />
             </button>
-            {n.figmaRef && (
+            {n.screens?.length ? (
               <button className="nd-figma-btn nd-figma-btn-remove" title="Remove Figma link"
                 onClick={() => onFigmaLink(n, null)}>
                 <X size={10} />
               </button>
-            )}
+            ) : null}
           </div>
         )}
 

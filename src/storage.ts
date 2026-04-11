@@ -1,6 +1,25 @@
 import type { Flow, FlowMeta } from './types';
 import { cloneTree } from './tree';
 
+// ── Legacy migration: figmaRef → screens[0] ───────────────────────────────────
+// Nodes stored before the screens unification have figmaRef: string.
+// Convert them on load so the rest of the app only needs to handle screens[].
+function migrateNode(node: any): void {
+  if (node.figmaRef) {
+    if (!node.screens?.length) {
+      node.screens = [{ ref: node.figmaRef, name: '', order: 1 }];
+    }
+    delete node.figmaRef;
+  }
+  for (const c of node.c ?? []) migrateNode(c);
+  if (node.innerFlow) migrateNode(node.innerFlow);
+}
+
+function migrateFlows(flows: Flow[]): Flow[] {
+  for (const flow of flows) migrateNode(flow.tree as any);
+  return flows;
+}
+
 // ── Local storage ─────────────────────────────────────────────────────────────
 
 const FLOWS_KEY  = 'fit4me_flows_v1';
@@ -16,7 +35,7 @@ export function loadFlowsLocal(): Flow[] | null {
   try {
     const raw = localStorage.getItem(FLOWS_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as Flow[];
+    return migrateFlows(JSON.parse(raw) as Flow[]);
   } catch { return null; }
 }
 
@@ -65,7 +84,7 @@ export async function loadFlowsRemote(): Promise<Flow[] | null> {
   try {
     const res = await fetch('/api/load');
     if (!res.ok) return null;
-    return await res.json() as Flow[];
+    return migrateFlows(await res.json() as Flow[]);
   } catch { return null; }
 }
 

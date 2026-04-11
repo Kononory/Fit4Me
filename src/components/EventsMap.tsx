@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { flattenTree } from '../layout';
 
 const FF = 'LatteraMonoLL,Space Mono,monospace';
-import type { EventEdge, TreeNode } from '../types';
+import type { EventEdge } from '../types';
 import { EventCard, CARD_W, TITLE_H } from './EventCard';
 import { PreviewPanel } from './PreviewPanel';
 
@@ -293,7 +293,7 @@ export function EventsMap() {
             <button id="evm-preview-btn"
               title="Preview prototype"
               onClick={() => {
-                const first = nodes.find(n => n.figmaRef) ?? nodes[0];
+                const first = nodes.find(n => n.screens?.length) ?? nodes[0];
                 if (first) setPreviewStartId(first.id);
               }}
             ><Play size={10} /> Preview</button>
