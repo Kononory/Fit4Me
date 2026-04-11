@@ -1429,6 +1429,17 @@ svg#svgl.dimmed { opacity: 0.3; }
 .fi-progress-bar { width: 100%; height: 4px; background: #E2E1DC; border-radius: 2px; overflow: hidden; }
 .fi-progress-fill { height: 100%; background: #1A1A1A; border-radius: 2px; transition: width 0.2s; }
 .fi-done-check { font-size: 24px; color: #6B9B5E; }
+.fi-resync-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 8px; background: #F2F1ED; border-radius: 4px;
+}
+.fi-btn-resync {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: 1px solid #DEDDDA; border-radius: 3px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 9px; font-weight: 700;
+  color: #5A5955; padding: 4px 9px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.fi-btn-resync:hover { background: #E2E1DC; color: #1A1A1A; }
 
 /* ── Expanded node full-screen panel (en-) ───────────────────────────────── */
 .en-backdrop {

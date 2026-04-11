@@ -11,6 +11,28 @@ export const SCREEN_PAT = /^(.+?)\s*\/\s*(\d+)\s*[–\-]\s*(.+)$/;
 export interface RawFrame { id: string; name: string; }
 export interface PageResult { id: string; name: string; frames: RawFrame[]; }
 
+/** Saved import config — stored in localStorage per flow, keyed by flow ID */
+export interface FigmaImportConfig {
+  url: string;        // original URL pasted (for display + pre-fill)
+  fileKey: string;
+  pageId: string;
+  pageName: string;
+  groupActions: Record<string, string>; // groupName → ImportAction
+}
+
+const IMPORT_CFG_KEY = (flowId: string) => `figma_import_cfg_${flowId}`;
+
+export function getFigmaImportConfig(flowId: string): FigmaImportConfig | null {
+  try {
+    const raw = localStorage.getItem(IMPORT_CFG_KEY(flowId));
+    return raw ? JSON.parse(raw) as FigmaImportConfig : null;
+  } catch { return null; }
+}
+
+export function setFigmaImportConfig(flowId: string, cfg: FigmaImportConfig): void {
+  localStorage.setItem(IMPORT_CFG_KEY(flowId), JSON.stringify(cfg));
+}
+
 export interface FigmaElement {
   id: string; name: string; type: string;
   x: number; y: number; w: number; h: number;
