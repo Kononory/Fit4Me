@@ -1,4 +1,10 @@
 export type NodeType = 'root' | 'nav' | 'tab' | 'leaf';
+
+export interface ScreenRef {
+  ref: string;    // `fileKey||nodeId` — same encoding as TreeNode.figmaRef
+  name: string;   // display name, e.g. "01 – Splash"
+  order: number;  // 1-based sort order
+}
 export type FlowShape = 'rect' | 'stadium' | 'diamond' | 'circle' | 'parallelogram';
 export type BranchId = string; // open-ended so imported flows can use any branch name
 
@@ -21,6 +27,8 @@ export interface TreeNode {
   py?: number; // free y (pixel center)
   // Figma link (serialised) — format: `${fileKey}||${nodeId}`
   figmaRef?: string;
+  // Screens imported from Figma (serialised) — user flow carousel
+  screens?: ScreenRef[];
   // Rich notes shown in the expanded panel card body
   content?: string;
   // Independent mini-flowchart owned by this node (edited in the expanded panel)

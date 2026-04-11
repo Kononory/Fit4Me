@@ -1,7 +1,15 @@
+import type { ScreenRef } from '../types';
+
 const PAT_KEY = 'figma_pat';
 const TTL = 25 * 60 * 1000; // 25 min — Figma signed URLs expire ~30 min
 const cache = new Map<string, { url: string; ts: number }>();
 const nodeCache = new Map<string, { data: FrameData; ts: number }>();
+
+/** Figma frame naming pattern: "Group Name / 01 – Screen Name" */
+export const SCREEN_PAT = /^(.+?)\s*\/\s*(\d+)\s*[–\-]\s*(.+)$/;
+
+export interface RawFrame { id: string; name: string; }
+export interface PageResult { id: string; name: string; frames: RawFrame[]; }
 
 export interface FigmaElement {
   id: string; name: string; type: string;
@@ -82,6 +90,71 @@ export async function fetchFrameElements(fileKey: string, nodeId: string): Promi
 
   nodeCache.set(cacheKey, { data: body, ts: Date.now() });
   return body;
+}
+
+/**
+ * Extract just the fileKey from a Figma design URL.
+ * Accepts any figma.com/design/:fileKey/... URL, with or without node-id.
+ */
+export function parseFigmaFileKey(raw: string): string | null {
+  const m = raw.trim().match(/figma\.com\/(?:design|file)\/([A-Za-z0-9_-]+)/i);
+  return m ? m[1] : null;
+}
+
+/**
+ * Group raw Figma frames by the "Group / 01 – Name" naming convention.
+ * Frames that don't match the pattern are silently skipped.
+ */
+export function parseFrameGroups(frames: RawFrame[], fileKey: string): Map<string, ScreenRef[]> {
+  const groups = new Map<string, ScreenRef[]>();
+  for (const f of frames) {
+    const m = f.name.match(SCREEN_PAT);
+    if (!m) continue;
+    const [, groupRaw, orderStr, screenRaw] = m;
+    const key = groupRaw.trim();
+    const order = parseInt(orderStr, 10);
+    const list = groups.get(key) ?? [];
+    list.push({
+      ref: encodeRef(fileKey, f.id),
+      name: `${orderStr.padStart(2, '0')} – ${screenRaw.trim()}`,
+      order,
+    });
+    groups.set(key, list);
+  }
+  for (const list of groups.values()) list.sort((a, b) => a.order - b.order);
+  return groups;
+}
+
+/** Fetch all pages + their top-level frames from a Figma file. */
+export async function fetchPageStructure(fileKey: string): Promise<PageResult[]> {
+  const token = getPAT();
+  if (!token) throw new Error('no_pat');
+  const params = new URLSearchParams({ fileKey, token });
+  const res = await fetch(`/api/figma-page?${params}`);
+  const body = await res.json() as { pages?: PageResult[]; error?: string };
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  return body.pages ?? [];
+}
+
+/**
+ * Batch-fetch thumbnail URLs for multiple node IDs.
+ * Populates the single-url cache so subsequent fetchPreviewUrl calls are instant.
+ */
+export async function fetchBatchThumbnails(fileKey: string, nodeIds: string[]): Promise<Map<string, string>> {
+  if (!nodeIds.length) return new Map();
+  const token = getPAT();
+  if (!token) throw new Error('no_pat');
+  const params = new URLSearchParams({ fileKey, nodeIds: nodeIds.join(','), token });
+  const res = await fetch(`/api/figma-batch?${params}`);
+  const body = await res.json() as { urls?: Record<string, string>; error?: string };
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  const result = new Map<string, string>();
+  const ts = Date.now();
+  for (const [id, url] of Object.entries(body.urls ?? {})) {
+    result.set(id, url);
+    cache.set(`${fileKey}:${id}`, { url, ts });
+  }
+  return result;
 }
 
 /** Find the most specific Figma element at (px, py) in frame-local coords. */

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree } from '../tree';
@@ -7,7 +7,7 @@ import { DEFAULT_TREE } from '../data';
 import { autoArrange, doLayout, flattenTree } from '../layout';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, overlapCount } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, overlapCount } = useStore();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -69,6 +69,7 @@ export function Toolbar() {
         onClick={() => setFreeMode(!freeMode)}
       ><Move size={14} /></button>
       <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
+      <button id="tb-figma-import" title="Import screens from Figma page" onClick={() => setFigmaImportOpen(true)}><Download size={14} /></button>
       {overlapCount > 0 && (
         <button id="tb-overlap" title="Edge crossings detected — click to auto-arrange" onClick={handleAutoArrange}>
           ⚠ {overlapCount} crossing{overlapCount > 1 ? 's' : ''} · Fix

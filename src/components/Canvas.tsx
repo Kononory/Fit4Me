@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
-import type { TreeNode, CrossEdge } from '../types';
+import type { TreeNode, CrossEdge, ScreenRef } from '../types';
 import { canvasSize, flattenTree, NW, NH, topY } from '../layout';
 import { useStore } from '../store';
 import { NodeEl } from './NodeEl';
@@ -8,6 +8,9 @@ import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { FigmaPreview } from './FigmaPreview';
 import { FigmaTokenModal } from './FigmaTokenModal';
+import { FigmaImportModal } from './FigmaImportModal';
+import { ScreenCarousel } from './ScreenCarousel';
+import { UserFlowView } from './UserFlowView';
 import { ExpandedNode } from './ExpandedNode';
 import { PreviewPanel } from './PreviewPanel';
 import { useDrag } from '../hooks/useDrag';
@@ -30,13 +33,15 @@ export function Canvas({
   allNodes, allEdges, crossEdges, doAnim, zoom,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen, figmaImportOpen } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
   const [figmaPreviewNode, setFigmaPreviewNode] = useState<TreeNode | null>(null);
   const [previewStartId, setPreviewStartId] = useState<string | null>(null);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const [carouselState, setCarouselState] = useState<{ node: TreeNode; rect: DOMRect } | null>(null);
+  const [userFlowNode, setUserFlowNode] = useState<TreeNode | null>(null);
 
   type Marquee = { x0: number; y0: number; x1: number; y1: number };
   const [marquee, setMarquee] = useState<Marquee | null>(null);
@@ -191,6 +196,16 @@ export function Canvas({
     updateActiveTree(getActive().tree);
   }, [pushUndo, getActive, updateActiveTree]);
 
+  const handleCarouselOpen = useCallback((n: TreeNode, el: HTMLElement) => {
+    setCarouselState({ node: n, rect: el.getBoundingClientRect() });
+  }, []);
+
+  const handleScreenReorder = useCallback((n: TreeNode, screens: ScreenRef[]) => {
+    pushUndo();
+    n.screens = screens;
+    updateActiveTree(getActive().tree);
+  }, [pushUndo, getActive, updateActiveTree]);
+
   const nodeState = useCallback((n: TreeNode) => {
     if (n.id === selNodeId)      return 'act' as const;
     if (!sel)                    return 'def' as const;
@@ -218,6 +233,7 @@ export function Canvas({
         if (didMarqueeRef.current) { didMarqueeRef.current = false; return; }
         setSel(null); setSelNodeId(null); clearMultiSel();
         setFigmaPreviewNode(null);
+        setCarouselState(null);
       }}
     >
       <EdgeLayer
@@ -249,6 +265,7 @@ export function Canvas({
           onEditDone={() => setEditNodeId(null)}
           onFigmaPreview={setFigmaPreviewNode}
           onFigmaLink={handleFigmaLink}
+          onCarouselOpen={handleCarouselOpen}
           onLongPress={n => setExpandedNodeId(n.id)}
         />
       ))}
@@ -302,6 +319,27 @@ export function Canvas({
       );
     })()}
     {figmaTokenOpen && <FigmaTokenModal />}
+    {figmaImportOpen && <FigmaImportModal allNodes={allNodes} />}
+    {carouselState && (
+      <ScreenCarousel
+        node={carouselState.node}
+        nodeRect={carouselState.rect}
+        onOpenFlow={() => { setUserFlowNode(carouselState.node); setCarouselState(null); }}
+        onClose={() => setCarouselState(null)}
+      />
+    )}
+    {userFlowNode && (() => {
+      const flow = getActive();
+      return (
+        <UserFlowView
+          node={userFlowNode}
+          allNodes={allNodes}
+          crossEdges={flow.crossEdges ?? []}
+          onReorder={screens => handleScreenReorder(userFlowNode, screens)}
+          onClose={() => setUserFlowNode(null)}
+        />
+      );
+    })()}
     <AnimatePresence>
       {expandedNodeId && (() => {
         const node = allNodes.find(n => n.id === expandedNodeId);

@@ -22,10 +22,16 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 src/
   components/   # UI — Canvas, NodeEl, EdgeLayer, EdgePicker, TextEditPanel, FlowTabs,
   #               Toolbar, RetentionWidget, Viewport, HotkeysPanel, ZoomControls
+  #               FigmaImportModal — multi-step import: URL → page select → review → apply
+  #               ScreenCarousel — fixed popover (z-90) for browsing screens on a node
+  #               UserFlowView — full-screen overlay (z-155) showing all screens in sequence
   hooks/        # useDrag.ts — drag/connect/free-position logic
   store.ts      # Zustand global state (flows, selection, undo/redo, drag, UI flags,
-  #               zoom, freeMode, hotkeysOpen)
-  types.ts      # TreeNode (incl. px/py free-position fields), Flow, CrossEdge, DragState
+  #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId)
+  types.ts      # TreeNode (incl. px/py, screens?: ScreenRef[]), Flow, CrossEdge, DragState
+  #               ScreenRef: { ref: fileKey||nodeId, name, order }
+  lib/figma.ts  # Figma API helpers + SCREEN_PAT, parseFrameGroups, fetchPageStructure,
+  #               fetchBatchThumbnails, parseFigmaFileKey
   parser.ts     # parseOutline() / treeToOutline() — indented text ↔ tree
   layout.ts     # doLayout(), flattenTree(), canvasSize() — NW=156 NH=36 LW=184 RH=40 PAD=40
   #               centerY(n) and topY(n) respect n.py free-position override
@@ -34,6 +40,11 @@ src/
   data.ts       # DEFAULT_TREE
   storage.ts    # local + Supabase persistence
   style.css     # all styles (no CSS modules) — read this before adding classes
+api/
+  figma.ts         # single-frame thumbnail: GET /api/figma?fileKey&nodeId&token
+  figma-nodes.ts   # frame element tree for hit-testing
+  figma-page.ts    # file page structure: GET /api/figma-page?fileKey&token → { pages }
+  figma-batch.ts   # batch thumbnails: GET /api/figma-batch?fileKey&nodeIds&token → { urls }
 ```
 
 ## Node interaction model
@@ -107,6 +118,7 @@ Count saved tokens from skipped work:
 - No multi-file grep for conventions (~2–5 k) — prefixes/z-index/colors listed above
 - Shorter plan (~1–2 k) — no need to explain the project to yourself
 - No types.ts / tree.ts read (~1 k each) — all public functions listed in repo layout above
+- No lib/figma.ts read (~2 k) — exports + patterns now listed in repo layout above
 
 ## Post-iteration rule update (mandatory)
 After every completed feature, bugfix, or refactor — before closing the task — do the following:
@@ -147,6 +159,15 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - `onMouseDown` on `#cnv` guards with `(e.target as Element).closest('[data-nid]')` — nodes carry `data-nid` so clicks on them are excluded
 - `didMarqueeRef` prevents the `onClick` deselect-all from firing after a completed drag-selection
 - Hit test uses `n.x ?? 0` (x is optional in TreeNode pre-layout) + `topY(n)` from layout.ts
+
+## Figma Screens / User Flow feature
+- **Naming convention** (required in Figma): `Group Name / 01 – Screen Name` — slash separates IA node name from screen order+name; order is numeric prefix.
+- **SCREEN_PAT** in `lib/figma.ts` — regex used both for parsing and for detecting parseable frames during import.
+- **ScreenCarousel** opens on single-click of a node that has `screens`. Positioned fixed at `nodeRect.right + 8`; flips left if overflow. `sc-backdrop` (z-89, transparent) catches outside clicks.
+- **UserFlowView** drag-reorder uses HTML5 `draggable` + `onDragOver`/`onDrop`. Calls `onReorder(screens)` → `pushUndo + n.screens = screens + updateActiveTree`.
+- **FigmaImportModal** step machine: `input → loading → select-page? → review → applying → done`. Batch-warms thumbnail cache during apply via `/api/figma-batch`. Renders from Canvas.tsx alongside FigmaTokenModal.
+- **Conflict resolution** per group: `overwrite` replaces screens, `merge` adds only refs not already in node.screens, `skip` no-ops. New groups default to `create` (attached to tree root as child).
+- **`e.currentTarget` in setTimeout**: capture as `const targetEl = e.currentTarget as HTMLElement` before the 270ms tap timer — `currentTarget` is null inside the callback otherwise.
 
 ## Known pitfalls
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.

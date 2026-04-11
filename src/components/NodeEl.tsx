@@ -19,12 +19,13 @@ interface Props {
   onEditDone: () => void;
   onFigmaPreview: (n: TreeNode) => void;
   onFigmaLink: (n: TreeNode, ref: string | null) => void;
+  onCarouselOpen?: (n: TreeNode, el: HTMLElement) => void;
   onLongPress?: (n: TreeNode) => void;
 }
 
 const canConnect = (n: TreeNode) => n.type !== 'nav';
 
-export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaPreview, onFigmaLink, onLongPress }: Props) {
+export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onToggleMulti, onAddSibling, editNodeId, onEditDone, onFigmaPreview, onFigmaLink, onCarouselOpen, onLongPress }: Props) {
     const { updateActiveTree, getActive, setSel, setSelNodeId } = useStore();
     const tapTimer = useRef(0);
     const tapId    = useRef<string | null>(null);
@@ -64,10 +65,12 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         onSelect(n);
         return;
       }
+      const targetEl = e.currentTarget as HTMLElement;
       tapId.current = n.id;
       tapTimer.current = window.setTimeout(() => {
         tapTimer.current = 0; tapId.current = null;
-        if (n.figmaRef) onFigmaPreview(n);
+        if (n.screens?.length) { onCarouselOpen?.(n, targetEl); }
+        else if (n.figmaRef) { onFigmaPreview(n); }
         if (n.b) {
           const { sel, selNodeId } = useStore.getState();
           if (sel === n.b && selNodeId === n.id) { setSel(null); setSelNodeId(null); }
@@ -78,7 +81,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
           else              { setSel(n.id); setSelNodeId(n.id); }
         }
       }, 270);
-    }, [n, onSelect, onToggleMulti, setSel, setSelNodeId]);
+    }, [n, onSelect, onToggleMulti, onCarouselOpen, setSel, setSelNodeId]);
 
     return (
       <motion.div
@@ -117,7 +120,10 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
             }}
           />
         ) : (
-          <span className="nd-lbl">{n.label}</span>
+          <span className="nd-lbl">
+            {n.label}
+            {n.screens?.length ? <span className="nd-screen-count">·{n.screens.length}</span> : null}
+          </span>
         )}
         {n.sublabel && <span className="sub">{n.sublabel}</span>}
 

@@ -91,6 +91,10 @@ interface AppStore {
   setHotkeysOpen: (v: boolean) => void;
   figmaTokenOpen: boolean;
   setFigmaTokenOpen: (v: boolean) => void;
+  figmaImportOpen: boolean;
+  setFigmaImportOpen: (v: boolean) => void;
+  userFlowNodeId: string | null;
+  setUserFlowNodeId: (id: string | null) => void;
   overlapCount: number;
   setOverlapCount: (n: number) => void;
 }
@@ -202,6 +206,10 @@ export const useStore = create<AppStore>((set, get) => {
     setHotkeysOpen: (hotkeysOpen) => set({ hotkeysOpen }),
     figmaTokenOpen: false,
     setFigmaTokenOpen: (figmaTokenOpen) => set({ figmaTokenOpen }),
+    figmaImportOpen: false,
+    setFigmaImportOpen: (figmaImportOpen) => set({ figmaImportOpen }),
+    userFlowNodeId: null,
+    setUserFlowNodeId: (userFlowNodeId) => set({ userFlowNodeId }),
     overlapCount: 0,
     setOverlapCount: (overlapCount) => set({ overlapCount }),
   };
