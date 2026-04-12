@@ -146,6 +146,14 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - Don't merge feature branches without rebasing on main first (avoids conflict overhead)
 - Don't add CSS for removed elements — search for stale IDs before adding new ones
 
+## Locale check feature
+- Entry: "Check locales →" button in ScreenCarousel footer → opens `LocaleCheckModal` (z-500)
+- API: `POST /api/locale-check` — takes `{ fileKey, nodeId, token, locales[] }`, fetches Figma text nodes, translates via Anthropic (claude-haiku), returns per-node×locale analysis
+- Shared types live in `src/lib/locale-types.ts` — import from there in both `api/` and `src/`; never import from `api/` in frontend (server deps leak)
+- Analysis: `charsPerLine = floor(w / (fontSize * charRatio))` → `linesNeeded` → `expandedH` → frame bounds → sibling collision
+- Status chain: `fit` → `overflow` (no collision) → `collision` → `frame_overflow`
+- Env var: `Fit4Me_ANTHROPIC_API_KEY` (falls back to `ANTHROPIC_API_KEY`)
+
 ## Known pitfalls
 ## Edge overlap detection
 - `detectOverlaps(allEdges, crossEdges, allNodes)` in `layout.ts` — returns `Overlap[]`; uses O(n²) segment-intersection; skips shared-endpoint pairs

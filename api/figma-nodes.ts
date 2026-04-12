@@ -5,12 +5,23 @@ interface FigmaNode {
   name: string;
   type: string;
   absoluteBoundingBox?: { x: number; y: number; width: number; height: number };
+  characters?: string;
+  style?: {
+    fontSize?: number;
+    lineHeightPx?: number;
+    fontFamily?: string;
+    textAutoResize?: string;
+  };
   children?: FigmaNode[];
 }
 
 interface Element {
   id: string; name: string; type: string;
   x: number; y: number; w: number; h: number;
+  // Text-only fields
+  chars?: string;
+  fontSize?: number;
+  lineHeightPx?: number;
 }
 
 function flatten(
@@ -21,13 +32,19 @@ function flatten(
   depth: number,
 ) {
   if (!isRoot && node.absoluteBoundingBox) {
-    out.push({
+    const el: Element = {
       id: node.id, name: node.name, type: node.type,
       x: node.absoluteBoundingBox.x - frameBox.x,
       y: node.absoluteBoundingBox.y - frameBox.y,
       w: node.absoluteBoundingBox.width,
       h: node.absoluteBoundingBox.height,
-    });
+    };
+    if (node.type === 'TEXT' && node.characters) {
+      el.chars = node.characters;
+      el.fontSize = node.style?.fontSize ?? 14;
+      el.lineHeightPx = node.style?.lineHeightPx ?? (el.fontSize * 1.4);
+    }
+    out.push(el);
   }
   if (depth < 5) {
     for (const child of node.children ?? []) {

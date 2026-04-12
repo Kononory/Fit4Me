@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2, Play, ExternalLink } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2, Play, ExternalLink, Languages } from 'lucide-react';
 import type { TreeNode, ScreenRef } from '../types';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
+import { LocaleCheckModal } from './LocaleCheckModal';
 
 const PANEL_W = 224;
 const PANEL_H = 330;
@@ -30,6 +31,7 @@ export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose 
   const screens = node.screens ?? [];
   const [idx, setIdx] = useState(0);
   const [ls, setLs] = useState<LoadState>({ status: 'loading' });
+  const [localeCheckOpen, setLocaleCheckOpen] = useState(false);
   const prevTokenOpen = { current: figmaTokenOpen };
 
   const screen: ScreenRef | undefined = screens[idx];
@@ -141,7 +143,27 @@ export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose 
         <button className="sc-flow-btn" onClick={onOpenFlow}>
           View full flow →
         </button>
+        {screen && (() => {
+          const decoded = decodeRef(screen.ref);
+          return decoded ? (
+            <button className="sc-flow-btn" onClick={() => setLocaleCheckOpen(true)}>
+              <Languages size={9} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+              Check locales →
+            </button>
+          ) : null;
+        })()}
       </div>
+      {localeCheckOpen && (() => {
+        const decoded = decodeRef(screen.ref);
+        return decoded ? (
+          <LocaleCheckModal
+            fileKey={decoded.fileKey}
+            nodeId={decoded.nodeId}
+            screenName={screen.name}
+            onClose={() => setLocaleCheckOpen(false)}
+          />
+        ) : null;
+      })()}
     </>
   );
 }
