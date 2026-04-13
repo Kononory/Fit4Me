@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Anthropic from '@anthropic-ai/sdk';
 import type { LocaleStatus, LocaleResult, TextNodeResult, LocaleCheckResponse } from '../src/lib/locale-types';
 
 // Average character width as fraction of font size, by locale script
@@ -98,31 +97,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (textEls.length === 0)
     return res.status(200).json({ frameW: frameBox.width, frameH: frameBox.height, results: [] });
 
-  // 2. Translate all strings to all locales in one Anthropic call
-  const apiKey = process.env['Fit4Me_ANTHROPIC_API_KEY'] ?? process.env['ANTHROPIC_API_KEY'];
-  if (!apiKey) return res.status(500).json({ error: 'Anthropic API key not configured' });
+  // 2. Translate all strings to all locales via DeepL Free API (parallel, one request per locale)
+  const deeplKey = process.env['Fit4Me_DEEPL_API_KEY'] ?? process.env['DEEPL_API_KEY'];
+  if (!deeplKey) return res.status(500).json({ error: 'DeepL API key not configured' });
 
-  const client = new Anthropic({ apiKey });
-  const strings: Record<string, string> = {};
-  for (const t of textEls) strings[t.id] = t.chars;
+  // DeepL target language code mapping (free API uses specific codes for some languages)
+  const DEEPL_CODE: Record<string, string> = {
+    ZH: 'ZH-HANS', PT: 'PT-BR', EN: 'EN-US',
+  };
+  // Languages not supported by DeepL — will keep original text
+  const DEEPL_UNSUPPORTED = new Set(['HE']);
 
-  const prompt = `Translate these UI strings into the following locales: ${locales.join(', ')}.
-Return ONLY a valid JSON object, no markdown, no explanation.
-Format: { "LOCALE_CODE": { "NODE_ID": "translated text" } }
-Use the exact locale codes provided as keys.
-Strings to translate: ${JSON.stringify(strings)}`;
+  const nodeIds = textEls.map(t => t.id);
+  const texts   = textEls.map(t => t.chars);
+
+  async function translateLocale(locale: string): Promise<Record<string, string>> {
+    const targetLang = DEEPL_CODE[locale.toUpperCase()] ?? locale.toUpperCase();
+    if (DEEPL_UNSUPPORTED.has(locale.toUpperCase())) {
+      // Fall back to original for unsupported languages
+      return Object.fromEntries(nodeIds.map((id, i) => [id, texts[i]]));
+    }
+    const params = new URLSearchParams({ target_lang: targetLang });
+    for (const t of texts) params.append('text', t);
+
+    const r = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: { Authorization: `DeepL-Auth-Key ${deeplKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    if (!r.ok) throw new Error(`DeepL ${locale}: HTTP ${r.status}`);
+    const body = await r.json() as { translations: { text: string }[] };
+    return Object.fromEntries(nodeIds.map((id, i) => [id, body.translations[i]?.text ?? texts[i]]));
+  }
 
   let translations: Record<string, Record<string, string>> = {};
   try {
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const raw = (msg.content[0] as { text: string }).text.trim();
-    // Strip markdown fences if model wraps response
-    const cleaned = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
-    translations = JSON.parse(cleaned);
+    const results = await Promise.all(locales.map(l => translateLocale(l).then(r => [l, r] as const)));
+    translations = Object.fromEntries(results);
   } catch (e) {
     return res.status(500).json({ error: `Translation failed: ${String(e)}` });
   }
