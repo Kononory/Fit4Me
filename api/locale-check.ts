@@ -71,14 +71,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { fileKey, nodeId, token, locales } = req.body ?? {};
-  if (!fileKey || !nodeId || !token || !Array.isArray(locales) || locales.length === 0)
+  const figmaToken = process.env['fit4me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
+  if (!fileKey || !nodeId || !figmaToken || !Array.isArray(locales) || locales.length === 0)
     return res.status(400).json({ error: 'Missing params' });
 
   // 1. Fetch Figma node tree with text properties
   const figmaUrl = `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeId)}&depth=6`;
   let r: Response;
   try {
-    r = await fetch(figmaUrl, { headers: { 'X-Figma-Token': token } });
+    r = await fetch(figmaUrl, { headers: { 'X-Figma-Token': figmaToken } });
   } catch (e) {
     return res.status(502).json({ error: String(e) });
   }
