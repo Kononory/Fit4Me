@@ -23,6 +23,7 @@ src/
   components/   # UI — Canvas, NodeEl, EdgeLayer, EdgePicker, TextEditPanel, FlowTabs,
   #               Toolbar, RetentionWidget, Viewport, HotkeysPanel, ZoomControls
   #               FigmaImportModal — multi-step import: URL → page select → review → apply
+  #               LocaleCheckStandaloneModal — toolbar entry: URL input → locale pick → results (uses parseFigmaInput)
   #               ScreenCarousel — fixed popover (z-90) for browsing screens on a node
   #               UserFlowView — full-screen overlay (z-155) showing all screens in sequence
   hooks/        # useDrag.ts — drag/connect/free-position logic
@@ -182,3 +183,4 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
 - [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
 - [Multi-select stale closure]: Pass `getMultiSel` callback to `useDrag`, not the Set — Set captured at `useCallback` time is stale by `dragEnd`.
+- [motion subpath import]: Package is `motion` but imports use `from 'motion/react'` — grep for `from 'motion'` returns nothing. Always grep `motion/react` to detect usage.
