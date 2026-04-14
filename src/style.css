@@ -1325,6 +1325,13 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .lc-close:hover { background: #F2F1ED; color: #1A1A1A; }
 .lc-section { padding: 10px 12px; border-bottom: 1px solid #E2E1DC; flex-shrink: 0; }
+.lc-url-input {
+  font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 10px;
+  width: 100%; box-sizing: border-box; padding: 7px 9px; margin-bottom: 10px;
+  border: 1px solid #DEDDDA; border-radius: 4px; background: #F8F7F4; color: #1A1A1A;
+  outline: none;
+}
+.lc-url-input:focus { border-color: #1A1A1A; }
 .lc-lang-grid {
   display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
 }

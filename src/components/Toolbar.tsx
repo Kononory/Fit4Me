@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree, addChildNode } from '../tree';
@@ -11,7 +11,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, overlapCount } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount } = useStore();
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -141,6 +141,7 @@ export function Toolbar() {
       ><Move size={14} /></button>
       <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
       <button id="tb-figma-import" title="Import screens from Figma page" onClick={() => setFigmaImportOpen(true)}><Download size={14} /></button>
+      <button id="tb-locale-check" title="Locale check — paste any Figma frame URL" onClick={() => setLocaleCheckOpen(true)}><Languages size={14} /></button>
       {hasSyncConfig && (
         <button
           id="tb-figma-resync"

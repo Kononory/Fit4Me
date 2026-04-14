@@ -8,6 +8,7 @@ import { EdgeLayer } from './EdgeLayer';
 import { DragOverlay } from './DragOverlay';
 import { FigmaTokenModal } from './FigmaTokenModal';
 import { FigmaImportModal } from './FigmaImportModal';
+import { LocaleCheckStandaloneModal } from './LocaleCheckStandaloneModal';
 import { ScreenCarousel } from './ScreenCarousel';
 import { UserFlowView } from './UserFlowView';
 import { ExpandedNode } from './ExpandedNode';
@@ -32,7 +33,7 @@ export function Canvas({
   allNodes, allEdges, crossEdges, doAnim, zoom,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen, figmaImportOpen } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen, figmaImportOpen, localeCheckOpen } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
@@ -309,6 +310,7 @@ export function Canvas({
     })()}
     {figmaTokenOpen && <FigmaTokenModal />}
     {figmaImportOpen && <FigmaImportModal allNodes={allNodes} />}
+    {localeCheckOpen && <LocaleCheckStandaloneModal />}
     {carouselState && (() => {
       const flow = getActive();
       const hasEdges = (flow.eventEdges ?? []).some(e => e.fromNodeId === carouselState.node.id);

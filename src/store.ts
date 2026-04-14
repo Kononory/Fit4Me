@@ -93,6 +93,8 @@ interface AppStore {
   setFigmaTokenOpen: (v: boolean) => void;
   figmaImportOpen: boolean;
   setFigmaImportOpen: (v: boolean) => void;
+  localeCheckOpen: boolean;
+  setLocaleCheckOpen: (v: boolean) => void;
   userFlowNodeId: string | null;
   setUserFlowNodeId: (id: string | null) => void;
   overlapCount: number;
@@ -208,6 +210,8 @@ export const useStore = create<AppStore>((set, get) => {
     setFigmaTokenOpen: (figmaTokenOpen) => set({ figmaTokenOpen }),
     figmaImportOpen: false,
     setFigmaImportOpen: (figmaImportOpen) => set({ figmaImportOpen }),
+    localeCheckOpen: false,
+    setLocaleCheckOpen: (localeCheckOpen) => set({ localeCheckOpen }),
     userFlowNodeId: null,
     setUserFlowNodeId: (userFlowNodeId) => set({ userFlowNodeId }),
     overlapCount: 0,
