@@ -20,7 +20,7 @@ function downloadFlowAsOutline(flow: Flow) {
 type ModalState = null | 'new-choice' | 'new-text';
 
 export function FlowTabs() {
-  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId } = useStore();
+  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen } = useStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [textInput, setTextInput] = useState('');
   const [parseErr, setParseErr] = useState('');
@@ -72,6 +72,13 @@ export function FlowTabs() {
     addFlow({ id: genId(), name: 'New Flow', tree });
     setModal(null);
   }, [addFlow]);
+
+  const handleNewFromFigma = useCallback(() => {
+    const tree = parseOutline(BLANK_OUTLINE);
+    addFlow({ id: genId(), name: 'New Flow', tree });
+    setModal(null);
+    setFigmaImportOpen(true);
+  }, [addFlow, setFigmaImportOpen]);
 
   const handleNewFromText = useCallback(() => {
     const text = textInput.trim();
@@ -165,6 +172,10 @@ export function FlowTabs() {
               <button className="ft-modal-opt" onClick={() => setModal('new-text')}>
                 <span className="ft-opt-label">From text</span>
                 <span className="ft-opt-desc">Paste outline text to build structure</span>
+              </button>
+              <button className="ft-modal-opt" onClick={handleNewFromFigma}>
+                <span className="ft-opt-label">From Figma</span>
+                <span className="ft-opt-desc">Import structure from a Figma file</span>
               </button>
             </div>
           </div>
