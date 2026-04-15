@@ -22,7 +22,8 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 src/
   components/   # UI — Canvas, NodeEl, EdgeLayer, EdgePicker, TextEditPanel, FlowTabs,
   #               Toolbar, RetentionWidget, Viewport, HotkeysPanel, ZoomControls
-  #               FigmaImportModal — multi-step import: URL → page select → review → apply
+  #               FigmaImportModal — multi-step import: URL (mode select) → page select → [analyze?] → review → apply
+  #               importMode: 'sections' | 'naming' — sections uses parseSectionGroups, naming goes through /api/figma-analyze
   #               LocaleCheckStandaloneModal — toolbar entry: URL input → locale pick → results (uses parseFigmaInput)
   #               ScreenCarousel — fixed popover (z-90) for browsing screens on a node
   #               UserFlowView — full-screen overlay (z-155) showing all screens in sequence
@@ -31,8 +32,10 @@ src/
   #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId)
   types.ts      # TreeNode (incl. px/py, screens?: ScreenRef[]), Flow, CrossEdge, DragState
   #               ScreenRef: { ref: fileKey||nodeId, name, order }
-  lib/figma.ts  # Figma API helpers + SCREEN_PAT, parseFrameGroups, fetchPageStructure,
-  #               fetchBatchThumbnails, parseFigmaFileKey
+  lib/figma.ts  # Figma API helpers + SCREEN_PAT, parseFrameGroups, parseSectionGroups,
+  #               fetchPageStructure, fetchBatchThumbnails, parseFigmaFileKey
+  #               SectionResult: { id, name, order, frames[] }
+  #               PageResult now includes sections?: SectionResult[]
   parser.ts     # parseOutline() / treeToOutline() — indented text ↔ tree
   layout.ts     # doLayout(), flattenTree(), canvasSize() — NW=156 NH=36 LW=184 RH=40 PAD=40
   #               centerY(n) and topY(n) respect n.py free-position override
@@ -44,8 +47,9 @@ src/
 api/
   figma.ts         # single-frame thumbnail: GET /api/figma?fileKey&nodeId&token
   figma-nodes.ts   # frame element tree for hit-testing
-  figma-page.ts    # file page structure: GET /api/figma-page?fileKey&token → { pages }
+  figma-page.ts    # file page structure: GET /api/figma-page?fileKey&token → { pages } (depth=3, includes sections[])
   figma-batch.ts   # batch thumbnails: GET /api/figma-batch?fileKey&nodeIds&token → { urls }
+  figma-analyze.ts # Gemini IA grouping: POST /api/figma-analyze { frames[] } → { groups[{ name, frameIds }] }
 ```
 
 ## Node interaction model
@@ -90,7 +94,7 @@ api/
 ## CSS conventions
 - All styles in `src/style.css` — no separate files, no CSS modules
 - ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
-- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar
+- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar, `fi-` figma import modal (`fi-mode-*` mode selector, `fi-analyze-*` analyze step)
 - Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebar → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
 - Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
 - Node handle sizing: `width:18px; height:18px` — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`
@@ -120,6 +124,7 @@ Count saved tokens from skipped work:
 - Shorter plan (~1–2 k) — no need to explain the project to yourself
 - No types.ts / tree.ts read (~1 k each) — all public functions listed in repo layout above
 - No lib/figma.ts read (~2 k) — exports + patterns now listed in repo layout above
+- No FigmaImportModal.tsx read (~4 k) — step machine + importMode pattern now listed in repo layout above
 
 ## Post-iteration rule update (mandatory)
 After every completed feature, bugfix, or refactor — before closing the task — do the following:
@@ -153,7 +158,7 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - Shared types live in `src/lib/locale-types.ts` — import from there in both `api/` and `src/`; never import from `api/` in frontend (server deps leak)
 - Analysis: `charsPerLine = floor(w / (fontSize * charRatio))` → `linesNeeded` → `expandedH` → frame bounds → sibling collision
 - Status chain: `fit` → `overflow` (no collision) → `collision` → `frame_overflow`
-- Translation: DeepL Free API, parallel requests per locale; env var `Fit4Me_DEEPL_API_KEY`; ZH→ZH-HANS, PT→PT-BR; HE unsupported (falls back to original)
+- Translation: DeepL Free API primary, Gemini 2.0 Flash Lite fallback on 456/429; env vars `Fit4Me_DEEPL_API_KEY` + `Fit4Me_GEMINI_API_KEY`; ZH→ZH-HANS, PT→PT-BR; HE routed to Gemini (DeepL doesn't support it)
 
 ## Known pitfalls
 ## Edge overlap detection
@@ -179,6 +184,7 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - **`e.currentTarget` in setTimeout**: capture as `const targetEl = e.currentTarget as HTMLElement` before the 270ms tap timer — `currentTarget` is null inside the callback otherwise.
 
 ## Known pitfalls
+- [useCallback indirect state capture]: if a `useCallback` calls a plain component function that uses state, add that state to the callback's deps — plain functions aren't refs, the callback captures a stale version otherwise. Hit in `handleResync` missing `importMode`.
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
 - [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
