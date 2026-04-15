@@ -98,9 +98,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (textEls.length === 0)
     return res.status(200).json({ frameW: frameBox.width, frameH: frameBox.height, results: [] });
 
-  // 2. Translate all strings to all locales via DeepL Free API (parallel, one request per locale)
+  // 2. Translate all strings to all locales — DeepL primary, Gemini fallback on quota/rate-limit
   const deeplKey = process.env['Fit4Me_DEEPL_API_KEY'] ?? process.env['DEEPL_API_KEY'];
-  if (!deeplKey) return res.status(500).json({ error: 'DeepL API key not configured' });
+  const geminiKey = process.env['Fit4Me_GEMINI_API_KEY'];
+  if (!deeplKey && !geminiKey) return res.status(500).json({ error: 'No translation API key configured' });
 
   // DeepL target language code mapping (free API uses specific codes for some languages)
   const DEEPL_CODE: Record<string, string> = {
@@ -112,12 +113,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const nodeIds = textEls.map(t => t.id);
   const texts   = textEls.map(t => t.chars);
 
+  async function translateWithGemini(locale: string): Promise<Record<string, string>> {
+    const prompt = `Translate each UI string to ${locale}. Return only a JSON array of translated strings in the same order. No explanation.\n\n${JSON.stringify(texts)}`;
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      }),
+    });
+    if (!r.ok) throw new Error(`Gemini ${locale}: HTTP ${r.status}`);
+    const body = await r.json() as { candidates: { content: { parts: { text: string }[] } }[] };
+    const translated: string[] = JSON.parse(body.candidates[0].content.parts[0].text);
+    return Object.fromEntries(nodeIds.map((id, i) => [id, translated[i] ?? texts[i]]));
+  }
+
   async function translateLocale(locale: string): Promise<Record<string, string>> {
-    const targetLang = DEEPL_CODE[locale.toUpperCase()] ?? locale.toUpperCase();
-    if (DEEPL_UNSUPPORTED.has(locale.toUpperCase())) {
-      // Fall back to original for unsupported languages
+    const upper = locale.toUpperCase();
+
+    // HE: DeepL doesn't support it — use Gemini if available, else keep original
+    if (DEEPL_UNSUPPORTED.has(upper)) {
+      if (geminiKey) return translateWithGemini(locale);
       return Object.fromEntries(nodeIds.map((id, i) => [id, texts[i]]));
     }
+
+    // No DeepL key at all — go straight to Gemini
+    if (!deeplKey) return translateWithGemini(locale);
+
+    const targetLang = DEEPL_CODE[upper] ?? upper;
     const params = new URLSearchParams({ target_lang: targetLang });
     for (const t of texts) params.append('text', t);
 
@@ -126,6 +150,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: { Authorization: `DeepL-Auth-Key ${deeplKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     });
+
+    // Quota exceeded (456) or rate limit (429) — fall back to Gemini
+    if ((r.status === 456 || r.status === 429) && geminiKey) return translateWithGemini(locale);
+
     if (!r.ok) throw new Error(`DeepL ${locale}: HTTP ${r.status}`);
     const body = await r.json() as { translations: { text: string }[] };
     return Object.fromEntries(nodeIds.map((id, i) => [id, body.translations[i]?.text ?? texts[i]]));

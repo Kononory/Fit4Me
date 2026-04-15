@@ -9,7 +9,8 @@ const nodeCache = new Map<string, { data: FrameData; ts: number }>();
 export const SCREEN_PAT = /^(.+?)\s*\/\s*(\d+)\s*[–\-]\s*(.+)$/;
 
 export interface RawFrame { id: string; name: string; }
-export interface PageResult { id: string; name: string; frames: RawFrame[]; }
+export interface SectionResult { id: string; name: string; order: number; frames: RawFrame[]; }
+export interface PageResult { id: string; name: string; frames: RawFrame[]; sections?: SectionResult[]; }
 
 /** Saved import config — stored in localStorage per flow, keyed by flow ID */
 export interface FigmaImportConfig {
@@ -144,6 +145,23 @@ export function parseFrameGroups(frames: RawFrame[], fileKey: string): Map<strin
     groups.set(key, list);
   }
   for (const list of groups.values()) list.sort((a, b) => a.order - b.order);
+  return groups;
+}
+
+/**
+ * Build groups from Figma sections. Each section becomes a node;
+ * frames inside are its screens, ordered by their position in the section.
+ */
+export function parseSectionGroups(sections: SectionResult[], fileKey: string): Map<string, ScreenRef[]> {
+  const groups = new Map<string, ScreenRef[]>();
+  for (const sec of sections) {
+    const screens = sec.frames.map((f, i) => ({
+      ref: encodeRef(fileKey, f.id),
+      name: f.name,
+      order: i,
+    }));
+    groups.set(sec.name, screens);
+  }
   return groups;
 }
 

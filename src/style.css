@@ -1532,6 +1532,22 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .fi-btn-resync:hover { background: #E2E1DC; color: #1A1A1A; }
 
+.fi-mode-group { display: flex; gap: 6px; margin-bottom: 2px; }
+.fi-mode-btn {
+  flex: 1; padding: 7px 10px; border-radius: 4px; cursor: pointer;
+  border: 1px solid #DEDDDA; background: #F8F7F4;
+  font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 9px; font-weight: 700;
+  color: #5A5955; text-align: left; display: flex; flex-direction: column; gap: 3px;
+}
+.fi-mode-btn:hover { border-color: #AEADA8; background: #F2F1ED; }
+.fi-mode-btn.fi-mode-active { border-color: #1A1A1A; background: #FEFCF8; color: #1A1A1A; }
+.fi-mode-label { font-size: 10px; font-weight: 700; }
+.fi-mode-desc { font-size: 8px; color: #9A9995; font-weight: 400; white-space: normal; line-height: 1.4; }
+.fi-mode-btn.fi-mode-active .fi-mode-desc { color: #5A5955; }
+.fi-analyze-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 8px 0; }
+.fi-analyze-frames { width: 100%; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.fi-analyze-frame { font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 9px; color: #5A5955; padding: 2px 6px; background: #F2F1ED; border-radius: 3px; }
+
 /* ── Expanded node full-screen panel (en-) ───────────────────────────────── */
 .en-backdrop {
   position: fixed; inset: 0;

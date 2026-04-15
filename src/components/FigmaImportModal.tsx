@@ -3,11 +3,11 @@ import { X, ArrowRight, RefreshCw, RotateCcw } from 'lucide-react';
 import type { TreeNode, ScreenRef } from '../types';
 import {
   parseFigmaInput, parseFigmaFileKey, getPAT,
-  fetchPageStructure, parseFrameGroups, fetchBatchThumbnails,
+  fetchPageStructure, parseFrameGroups, parseSectionGroups, fetchBatchThumbnails,
   getFigmaImportConfig, setFigmaImportConfig,
-  SCREEN_PAT,
+  SCREEN_PAT, encodeRef,
 } from '../lib/figma';
-import type { PageResult } from '../lib/figma';
+import type { PageResult, RawFrame } from '../lib/figma';
 import { useStore } from '../store';
 import { findNode, addChildNode } from '../tree';
 import { decodeRef } from '../lib/figma';
@@ -22,10 +22,13 @@ interface ReviewGroup {
   action: ImportAction;
 }
 
+type ImportMode = 'sections' | 'naming';
+
 type Step =
   | { type: 'input' }
   | { type: 'loading'; msg: string }
   | { type: 'select-page'; fileKey: string; pages: PageResult[] }
+  | { type: 'analyze'; fileKey: string; pageId: string; pageName: string; frames: RawFrame[] }
   | { type: 'review'; fileKey: string; pageId: string; pageName: string; groups: ReviewGroup[]; skippedFrames: number }
   | { type: 'applying'; total: number; done: number; msg: string }
   | { type: 'done'; created: number; updated: number; skippedGroups: number }
@@ -42,15 +45,15 @@ export function FigmaImportModal({ allNodes }: Props) {
   const [url, setUrl] = useState(() => getFigmaImportConfig(getActive().id)?.url ?? '');
   const [step, setStep] = useState<Step>({ type: 'input' });
   const [selectedPageId, setSelectedPageId] = useState<string>('');
+  const [importMode, setImportMode] = useState<ImportMode>('sections');
 
   const close = useCallback(() => setFigmaImportOpen(false), [setFigmaImportOpen]);
 
   // Saved config for the current flow (read on each render — localStorage is synchronous)
   const savedCfg = getFigmaImportConfig(getActive().id);
 
-  function buildGroups(fileKey: string, page: PageResult, savedActions?: Record<string, string>): ReviewGroup[] {
-    const groups = parseFrameGroups(page.frames, fileKey);
-    return Array.from(groups).map(([groupName, screens]) => {
+  function groupsFromMap(map: Map<string, ScreenRef[]>, savedActions?: Record<string, string>): ReviewGroup[] {
+    return Array.from(map).map(([groupName, screens]) => {
       const matched = allNodes.find(n => n.label.trim().toLowerCase() === groupName.toLowerCase());
       const saved = savedActions?.[groupName] as ImportAction | undefined;
       return {
@@ -61,8 +64,17 @@ export function FigmaImportModal({ allNodes }: Props) {
     });
   }
 
+  function buildGroups(fileKey: string, page: PageResult, savedActions?: Record<string, string>): ReviewGroup[] {
+    const map = importMode === 'sections' && (page.sections?.length ?? 0) > 0
+      ? parseSectionGroups(page.sections!, fileKey)
+      : parseFrameGroups(page.frames, fileKey);
+    return groupsFromMap(map, savedActions);
+  }
+
   function buildReview(fileKey: string, page: PageResult, savedActions?: Record<string, string>) {
-    const skippedFrames = page.frames.filter(f => !SCREEN_PAT.test(f.name)).length;
+    const skippedFrames = importMode === 'naming'
+      ? page.frames.filter(f => !SCREEN_PAT.test(f.name)).length
+      : 0;
     setStep({
       type: 'review',
       fileKey, pageId: page.id, pageName: page.name,
@@ -83,15 +95,20 @@ export function FigmaImportModal({ allNodes }: Props) {
     setStep({ type: 'loading', msg: 'Fetching file structure…' });
     try {
       const pages = await fetchPageStructure(fileKey);
-      const useful = pages.filter(p => p.frames.some(f => SCREEN_PAT.test(f.name)));
+      const useful = importMode === 'sections'
+        ? pages.filter(p => (p.sections?.length ?? 0) > 0)
+        : pages.filter(p => p.frames.length > 0);
       if (useful.length === 0) {
-        setStep({ type: 'error', msg: 'No frames matching "Group / 01 – Name" pattern found on any page.' });
+        const hint = importMode === 'sections'
+          ? 'No sections found on any page. Try switching to Naming mode.'
+          : 'No frames found on any page.';
+        setStep({ type: 'error', msg: hint });
         return;
       }
       // Restore saved actions if the same file
       const saved = savedCfg?.fileKey === fileKey ? savedCfg.groupActions : undefined;
       if (useful.length === 1) {
-        buildReview(fileKey, useful[0], saved);
+        goToPageStep(fileKey, useful[0], saved);
       } else {
         setSelectedPageId(useful[0].id);
         setStep({ type: 'select-page', fileKey, pages: useful });
@@ -103,11 +120,51 @@ export function FigmaImportModal({ allNodes }: Props) {
     }
   }, [url, allNodes, savedCfg, setFigmaTokenOpen]);
 
+  // Route to analyze (naming+Gemini) or review (sections / naming+SCREEN_PAT)
+  function goToPageStep(fileKey: string, page: PageResult, savedActions?: Record<string, string>) {
+    if (importMode === 'naming') {
+      // Try Gemini analyze — always show the analyze step so user can confirm
+      setStep({ type: 'analyze', fileKey, pageId: page.id, pageName: page.name, frames: page.frames });
+      return;
+    }
+    buildReview(fileKey, page, savedActions);
+  }
+
   const handlePageNext = useCallback((fileKey: string, pages: PageResult[]) => {
     const page = pages.find(p => p.id === selectedPageId) ?? pages[0];
     const saved = savedCfg?.fileKey === fileKey ? savedCfg.groupActions : undefined;
-    buildReview(fileKey, page, saved);
-  }, [selectedPageId, allNodes, savedCfg]);
+    goToPageStep(fileKey, page, saved);
+  }, [selectedPageId, allNodes, savedCfg, importMode]);
+
+  const handleAnalyze = useCallback(async (fileKey: string, pageId: string, pageName: string, frames: RawFrame[]) => {
+    setStep({ type: 'loading', msg: 'Analyzing with Gemini…' });
+    try {
+      const res = await fetch('/api/figma-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frames }),
+      });
+      const body = await res.json() as { groups?: { name: string; frameIds: string[] }[]; error?: string };
+      if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+
+      const frameMap = new Map(frames.map(f => [f.id, f]));
+      const map = new Map<string, ScreenRef[]>();
+      for (const g of body.groups ?? []) {
+        const screens = g.frameIds
+          .map((id, i) => {
+            const f = frameMap.get(id);
+            return f ? { ref: encodeRef(fileKey, id), name: f.name, order: i } : null;
+          })
+          .filter((s): s is ScreenRef => s !== null);
+        if (screens.length > 0) map.set(g.name, screens);
+      }
+
+      const groups = groupsFromMap(map);
+      setStep({ type: 'review', fileKey, pageId, pageName, groups, skippedFrames: 0 });
+    } catch (e) {
+      setStep({ type: 'error', msg: String((e as Error).message ?? e) });
+    }
+  }, [allNodes]);
 
   const handleApply = useCallback(async (
     groups: ReviewGroup[], fileKey: string, pageId: string, pageName: string,
@@ -180,7 +237,7 @@ export function FigmaImportModal({ allNodes }: Props) {
       const msg = String((e as Error).message ?? e);
       setStep({ type: 'error', msg });
     }
-  }, [savedCfg, allNodes, setFigmaTokenOpen, handleApply]);
+  }, [savedCfg, allNodes, setFigmaTokenOpen, handleApply, importMode]);
 
   const setGroupAction = useCallback((groups: ReviewGroup[], i: number, action: ImportAction): ReviewGroup[] =>
     groups.map((g, idx) => idx === i ? { ...g, action } : g), []);
@@ -203,8 +260,22 @@ export function FigmaImportModal({ allNodes }: Props) {
                 </button>
               </div>
             )}
-            <p className="fi-hint">Paste a Figma page URL. Frames must follow the naming convention:</p>
-            <code className="fi-code">Open App / 01 – Splash{'\n'}Open App / 02 – Loading{'\n'}Profile / 01 – View</code>
+            <div className="fi-mode-group">
+              <button
+                className={`fi-mode-btn${importMode === 'sections' ? ' fi-mode-active' : ''}`}
+                onClick={() => setImportMode('sections')}
+              >
+                <span className="fi-mode-label">Sections</span>
+                <span className="fi-mode-desc">Each Figma section → node. Frames inside → screens. Order = left to right.</span>
+              </button>
+              <button
+                className={`fi-mode-btn${importMode === 'naming' ? ' fi-mode-active' : ''}`}
+                onClick={() => setImportMode('naming')}
+              >
+                <span className="fi-mode-label">AI Naming</span>
+                <span className="fi-mode-desc">Gemini analyzes frame names and groups them into nodes automatically.</span>
+              </button>
+            </div>
             <div className="fi-row">
               <input
                 className="fi-input"
@@ -254,6 +325,26 @@ export function FigmaImportModal({ allNodes }: Props) {
             </div>
           </div>
         )}
+
+        {step.type === 'analyze' && (() => {
+          const { fileKey, pageId, pageName, frames } = step;
+          return (
+            <div className="fi-body">
+              <p className="fi-hint">{frames.length} frame{frames.length !== 1 ? 's' : ''} found · Gemini will group them into nodes</p>
+              <div className="fi-analyze-frames">
+                {frames.map(f => (
+                  <span key={f.id} className="fi-analyze-frame">{f.name}</span>
+                ))}
+              </div>
+              <div className="fi-actions">
+                <button className="fi-btn fi-btn-ghost" onClick={() => setStep({ type: 'input' })}>← Back</button>
+                <button className="fi-btn fi-btn-primary" onClick={() => handleAnalyze(fileKey, pageId, pageName, frames)}>
+                  Analyze <ArrowRight size={11} />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {step.type === 'review' && (() => {
           const { fileKey, pageId, pageName, groups, skippedFrames } = step;
