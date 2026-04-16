@@ -22,14 +22,16 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 src/
   components/   # UI — Canvas, NodeEl, EdgeLayer, EdgePicker, TextEditPanel, FlowTabs,
   #               Toolbar, RetentionWidget, Viewport, HotkeysPanel, ZoomControls
+  #               FlowTabs — left sidebar; TOP contains layer tabs (Outline/Nodes/Events) via #flow-layer-tabs
   #               FigmaImportModal — multi-step import: URL (mode select) → page select → [analyze?] → review → apply
   #               importMode: 'sections' | 'naming' — sections uses parseSectionGroups, naming goes through /api/figma-analyze
   #               LocaleCheckStandaloneModal — toolbar entry: URL input → locale pick → results (uses parseFigmaInput)
-  #               ScreenCarousel — fixed popover (z-90) for browsing screens on a node
+  #               ScreenCarousel — right sidebar (fixed right, z-100, width 320px) for browsing screens on a node
   #               UserFlowView — full-screen overlay (z-155) showing all screens in sequence
   hooks/        # useDrag.ts — drag/connect/free-position logic
   store.ts      # Zustand global state (flows, selection, undo/redo, drag, UI flags,
-  #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId)
+  #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId, carouselNodeId)
+  #               setActiveLayer auto-clears carouselNodeId when switching off 'nodes'
   types.ts      # TreeNode (incl. px/py, screens?: ScreenRef[]), Flow, CrossEdge, DragState
   #               ScreenRef: { ref: fileKey||nodeId, name, order }
   lib/figma.ts  # Figma API helpers + SCREEN_PAT, parseFrameGroups, parseSectionGroups,
@@ -94,8 +96,8 @@ api/
 ## CSS conventions
 - All styles in `src/style.css` — no separate files, no CSS modules
 - ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
-- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar, `fi-` figma import modal (`fi-mode-*` mode selector, `fi-analyze-*` analyze step)
-- Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebar → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
+- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `sc-` screen carousel (right sidebar), `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar, `fi-` figma import modal (`fi-mode-*` mode selector, `fi-analyze-*` analyze step), `layer-` layer tabs (inside FlowTabs)
+- Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebars (left flow-tabs + right sc-carousel) → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
 - Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
 - Node handle sizing: `width:18px; height:18px` — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`
 
@@ -190,3 +192,5 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
 - [Multi-select stale closure]: Pass `getMultiSel` callback to `useDrag`, not the Set — Set captured at `useCallback` time is stale by `dragEnd`.
 - [motion subpath import]: Package is `motion` but imports use `from 'motion/react'` — grep for `from 'motion'` returns nothing. Always grep `motion/react` to detect usage.
+- [useEffect stale on flow switch]: components that read `getActive()` in `useEffect(..., [])` don't refresh when user switches flows. Add `activeId` to deps (e.g. `TextEditPanel` outline reload).
+- [Toolbar scoped to layer]: toolbar buttons tied to a specific layer (Figma, free-mode, overlap, locale-check) must gate on `activeLayer === 'nodes'`. Global ones (undo/redo/save/reset) render on every layer.

@@ -759,25 +759,30 @@ svg#svgl.dimmed { opacity: 0.3; }
     @apply font-sans; } }
 
 /* ── Layer tabs (segment control) ────────────────────────────────────────── */
-#layer-tabs {
-  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-  z-index: 100;
+#flow-layer-tabs {
+  flex-shrink: 0;
+  padding: 8px;
+  border-bottom: 1.5px solid #E2E1DC;
+  background: #F2F1ED;
 }
+#flow-layer-tabs [data-slot="tabs"] { width: 100%; }
 .layer-tabs-list {
-  background: #F2F1ED !important;
+  background: #FEFCF8 !important;
   border: 1.5px solid #DEDDDA !important;
   border-radius: 4px !important;
   padding: 2px !important;
   gap: 2px !important;
   height: auto !important;
+  width: 100% !important;
 }
 .layer-tab {
   font-family: 'LatteraMonoLL','Space Mono',monospace !important;
   font-size: 9px !important; font-weight: 700 !important;
   letter-spacing: 0.07em !important; text-transform: uppercase !important;
   color: #9A9995 !important;
-  padding: 4px 14px !important; border-radius: 3px !important;
+  padding: 4px 6px !important; border-radius: 3px !important;
   height: auto !important;
+  flex: 1 !important;
   transition: background 0.12s, color 0.12s !important;
 }
 .layer-tab[data-state="active"] {
@@ -1243,12 +1248,12 @@ svg#svgl.dimmed { opacity: 0.3; }
   font-size: 8px; color: #AEADA8; margin-left: 3px; font-weight: 400;
 }
 
-/* ── Screen carousel popover (sc-) ──────────────────────────────────────── */
-.sc-backdrop { position: fixed; inset: 0; z-index: 89; background: transparent; }
+/* ── Screen carousel right sidebar (sc-) ────────────────────────────────── */
 #sc-carousel {
-  position: fixed; z-index: 90; width: 224px;
-  background: #FEFCF8; border: 1.5px solid #DEDDDA; border-radius: 6px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+  z-index: 100;
+  background: #FEFCF8; border-left: 1.5px solid #DEDDDA;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.06);
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sc-header {
@@ -1258,7 +1263,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 .sc-title {
   font-family: 'LatteraMonoLL','Space Mono',monospace;
   font-size: 10px; font-weight: 700; color: #1A1A1A;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
 }
 .sc-header-actions { display: flex; gap: 3px; align-items: center; }
 .sc-icon-btn {
@@ -1269,9 +1274,10 @@ svg#svgl.dimmed { opacity: 0.3; }
 .sc-icon-btn:hover { background: #F2F1ED; color: #1A1A1A; }
 .sc-image-area {
   flex: 1; min-height: 180px; display: flex; flex-direction: column;
-  background: #F8F7F4; overflow: hidden;
+  align-items: center; justify-content: center;
+  background: #F8F7F4; overflow: hidden; padding: 12px;
 }
-.sc-img { width: 100%; display: block; object-fit: contain; }
+.sc-img { max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
 .sc-center {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 8px; padding: 16px;

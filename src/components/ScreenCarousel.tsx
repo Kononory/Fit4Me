@@ -5,28 +5,17 @@ import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
 import { LocaleCheckModal } from './LocaleCheckModal';
 
-const PANEL_W = 224;
-const PANEL_H = 330;
-
-function getPosition(rect: DOMRect): { left: number; top: number } {
-  let left = rect.right + 8;
-  const top = Math.max(8, Math.min(rect.top, window.innerHeight - PANEL_H - 8));
-  if (left + PANEL_W > window.innerWidth - 8) left = rect.left - PANEL_W - 8;
-  return { left: Math.max(8, left), top };
-}
-
 type LoadState = { status: 'loading' } | { status: 'ok'; url: string } | { status: 'err'; msg: string } | { status: 'no_pat' };
 
 interface Props {
   node: TreeNode;
-  nodeRect: DOMRect;
   hasEventEdges?: boolean;
   onPreview?: () => void;
   onOpenFlow: () => void;
   onClose: () => void;
 }
 
-export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose }: Props) {
+export function ScreenCarousel({ node, onPreview, onOpenFlow, onClose }: Props) {
   const { setFigmaTokenOpen, figmaTokenOpen } = useStore();
   const screens = node.screens ?? [];
   const [idx, setIdx] = useState(0);
@@ -35,7 +24,6 @@ export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose 
   const prevTokenOpen = { current: figmaTokenOpen };
 
   const screen: ScreenRef | undefined = screens[idx];
-  const pos = getPosition(nodeRect);
 
   const loadThumb = useCallback(() => {
     if (!screen) return;
@@ -76,10 +64,8 @@ export function ScreenCarousel({ node, nodeRect, onPreview, onOpenFlow, onClose 
 
   return (
     <>
-      <div className="sc-backdrop" onClick={onClose} />
       <div
         id="sc-carousel"
-        style={{ left: pos.left, top: pos.top }}
         onClick={e => e.stopPropagation()}
       >
         <div className="sc-header">

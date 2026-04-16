@@ -18,7 +18,7 @@ interface Props {
   editNodeId: string | null;
   onEditDone: () => void;
   onFigmaLink: (n: TreeNode, ref: string | null) => void;
-  onCarouselOpen?: (n: TreeNode, el: HTMLElement) => void;
+  onCarouselOpen?: (n: TreeNode) => void;
   onLongPress?: (n: TreeNode) => void;
 }
 
@@ -64,11 +64,10 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
         onSelect(n);
         return;
       }
-      const targetEl = e.currentTarget as HTMLElement;
       tapId.current = n.id;
       tapTimer.current = window.setTimeout(() => {
         tapTimer.current = 0; tapId.current = null;
-        if (n.screens?.length) onCarouselOpen?.(n, targetEl);
+        if (n.screens?.length) onCarouselOpen?.(n);
         if (n.b) {
           const { sel, selNodeId } = useStore.getState();
           if (sel === n.b && selNodeId === n.id) { setSel(null); setSelNodeId(null); }

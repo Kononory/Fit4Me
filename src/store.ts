@@ -97,6 +97,8 @@ interface AppStore {
   setLocaleCheckOpen: (v: boolean) => void;
   userFlowNodeId: string | null;
   setUserFlowNodeId: (id: string | null) => void;
+  carouselNodeId: string | null;
+  setCarouselNodeId: (id: string | null) => void;
   overlapCount: number;
   setOverlapCount: (n: number) => void;
 }
@@ -194,7 +196,10 @@ export const useStore = create<AppStore>((set, get) => {
 
     // ── UI flags ─────────────────────────────────────────────────────
     activeLayer: 'nodes',
-    setActiveLayer: (activeLayer) => set({ activeLayer }),
+    setActiveLayer: (activeLayer) => set(s => ({
+      activeLayer,
+      carouselNodeId: activeLayer === 'nodes' ? s.carouselNodeId : null,
+    })),
     animateEdgesNext: false,
     triggerEdgeAnim: () => set({ animateEdgesNext: true }),
     clearEdgeAnim: () => set({ animateEdgesNext: false }),
@@ -214,6 +219,8 @@ export const useStore = create<AppStore>((set, get) => {
     setLocaleCheckOpen: (localeCheckOpen) => set({ localeCheckOpen }),
     userFlowNodeId: null,
     setUserFlowNodeId: (userFlowNodeId) => set({ userFlowNodeId }),
+    carouselNodeId: null,
+    setCarouselNodeId: (carouselNodeId) => set({ carouselNodeId }),
     overlapCount: 0,
     setOverlapCount: (overlapCount) => set({ overlapCount }),
   };

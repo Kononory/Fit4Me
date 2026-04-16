@@ -4,7 +4,6 @@ import { ZoomControls } from './components/ZoomControls';
 import { decodeSharedFlow } from './utils';
 import { saveFlowRemote, loadFlowsRemote } from './storage';
 import { Toolbar } from './components/Toolbar';
-import { LayerTabs } from './components/LayerTabs';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
 import { TextEditPanel } from './components/TextEditPanel';
@@ -80,7 +79,6 @@ export function App() {
     <div id="app">
       <FlowTabs />
       <Toolbar />
-      <LayerTabs />
       {activeLayer !== 'events' && (
         <Viewport
           onShowEdgePicker={handleShowEdgePicker}

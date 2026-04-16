@@ -34,7 +34,7 @@ function computeBreadcrumbs(value: string, cursorPos: number): string[] {
 }
 
 export function TextEditPanel() {
-  const { getActive, setActiveLayer, pushUndo, updateActiveTree } = useStore();
+  const { getActive, activeId, setActiveLayer, pushUndo, updateActiveTree } = useStore();
   const taRef      = useRef<HTMLTextAreaElement>(null);
   const dimRef     = useRef<HTMLDivElement>(null);
   const errRef     = useRef<HTMLSpanElement>(null);
@@ -64,7 +64,7 @@ export function TextEditPanel() {
     if (!ta) return;
     ta.value = normalizeOutline(treeToOutline(getActive().tree));
     requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(0, 0); });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apply = () => {
     const ta = taRef.current;

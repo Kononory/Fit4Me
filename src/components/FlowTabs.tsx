@@ -5,6 +5,7 @@ import { parseOutline, treeToOutline, BLANK_OUTLINE } from '../parser';
 import { useStore } from '../store';
 import { deleteFlowRemote, saveFlowRemote } from '../storage';
 import { encodeFlow } from '../utils';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 function genId() { return `flow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
 
@@ -20,7 +21,7 @@ function downloadFlowAsOutline(flow: Flow) {
 type ModalState = null | 'new-choice' | 'new-text';
 
 export function FlowTabs() {
-  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen } = useStore();
+  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen, activeLayer, setActiveLayer } = useStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [textInput, setTextInput] = useState('');
   const [parseErr, setParseErr] = useState('');
@@ -110,6 +111,15 @@ export function FlowTabs() {
   return (
     <>
       <div id="flow-tabs">
+        <div id="flow-layer-tabs">
+          <Tabs value={activeLayer} onValueChange={v => setActiveLayer(v as typeof activeLayer)}>
+            <TabsList className="layer-tabs-list">
+              <TabsTrigger value="outline" className="layer-tab">Outline</TabsTrigger>
+              <TabsTrigger value="nodes"   className="layer-tab">Nodes</TabsTrigger>
+              <TabsTrigger value="events"  className="layer-tab">Events</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div id="flow-tabs-label">FLOWS</div>
         <div id="flow-tab-list">
           {flows.map(flow => (

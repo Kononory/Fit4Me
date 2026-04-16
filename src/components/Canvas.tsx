@@ -33,13 +33,12 @@ export function Canvas({
   allNodes, allEdges, crossEdges, doAnim, zoom,
   onShowEdgePicker, onShowCrossEdgePicker,
 }: Props) {
-  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen, figmaImportOpen, localeCheckOpen } = useStore();
+  const { sel, selNodeId, selTick, setSel, setSelNodeId, drag, getActive, updateActiveTree, clearEdgeAnim, pushUndo, triggerEdgeAnim, figmaTokenOpen, figmaImportOpen, localeCheckOpen, carouselNodeId, setCarouselNodeId } = useStore();
   const cnvRef    = useRef<HTMLDivElement>(null);
   const [editNodeId, setEditNodeId] = useState<string | null>(null);
   const [multiSelIds, setMultiSelIds] = useState<Set<string>>(new Set());
   const [previewStartId, setPreviewStartId] = useState<string | null>(null);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
-  const [carouselState, setCarouselState] = useState<{ node: TreeNode; rect: DOMRect } | null>(null);
   const [userFlowNode, setUserFlowNode] = useState<TreeNode | null>(null);
 
   type Marquee = { x0: number; y0: number; x1: number; y1: number };
@@ -200,9 +199,9 @@ export function Canvas({
     updateActiveTree(getActive().tree);
   }, [pushUndo, getActive, updateActiveTree]);
 
-  const handleCarouselOpen = useCallback((n: TreeNode, el: HTMLElement) => {
-    setCarouselState({ node: n, rect: el.getBoundingClientRect() });
-  }, []);
+  const handleCarouselOpen = useCallback((n: TreeNode) => {
+    setCarouselNodeId(carouselNodeId === n.id ? null : n.id);
+  }, [carouselNodeId, setCarouselNodeId]);
 
   const handleScreenReorder = useCallback((n: TreeNode, screens: ScreenRef[]) => {
     pushUndo();
@@ -236,7 +235,6 @@ export function Canvas({
         if (editNodeId || drag.on) return;
         if (didMarqueeRef.current) { didMarqueeRef.current = false; return; }
         setSel(null); setSelNodeId(null); clearMultiSel();
-        setCarouselState(null);
       }}
     >
       <EdgeLayer
@@ -311,17 +309,18 @@ export function Canvas({
     {figmaTokenOpen && <FigmaTokenModal />}
     {figmaImportOpen && <FigmaImportModal allNodes={allNodes} />}
     {localeCheckOpen && <LocaleCheckStandaloneModal />}
-    {carouselState && (() => {
+    {carouselNodeId && (() => {
       const flow = getActive();
-      const hasEdges = (flow.eventEdges ?? []).some(e => e.fromNodeId === carouselState.node.id);
+      const n = findNode(flow.tree, carouselNodeId);
+      if (!n) return null;
+      const hasEdges = (flow.eventEdges ?? []).some(e => e.fromNodeId === n.id);
       return (
         <ScreenCarousel
-          node={carouselState.node}
-          nodeRect={carouselState.rect}
+          node={n}
           hasEventEdges={hasEdges}
-          onPreview={hasEdges ? () => { setPreviewStartId(carouselState.node.id); setCarouselState(null); } : undefined}
-          onOpenFlow={() => { setUserFlowNode(carouselState.node); setCarouselState(null); }}
-          onClose={() => setCarouselState(null)}
+          onPreview={hasEdges ? () => { setPreviewStartId(n.id); setCarouselNodeId(null); } : undefined}
+          onOpenFlow={() => { setUserFlowNode(n); setCarouselNodeId(null); }}
+          onClose={() => setCarouselNodeId(null)}
         />
       );
     })()}

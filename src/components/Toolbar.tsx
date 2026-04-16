@@ -11,7 +11,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer } = useStore();
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -133,16 +133,24 @@ export function Toolbar() {
       )}
       <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}><RotateCcw size={14} /></button>
       <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}><RotateCw size={14} /></button>
-      <button
-        id="tb-free"
-        title="Free positioning — drag nodes anywhere, snap to grid"
-        className={freeMode ? 'tb-active' : ''}
-        onClick={() => setFreeMode(!freeMode)}
-      ><Move size={14} /></button>
-      <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
-      <button id="tb-figma-import" title="Import screens from Figma page" onClick={() => setFigmaImportOpen(true)}><Download size={14} /></button>
-      <button id="tb-locale-check" title="Locale check — paste any Figma frame URL" onClick={() => setLocaleCheckOpen(true)}><Languages size={14} /></button>
-      {hasSyncConfig && (
+      {activeLayer === 'nodes' && (
+        <button
+          id="tb-free"
+          title="Free positioning — drag nodes anywhere, snap to grid"
+          className={freeMode ? 'tb-active' : ''}
+          onClick={() => setFreeMode(!freeMode)}
+        ><Move size={14} /></button>
+      )}
+      {activeLayer === 'nodes' && (
+        <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
+      )}
+      {activeLayer === 'nodes' && (
+        <button id="tb-figma-import" title="Import screens from Figma page" onClick={() => setFigmaImportOpen(true)}><Download size={14} /></button>
+      )}
+      {activeLayer === 'nodes' && (
+        <button id="tb-locale-check" title="Locale check — paste any Figma frame URL" onClick={() => setLocaleCheckOpen(true)}><Languages size={14} /></button>
+      )}
+      {activeLayer === 'nodes' && hasSyncConfig && (
         <button
           id="tb-figma-resync"
           title="Re-sync screens from Figma (last page)"
@@ -152,7 +160,7 @@ export function Toolbar() {
           <RefreshCw size={14} className={syncing ? 'fig-spin' : ''} />
         </button>
       )}
-      {overlapCount > 0 && (
+      {activeLayer === 'nodes' && overlapCount > 0 && (
         <button id="tb-overlap" title="Edge crossings detected — click to auto-arrange" onClick={handleAutoArrange}>
           ⚠ {overlapCount} crossing{overlapCount > 1 ? 's' : ''} · Fix
         </button>
