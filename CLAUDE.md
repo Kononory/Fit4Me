@@ -30,7 +30,8 @@ src/
   #               UserFlowView — full-screen overlay (z-155) showing all screens in sequence
   hooks/        # useDrag.ts — drag/connect/free-position logic
   store.ts      # Zustand global state (flows, selection, undo/redo, drag, UI flags,
-  #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId, carouselNodeId)
+  #               zoom, freeMode, hotkeysOpen, figmaImportOpen, userFlowNodeId, carouselNodeId,
+  #               leftSidebarCollapsed/rightSidebarCollapsed — persisted to localStorage)
   #               setActiveLayer auto-clears carouselNodeId when switching off 'nodes'
   types.ts      # TreeNode (incl. px/py, screens?: ScreenRef[]), Flow, CrossEdge, DragState
   #               ScreenRef: { ref: fileKey||nodeId, name, order }
@@ -55,8 +56,8 @@ api/
 ```
 
 ## Node interaction model
-- **Right-center `+`** (`.nd-handle-add-child`) — click adds child; drag creates connection/reparents
-- **Bottom-center `+`** (`.nd-handle-add-sib`) — click adds sibling below current node
+- **Right-center handle** (`.nd-handle-add-child`) — 12×12 solid-dark circle (no icon); click adds child; drag creates connection/reparents
+- **Bottom-center handle** (`.nd-handle-add-sib`) — 12×12 solid-dark circle (no icon); click adds sibling below current node
 - **Delete key** — deletes selected node (with confirmation if it has children)
 - **Double-click** — inline rename
 - **Shift+click** — multi-select; when exactly 2 nodes selected, swap action bar appears
@@ -96,10 +97,11 @@ api/
 ## CSS conventions
 - All styles in `src/style.css` — no separate files, no CSS modules
 - ID-based for unique elements (`#text-edit-panel`), class-based for reusable (`.te-btn`)
-- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `sc-` screen carousel (right sidebar), `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar, `fi-` figma import modal (`fi-mode-*` mode selector, `fi-analyze-*` analyze step), `layer-` layer tabs (inside FlowTabs)
+- Prefix classes by component: `nd-` nodes, `ep-` edge picker, `te-` text edit, `ft-` flow tabs, `sc-` screen carousel (right sidebar), `sb-` sidebar shared (collapse btn, collapsed strip), `ea-` edge analytics, `ret-` retention, `hk-` hotkeys, `swap-` swap bar, `fi-` figma import modal (`fi-mode-*` mode selector, `fi-analyze-*` analyze step), `layer-` layer tabs (inside FlowTabs)
 - Z-index ladder: 500 modals/hotkeys → 200 hotkeys backdrop → 155 en-panel (full-screen node flow) → 150 en-backdrop → 100 sidebars (left flow-tabs + right sc-carousel) → 90 pickers → 60 fixed corners → 50 swap bar → 40 text-edit → 20 handles → 6 drag → 2 nodes → 1 edges
 - Color palette: bg `#FEFCF8`/`#F8F7F4`/`#F2F1ED`, text `#1A1A1A`, muted `#AEADA8`/`#9A9995`, border `#DEDDDA`/`#E2E1DC`, red `#B52B1E`, green `#6B9B5E`, orange `#C8963C`
-- Node handle sizing: `width:18px; height:18px` — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`
+- Node handle sizing: `width:12px; height:12px` circles — right-center uses `transform:translateY(-50%)`, bottom-center uses `transform:translateX(-50%)`; hover scales 1.25 (preserve the translate when overriding `transform` on hover)
+- Sidebar collapse/peek: `#flow-tabs` + `#sc-carousel` accept `.collapsed` (40px strip) and `.collapsed.peeking` (full width, overlay via box-shadow). Peek is local hover state in the component, not in store; collapsed flag stays true during peek.
 
 ## State patterns
 - Global toggles (e.g. `textEditOpen`, `freeMode`, `hotkeysOpen`, `zoom`) live in `store.ts`
@@ -194,3 +196,5 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - [motion subpath import]: Package is `motion` but imports use `from 'motion/react'` — grep for `from 'motion'` returns nothing. Always grep `motion/react` to detect usage.
 - [useEffect stale on flow switch]: components that read `getActive()` in `useEffect(..., [])` don't refresh when user switches flows. Add `activeId` to deps (e.g. `TextEditPanel` outline reload).
 - [Toolbar scoped to layer]: toolbar buttons tied to a specific layer (Figma, free-mode, overlap, locale-check) must gate on `activeLayer === 'nodes'`. Global ones (undo/redo/save/reset) render on every layer.
+- [Sidebar peek vs expand]: peek is a hover-only overlay (class `.peeking`), not a state change — `collapsed` flag stays true. Peek timer (200ms) on mouseleave prevents flicker when the user crosses the strip edge briefly.
+- [Hover transform override]: `.nd-handle` uses `transform: translateY(-50%)` (or X) for positioning; hover rules must re-include the translate (`translateY(-50%) scale(1.25)`) or positioning breaks.

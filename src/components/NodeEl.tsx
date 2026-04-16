@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Link2, X } from 'lucide-react';
+import { Link2, X } from 'lucide-react';
 import type { TreeNode } from '../types';
 import { parseFigmaInput, encodeRef } from '../lib/figma';
 import { NW, NH, topY } from '../layout';
@@ -134,16 +134,16 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
               onDragBegin(n, e.currentTarget.parentElement as HTMLElement, e.clientX, e.clientY, 'connect', e.altKey);
             }}
             onClick={e => e.stopPropagation()}
-          ><Plus size={10} /></div>
+          />
         )}
 
-        {/* Bottom-center + handle — click adds sibling below */}
+        {/* Bottom-center handle — click adds sibling below */}
         {n.type !== 'root' && n.type !== 'nav' && (
           <div
             className="nd-handle nd-handle-add-sib"
             onClick={e => { e.stopPropagation(); onAddSibling(n); }}
             onMouseDown={e => e.stopPropagation()}
-          ><Plus size={10} /></div>
+          />
         )}
 
         {/* Figma action bar — visible when node is selected */}

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Download, Upload, Plus, X, Link, Check } from 'lucide-react';
+import { Download, Upload, Plus, X, Link, Check, PanelLeftClose, PanelLeftOpen, List, Network, Zap } from 'lucide-react';
 import type { Flow } from '../types';
 import { parseOutline, treeToOutline, BLANK_OUTLINE } from '../parser';
 import { useStore } from '../store';
@@ -21,14 +21,27 @@ function downloadFlowAsOutline(flow: Flow) {
 type ModalState = null | 'new-choice' | 'new-text';
 
 export function FlowTabs() {
-  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen, activeLayer, setActiveLayer } = useStore();
+  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen, activeLayer, setActiveLayer, leftSidebarCollapsed, setLeftSidebarCollapsed } = useStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [textInput, setTextInput] = useState('');
   const [parseErr, setParseErr] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState('');
+  const [peeking, setPeeking] = useState(false);
+  const peekTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePeekEnter = () => {
+    if (!leftSidebarCollapsed) return;
+    if (peekTimerRef.current) { clearTimeout(peekTimerRef.current); peekTimerRef.current = null; }
+    setPeeking(true);
+  };
+  const handlePeekLeave = () => {
+    if (!leftSidebarCollapsed) return;
+    if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+    peekTimerRef.current = window.setTimeout(() => setPeeking(false), 200);
+  };
 
   const switchTo = useCallback((id: string) => {
     if (id === activeId) return;
@@ -110,17 +123,47 @@ export function FlowTabs() {
 
   return (
     <>
-      <div id="flow-tabs">
+      <div
+        id="flow-tabs"
+        className={[
+          leftSidebarCollapsed ? 'collapsed' : '',
+          leftSidebarCollapsed && peeking ? 'peeking' : '',
+        ].filter(Boolean).join(' ')}
+        onMouseEnter={handlePeekEnter}
+        onMouseLeave={handlePeekLeave}
+      >
+        {leftSidebarCollapsed && !peeking ? (
+          <div className="sb-collapsed-content">
+            <button
+              className="sb-collapse-btn"
+              title="Expand sidebar"
+              onClick={() => setLeftSidebarCollapsed(false)}
+            ><PanelLeftOpen size={14} /></button>
+          </div>
+        ) : (<>
         <div id="flow-layer-tabs">
           <Tabs value={activeLayer} onValueChange={v => setActiveLayer(v as typeof activeLayer)}>
             <TabsList className="layer-tabs-list">
-              <TabsTrigger value="outline" className="layer-tab">Outline</TabsTrigger>
-              <TabsTrigger value="nodes"   className="layer-tab">Nodes</TabsTrigger>
-              <TabsTrigger value="events"  className="layer-tab">Events</TabsTrigger>
+              <TabsTrigger value="outline" className="layer-tab" title="Outline">
+                <List size={11} /><span className="layer-tab-lbl">Outline</span>
+              </TabsTrigger>
+              <TabsTrigger value="nodes" className="layer-tab" title="Nodes">
+                <Network size={11} /><span className="layer-tab-lbl">Nodes</span>
+              </TabsTrigger>
+              <TabsTrigger value="events" className="layer-tab" title="Events">
+                <Zap size={11} /><span className="layer-tab-lbl">Events</span>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
-        <div id="flow-tabs-label">FLOWS</div>
+        <div id="flow-tabs-label">
+          FLOWS
+          <button
+            className="sb-collapse-btn sb-collapse-btn-inline"
+            title="Collapse sidebar"
+            onClick={() => { setPeeking(false); setLeftSidebarCollapsed(true); }}
+          ><PanelLeftClose size={12} /></button>
+        </div>
         <div id="flow-tab-list">
           {flows.map(flow => (
             <div
@@ -167,6 +210,7 @@ export function FlowTabs() {
           <button className="flow-footer-btn" onClick={() => fileInputRef.current?.click()}><Upload size={11} /> Import</button>
           <button className="flow-footer-btn" onClick={() => setModal('new-choice')}><Plus size={11} /> New</button>
         </div>
+        </>)}
       </div>
 
       {/* New flow modal */}

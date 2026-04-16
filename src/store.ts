@@ -99,8 +99,22 @@ interface AppStore {
   setUserFlowNodeId: (id: string | null) => void;
   carouselNodeId: string | null;
   setCarouselNodeId: (id: string | null) => void;
+  leftSidebarCollapsed: boolean;
+  setLeftSidebarCollapsed: (v: boolean) => void;
+  rightSidebarCollapsed: boolean;
+  setRightSidebarCollapsed: (v: boolean) => void;
   overlapCount: number;
   setOverlapCount: (n: number) => void;
+}
+
+const LS_LEFT_COLLAPSED  = 'fit4me.leftSidebarCollapsed';
+const LS_RIGHT_COLLAPSED = 'fit4me.rightSidebarCollapsed';
+
+function readLS(key: string): boolean {
+  try { return localStorage.getItem(key) === '1'; } catch { return false; }
+}
+function writeLS(key: string, v: boolean) {
+  try { localStorage.setItem(key, v ? '1' : '0'); } catch { /* ignore */ }
 }
 
 export const useStore = create<AppStore>((set, get) => {
@@ -221,6 +235,10 @@ export const useStore = create<AppStore>((set, get) => {
     setUserFlowNodeId: (userFlowNodeId) => set({ userFlowNodeId }),
     carouselNodeId: null,
     setCarouselNodeId: (carouselNodeId) => set({ carouselNodeId }),
+    leftSidebarCollapsed: readLS(LS_LEFT_COLLAPSED),
+    setLeftSidebarCollapsed: (v) => { writeLS(LS_LEFT_COLLAPSED, v); set({ leftSidebarCollapsed: v }); },
+    rightSidebarCollapsed: readLS(LS_RIGHT_COLLAPSED),
+    setRightSidebarCollapsed: (v) => { writeLS(LS_RIGHT_COLLAPSED, v); set({ rightSidebarCollapsed: v }); },
     overlapCount: 0,
     setOverlapCount: (overlapCount) => set({ overlapCount }),
   };

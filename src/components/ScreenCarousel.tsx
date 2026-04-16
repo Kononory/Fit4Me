@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2, Play, ExternalLink, Languages } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { X, ChevronLeft, ChevronRight, RefreshCw, Maximize2, Play, ExternalLink, Languages, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import type { TreeNode, ScreenRef } from '../types';
 import { decodeRef, fetchPreviewUrl, getPAT } from '../lib/figma';
 import { useStore } from '../store';
@@ -16,12 +16,25 @@ interface Props {
 }
 
 export function ScreenCarousel({ node, onPreview, onOpenFlow, onClose }: Props) {
-  const { setFigmaTokenOpen, figmaTokenOpen } = useStore();
+  const { setFigmaTokenOpen, figmaTokenOpen, rightSidebarCollapsed, setRightSidebarCollapsed } = useStore();
   const screens = node.screens ?? [];
   const [idx, setIdx] = useState(0);
   const [ls, setLs] = useState<LoadState>({ status: 'loading' });
   const [localeCheckOpen, setLocaleCheckOpen] = useState(false);
+  const [peeking, setPeeking] = useState(false);
+  const peekTimerRef = useRef<number | null>(null);
   const prevTokenOpen = { current: figmaTokenOpen };
+
+  const handlePeekEnter = () => {
+    if (!rightSidebarCollapsed) return;
+    if (peekTimerRef.current) { clearTimeout(peekTimerRef.current); peekTimerRef.current = null; }
+    setPeeking(true);
+  };
+  const handlePeekLeave = () => {
+    if (!rightSidebarCollapsed) return;
+    if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+    peekTimerRef.current = window.setTimeout(() => setPeeking(false), 200);
+  };
 
   const screen: ScreenRef | undefined = screens[idx];
 
@@ -66,8 +79,23 @@ export function ScreenCarousel({ node, onPreview, onOpenFlow, onClose }: Props) 
     <>
       <div
         id="sc-carousel"
+        className={[
+          rightSidebarCollapsed ? 'collapsed' : '',
+          rightSidebarCollapsed && peeking ? 'peeking' : '',
+        ].filter(Boolean).join(' ')}
+        onMouseEnter={handlePeekEnter}
+        onMouseLeave={handlePeekLeave}
         onClick={e => e.stopPropagation()}
       >
+        {rightSidebarCollapsed && !peeking ? (
+          <div className="sb-collapsed-content">
+            <button
+              className="sb-collapse-btn"
+              title="Expand screens sidebar"
+              onClick={() => setRightSidebarCollapsed(false)}
+            ><PanelRightOpen size={14} /></button>
+          </div>
+        ) : (<>
         <div className="sc-header">
           <span className="sc-title">{node.label}</span>
           <div className="sc-header-actions">
@@ -90,6 +118,11 @@ export function ScreenCarousel({ node, onPreview, onOpenFlow, onClose }: Props) 
             <button className="sc-icon-btn" title="View full flow" onClick={onOpenFlow}>
               <Maximize2 size={11} />
             </button>
+            <button
+              className="sc-icon-btn"
+              title="Collapse sidebar"
+              onClick={() => { setPeeking(false); setRightSidebarCollapsed(true); }}
+            ><PanelRightClose size={11} /></button>
             <button className="sc-icon-btn" onClick={onClose}><X size={11} /></button>
           </div>
         </div>
@@ -138,6 +171,7 @@ export function ScreenCarousel({ node, onPreview, onOpenFlow, onClose }: Props) 
             </button>
           ) : null;
         })()}
+        </>)}
       </div>
       {localeCheckOpen && (() => {
         const decoded = decodeRef(screen.ref);

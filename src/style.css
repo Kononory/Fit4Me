@@ -25,12 +25,19 @@ html, body {
   z-index: 100;
   display: flex; flex-direction: column;
   overflow: hidden;
+  transition: width 0.18s ease, box-shadow 0.18s ease;
+}
+#flow-tabs.collapsed { width: 40px; }
+#flow-tabs.collapsed.peeking {
+  width: 148px;
+  box-shadow: 8px 0 24px rgba(0,0,0,0.12);
 }
 
 #flow-tabs-label {
   font-size: 8px; letter-spacing: 0.14em; color: #AEADA8;
   padding: 14px 12px 8px; text-transform: uppercase;
   border-bottom: 1px solid #E2E1DC; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
 }
 
 #flow-tab-list {
@@ -99,6 +106,23 @@ html, body {
 }
 .flow-footer-btn:hover { background: #EEEDE9; color: #1A1A1A; }
 .flow-footer-btn:last-child { border-bottom: none; }
+
+/* ── Sidebar collapse / peek (shared sb-) ───────────────────────── */
+.sb-collapsed-content {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 12px;
+}
+.sb-collapse-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 3px;
+  background: none; border: none; color: #9A9995; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sb-collapse-btn:hover { background: #EEEDE9; color: #1A1A1A; }
+.sb-collapse-btn-inline {
+  margin-left: auto; width: 20px; height: 20px;
+}
 
 /* ── Hint bar (hidden, shown on node hover via JS) ─────────────── */
 #hint {
@@ -266,31 +290,29 @@ svg#svgl.dimmed { opacity: 0.3; }
 #ghost .g-sub { font-size: 8px; opacity: 0.55; margin-top: 2px; display: none; }
 #ghost.has-target .g-sub { display: block; }
 
-/* ── Node handles (add child / add sibling) ─────────────────────── */
+/* ── Node handles (add child / add sibling) — solid circles ─────── */
 .nd-handle {
   position: absolute;
-  width: 18px; height: 18px;
-  border: 1.5px solid currentColor; border-radius: 2px;
-  background: #FEFCF8;
-  font-size: 12px; line-height: 15px; text-align: center;
+  width: 12px; height: 12px;
+  border: none; border-radius: 50%;
+  background: #1A1A1A;
   cursor: pointer; opacity: 0;
-  transition: opacity 0.1s, background 0.1s;
+  transition: opacity 0.1s, transform 0.1s;
   z-index: 20; user-select: none;
-  color: #1A1A1A;
 }
 .nd:hover .nd-handle { opacity: 1; }
 /* Right-center: add child */
 .nd-handle-add-child {
-  right: -10px;
+  right: -6px;
   top: 50%; transform: translateY(-50%);
 }
-.nd-handle-add-child:hover { background: #1A1A1A; color: #fff; }
+.nd-handle-add-child:hover { transform: translateY(-50%) scale(1.25); }
 /* Bottom-center: add sibling */
 .nd-handle-add-sib {
-  bottom: -10px;
+  bottom: -6px;
   left: 50%; transform: translateX(-50%);
 }
-.nd-handle-add-sib:hover { background: #1A1A1A; color: #fff; }
+.nd-handle-add-sib:hover { transform: translateX(-50%) scale(1.25); }
 
 /* ── Inline edit ────────────────────────────────────────────────── */
 .nd-input {
@@ -780,15 +802,20 @@ svg#svgl.dimmed { opacity: 0.3; }
   font-size: 9px !important; font-weight: 700 !important;
   letter-spacing: 0.07em !important; text-transform: uppercase !important;
   color: #9A9995 !important;
-  padding: 4px 6px !important; border-radius: 3px !important;
+  padding: 5px 6px !important; border-radius: 3px !important;
   height: auto !important;
-  flex: 1 !important;
-  transition: background 0.12s, color 0.12s !important;
+  flex: 0 0 auto !important;
+  display: inline-flex !important; align-items: center !important; gap: 4px !important;
+  transition: background 0.12s, color 0.12s, flex 0.15s !important;
 }
+.layer-tab .layer-tab-lbl { display: none; }
 .layer-tab[data-state="active"] {
   background: #1A1A1A !important; color: #F5F4F0 !important;
   box-shadow: none !important;
+  flex: 1 1 auto !important;
+  justify-content: center !important;
 }
+.layer-tab[data-state="active"] .layer-tab-lbl { display: inline; }
 .layer-tab:hover:not([data-state="active"]) { color: #1A1A1A !important; }
 
 /* ── Events map (evm-) ────────────────────────────────────────────────────── */
@@ -1255,6 +1282,12 @@ svg#svgl.dimmed { opacity: 0.3; }
   background: #FEFCF8; border-left: 1.5px solid #DEDDDA;
   box-shadow: -4px 0 16px rgba(0,0,0,0.06);
   display: flex; flex-direction: column; overflow: hidden;
+  transition: width 0.18s ease, box-shadow 0.18s ease;
+}
+#sc-carousel.collapsed { width: 40px; }
+#sc-carousel.collapsed.peeking {
+  width: 320px;
+  box-shadow: -8px 0 24px rgba(0,0,0,0.12);
 }
 .sc-header {
   display: flex; align-items: center; justify-content: space-between;
