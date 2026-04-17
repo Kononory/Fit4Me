@@ -4,7 +4,7 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
-
+ 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -805,6 +805,7 @@ svg#svgl.dimmed { opacity: 0.3; }
   padding: 5px 6px !important; border-radius: 3px !important;
   height: auto !important;
   flex: 1 !important;
+  justify-content: center !important;
   display: inline-flex !important; align-items: center !important; gap: 4px !important;
   transition: background 0.12s, color 0.12s, flex 0.15s !important;
 }
@@ -812,7 +813,6 @@ svg#svgl.dimmed { opacity: 0.3; }
 .layer-tab[data-state="active"] {
   background: var(--foreground) !important; color: var(--card) !important;
   box-shadow: none !important;
-  flex: 1 1 auto !important;
   justify-content: center !important;
 }
 .layer-tab[data-state="active"] .layer-tab-lbl { display: inline; }
