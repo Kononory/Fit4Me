@@ -6,13 +6,14 @@ import { flattenTree } from '../layout';
 const FF = 'LatteraMonoLL,Space Mono,monospace';
 import type { EventEdge } from '../types';
 import { EventCard, CARD_W, TITLE_H } from './EventCard';
+import { EVM_PAD, EVM_CARD_GAP, EVM_ROW_H, EVM_MIN_CANVAS_W, EVM_MIN_CANVAS_H, EVM_DEFAULT_IMG_H, EVM_IMG_BOTTOM_PAD } from '../constants';
 import { PreviewPanel } from './PreviewPanel';
 
 // Default card positions — arranged in a loose grid
 function defaultPos(idx: number): { x: number; y: number } {
   const col = idx % 3;
   const row = Math.floor(idx / 3);
-  return { x: 40 + col * (CARD_W + 80), y: 40 + row * 420 };
+  return { x: EVM_PAD + col * (CARD_W + EVM_CARD_GAP), y: EVM_PAD + row * EVM_ROW_H };
 }
 
 interface PendingHotspot {
@@ -155,10 +156,10 @@ export function EventsMap() {
   }, [flows, flow.id, setFlows]);
 
   // ── Canvas size ───────────────────────────────────────────────────────────
-  const canvasW = Math.max(800, ...nodes.map((n, i) => getPos(n.id, i).x + CARD_W + 80));
-  const canvasH = Math.max(600, ...nodes.map((n, i) => {
-    const ih = imgHeights[n.id] ?? 300;
-    return getPos(n.id, i).y + TITLE_H + ih + 60;
+  const canvasW = Math.max(EVM_MIN_CANVAS_W, ...nodes.map((n, i) => getPos(n.id, i).x + CARD_W + EVM_CARD_GAP));
+  const canvasH = Math.max(EVM_MIN_CANVAS_H, ...nodes.map((n, i) => {
+    const ih = imgHeights[n.id] ?? EVM_DEFAULT_IMG_H;
+    return getPos(n.id, i).y + TITLE_H + ih + EVM_IMG_BOTTOM_PAD;
   }));
 
   return (
@@ -181,8 +182,8 @@ export function EventsMap() {
             if (fi < 0 || ti < 0) return null;
             const fromPos = getPos(edge.fromNodeId, fi);
             const toPos   = getPos(edge.toNodeId, ti);
-            const fromIH  = imgHeights[edge.fromNodeId] ?? 300;
-            const toIH    = imgHeights[edge.toNodeId]   ?? 300;
+            const fromIH  = imgHeights[edge.fromNodeId] ?? EVM_DEFAULT_IMG_H;
+            const toIH    = imgHeights[edge.toNodeId]   ?? EVM_DEFAULT_IMG_H;
 
             const x1 = fromPos.x + edge.bx * CARD_W;
             const y1 = fromPos.y + TITLE_H + edge.by * fromIH;

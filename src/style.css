@@ -16,10 +16,20 @@ html, body {
 
 #app { width: 100%; height: 100%; }
 
+/* ── Layout constants ─────────────────────────────────────────────── */
+:root {
+  --sidebar-w: 148px;               /* left sidebar (FlowTabs) expanded width */
+  --sidebar-collapsed-w: 40px;      /* left sidebar collapsed strip */
+  --right-sidebar-w: 320px;         /* right sidebar (ScreenCarousel) width */
+  --canvas-left: 156px;             /* canvas left edge = sidebar + 8px gap */
+  --evm-top: 48px;                  /* events map top offset (clears toolbar) */
+  --evm-side-w: 220px;              /* events edge-list panel width */
+}
+
 /* ── Flow tabs sidebar ──────────────────────────────────────────── */
 #flow-tabs {
   position: fixed; left: 0; top: 0; bottom: 0;
-  width: 148px;
+  width: var(--sidebar-w);
   background: var(--card);
   border-right: 1.5px solid var(--input);
   z-index: 100;
@@ -27,9 +37,9 @@ html, body {
   overflow: hidden;
   transition: width 0.18s ease, box-shadow 0.18s ease;
 }
-#flow-tabs.collapsed { width: 40px; }
+#flow-tabs.collapsed { width: var(--sidebar-collapsed-w); }
 #flow-tabs.collapsed.peeking {
-  width: 148px;
+  width: var(--sidebar-w);
   box-shadow: 8px 0 24px rgba(0,0,0,0.12);
 }
 
@@ -181,7 +191,7 @@ html, body {
 
 /* ── Viewport & canvas ──────────────────────────────────────────── */
 #vp {
-  width: calc(100% - 148px); height: 100%; overflow: auto; margin-left: 148px;
+  width: calc(100% - var(--sidebar-w)); height: 100%; overflow: auto; margin-left: var(--sidebar-w);
   background-color: var(--muted);
 }
 
@@ -521,7 +531,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 /* ── Zoom controls (bottom-left) ─────────────────────────────────── */
 #zoom-controls {
   position: fixed; z-index: 60;
-  left: 156px; bottom: 20px;
+  left: var(--canvas-left); bottom: 20px;
   display: flex; align-items: center; gap: 0;
   background: var(--background); border: 1.5px solid var(--foreground); border-radius: 2px;
   font-family: 'LatteraMonoLL','Space Mono',monospace;
@@ -625,7 +635,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 
 /* ── Text-edit panel ────────────────────────────────────────────── */
 #text-edit-panel {
-  position: fixed; left: 148px; right: 0; top: 0; bottom: 0; z-index: 40;
+  position: fixed; left: var(--sidebar-w); right: 0; top: 0; bottom: 0; z-index: 40;
   display: flex; flex-direction: column;
   background: var(--background);
 }
@@ -820,7 +830,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 
 /* ── Events map (evm-) ────────────────────────────────────────────────────── */
 #evm-container {
-  position: fixed; inset: 0; top: 48px; left: 156px;
+  position: fixed; inset: 0; top: var(--evm-top); left: var(--canvas-left);
   overflow: auto; background: var(--card);
 }
 #evm-canvas {
@@ -933,8 +943,8 @@ svg#svgl.dimmed { opacity: 0.3; }
 
 /* Events sidebar list */
 #evm-edge-list {
-  position: fixed; right: 0; top: 48px; bottom: 0;
-  width: 220px; background: var(--background);
+  position: fixed; right: 0; top: var(--evm-top); bottom: 0;
+  width: var(--evm-side-w); background: var(--background);
   border-left: 1px solid var(--input);
   padding: 12px; overflow-y: auto; z-index: 10;
   display: flex; flex-direction: column; gap: 6px;
@@ -1277,16 +1287,16 @@ svg#svgl.dimmed { opacity: 0.3; }
 
 /* ── Screen carousel right sidebar (sc-) ────────────────────────────────── */
 #sc-carousel {
-  position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+  position: fixed; right: 0; top: 0; bottom: 0; width: var(--right-sidebar-w);
   z-index: 100;
   background: var(--background); border-left: 1.5px solid var(--border);
   box-shadow: -4px 0 16px rgba(0,0,0,0.06);
   display: flex; flex-direction: column; overflow: hidden;
   transition: width 0.18s ease, box-shadow 0.18s ease;
 }
-#sc-carousel.collapsed { width: 40px; }
+#sc-carousel.collapsed { width: var(--sidebar-collapsed-w); }
 #sc-carousel.collapsed.peeking {
-  width: 320px;
+  width: var(--right-sidebar-w);
   box-shadow: -8px 0 24px rgba(0,0,0,0.12);
 }
 .sc-header {

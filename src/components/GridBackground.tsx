@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { InteractiveGridPattern } from './magicui/interactive-grid-pattern';
+import { useStore } from '../store';
+import { SIDEBAR_W, SIDEBAR_COLLAPSED_W } from '../constants';
 
 const CELL = 40;
 
@@ -8,16 +10,18 @@ interface Props {
 }
 
 export function GridBackground({ vpRef: _vpRef }: Props) {
-  const [size, setSize] = useState({ w: window.innerWidth - 148, h: window.innerHeight });
+  const { leftSidebarCollapsed } = useStore();
+  const sidebarW = leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W;
+  const [winSize, setWinSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth - 148, h: window.innerHeight });
+    const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const cols = Math.ceil(size.w / CELL) + 1;
-  const rows = Math.ceil(size.h / CELL) + 1;
+  const cols = Math.ceil((winSize.w - sidebarW) / CELL) + 1;
+  const rows = Math.ceil(winSize.h / CELL) + 1;
 
   return (
     <InteractiveGridPattern
@@ -25,7 +29,7 @@ export function GridBackground({ vpRef: _vpRef }: Props) {
       width={CELL}
       height={CELL}
       squares={[cols, rows]}
-      style={{ position: 'fixed', left: 148, top: 0, zIndex: 0 }}
+      style={{ position: 'fixed', left: sidebarW, top: 0, zIndex: 0, transition: 'left 0.18s ease' }}
     />
   );
 }

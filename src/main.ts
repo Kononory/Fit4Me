@@ -1,5 +1,6 @@
 import './style.css';
 import type { TreeNode, Flow, DragState, SelectionState, CrossEdge, RetentionPoint } from './types';
+import { SIDEBAR_W, EP_CLAMP_X_MIN, EP_CLAMP_X_PAD, EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN, EP_ANALYTICS_Y_BOT } from './constants';
 import { DEFAULT_TREE, RETENTION_DATA } from './data';
 import {
   doLayout, flattenTree, collectEdges, canvasSize,
@@ -644,8 +645,8 @@ function showEdgePicker(toNode: TreeNode, lx: number, ly: number) {
   // Position: above click point, clamped to viewport
   document.body.appendChild(picker);
   const pw = picker.offsetWidth || 180, ph = picker.offsetHeight || 40;
-  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
-  const y = Math.max(sy - ph - 10, 38);
+  const x = Math.min(Math.max(sx - pw / 2, EP_CLAMP_X_MIN), window.innerWidth - pw - EP_CLAMP_X_PAD);
+  const y = Math.max(sy - ph - EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN);
   picker.style.left = x + 'px';
   picker.style.top  = y + 'px';
 
@@ -687,8 +688,8 @@ function showStatusPicker(toNode: TreeNode, lx: number, ly: number) {
 
   document.body.appendChild(picker);
   const pw = picker.offsetWidth || 160;
-  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
-  const y = Math.max(sy - (picker.offsetHeight || 36) - 10, 38);
+  const x = Math.min(Math.max(sx - pw / 2, EP_CLAMP_X_MIN), window.innerWidth - pw - EP_CLAMP_X_PAD);
+  const y = Math.max(sy - (picker.offsetHeight || 36) - EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN);
   picker.style.left = x + 'px';
   picker.style.top  = y + 'px';
 
@@ -792,8 +793,8 @@ function showEdgeAnalytics(toNode: TreeNode, lx: number, ly: number) {
 
   document.body.appendChild(popup);
   const pw = 220;
-  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
-  const y = Math.max(Math.min(sy + 10, window.innerHeight - 300), 38);
+  const x = Math.min(Math.max(sx - pw / 2, EP_CLAMP_X_MIN), window.innerWidth - pw - EP_CLAMP_X_PAD);
+  const y = Math.max(Math.min(sy + EP_CLAMP_Y_PAD, window.innerHeight - EP_ANALYTICS_Y_BOT), EP_CLAMP_Y_MIN);
   popup.style.left = x + 'px';
   popup.style.top  = y + 'px';
 }
@@ -842,8 +843,8 @@ function showCrossEdgePicker(ce: CrossEdge, lx: number, ly: number) {
 
   document.body.appendChild(picker);
   const pw = picker.offsetWidth || 200;
-  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
-  const y = Math.max(sy - (picker.offsetHeight || 40) - 10, 38);
+  const x = Math.min(Math.max(sx - pw / 2, EP_CLAMP_X_MIN), window.innerWidth - pw - EP_CLAMP_X_PAD);
+  const y = Math.max(sy - (picker.offsetHeight || 40) - EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN);
   picker.style.left = x + 'px';
   picker.style.top  = y + 'px';
 
@@ -1250,7 +1251,7 @@ let gridSvgEl: SVGSVGElement | null = null;
 
 function buildGrid() {
   gridSvgEl?.remove();
-  const W = window.innerWidth - 148;
+  const W = window.innerWidth - SIDEBAR_W;
   const H = window.innerHeight;
   gridCols  = Math.ceil(W / GRID_CELL) + 1;
   const rows = Math.ceil(H / GRID_CELL) + 1;

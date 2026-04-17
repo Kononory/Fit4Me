@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TreeNode, CrossEdge } from '../types';
 import { doLayout, flattenTree, collectEdges, detectOverlaps, PAD, RH } from '../layout';
 import { useStore } from '../store';
+import { SIDEBAR_W, SIDEBAR_COLLAPSED_W } from '../constants';
 import { Canvas } from './Canvas';
 import { GridBackground } from './GridBackground';
 import type { PickerState, PickerMode } from './EdgePicker';
@@ -21,7 +22,7 @@ function applyFreePositions(nodes: TreeNode[]) {
 }
 
 export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState, onSetPickerMode }: Props) {
-  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows, setOverlapCount } = useStore();
+  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows, setOverlapCount, leftSidebarCollapsed } = useStore();
   const vpRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number } | null>(null);
 
@@ -110,6 +111,11 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
       <div
         id="vp"
         ref={vpRef}
+        style={{
+          marginLeft: leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W,
+          width: `calc(100% - ${leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W}px)`,
+          transition: 'margin-left 0.18s ease, width 0.18s ease',
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
