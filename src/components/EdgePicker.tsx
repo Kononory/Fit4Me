@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import type { TreeNode, CrossEdge, RetentionPoint } from '../types';
 import { useStore } from '../store';
+import { MessageSquare, Activity, BarChart2, Mic } from 'lucide-react';
 
 // ── Shared positioning helpers ─────────────────────────────────────────────────
 
@@ -78,26 +79,56 @@ export function EdgePicker({ pickerState, onClose, onSetMode }: Props) {
   if (!mode || mode === 'label-edit' || mode === 'cross-label-edit' || mode === 'analytics') return null;
 
   if (mode === 'main' && toNode) {
-    const pw = 180;
+    const pw = 280;
     const x = clampX(sx - pw / 2, pw);
-    const y = clampY(sy, 40);
+    const y = clampY(sy, 220);
     return ReactDOM.createPortal(
-      <div id="edge-picker" ref={mainRef} style={{ left: x, top: y }}>
-        <button className={'ep-btn' + (toNode.edgeLabel ? ' ep-btn-active' : '')}
-          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
-          onClick={e => { e.stopPropagation(); onSetMode('label-edit'); }}>
-          <span className="ep-icon">💬</span><span className="ep-label">Note</span>
-        </button>
-        <button className={'ep-btn' + (toNode.edgeStatus ? ' ep-btn-active' : '')}
-          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
-          onClick={e => { e.stopPropagation(); onSetMode('status'); }}>
-          <span className="ep-icon">◉</span><span className="ep-label">Status</span>
-        </button>
-        <button className={'ep-btn' + (toNode.edgeRetention ? ' ep-btn-active' : '')}
-          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
-          onClick={e => { e.stopPropagation(); onSetMode('analytics'); }}>
-          <span className="ep-icon">/</span><span className="ep-label">Analytics</span>
-        </button>
+      <div id="edge-picker" className="ep-card-panel" ref={mainRef} style={{ left: x, top: y }}>
+        <div className="ep-card-header">
+          <span>Edge options</span>
+          <span className="ep-card-more">More ›</span>
+        </div>
+        <div className="ep-card-grid">
+          <button className={'ep-card-item' + (toNode.edgeLabel ? ' ep-card-item--active' : '')}
+            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+            onClick={e => { e.stopPropagation(); onSetMode('label-edit'); }}>
+            <div className="ep-card-icon ep-card-icon--note">
+              <MessageSquare size={22} />
+            </div>
+            <span className="ep-card-label">Note</span>
+          </button>
+          <button className={'ep-card-item' + (toNode.edgeStatus ? ' ep-card-item--active' : '')}
+            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+            onClick={e => { e.stopPropagation(); onSetMode('status'); }}>
+            <div className="ep-card-icon ep-card-icon--status">
+              <Activity size={22} />
+            </div>
+            <span className="ep-card-label">Status</span>
+          </button>
+          <button className={'ep-card-item' + (toNode.edgeRetention ? ' ep-card-item--active' : '')}
+            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+            onClick={e => { e.stopPropagation(); onSetMode('analytics'); }}>
+            <div className="ep-card-icon ep-card-icon--analytics">
+              <BarChart2 size={22} />
+            </div>
+            <span className="ep-card-label">Analytics</span>
+          </button>
+        </div>
+        <div className="ep-card-describe">
+          <input
+            placeholder="Or just describe it…"
+            onMouseDown={e => e.stopPropagation()}
+            onKeyDown={e => {
+              e.stopPropagation();
+              if (e.key === 'Enter') {
+                const val = (e.target as HTMLInputElement).value.trim();
+                if (val) commit(() => { toNode.edgeLabel = val; });
+              }
+              if (e.key === 'Escape') onClose();
+            }}
+          />
+          <Mic size={16} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+        </div>
       </div>,
       document.body,
     );

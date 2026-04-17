@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { TreeNode, CrossEdge, RetentionPoint, SelectionState } from '../types';
 import { NW, centerY } from '../layout';
 import { buildChart } from '../retention';
@@ -88,6 +88,7 @@ function canvasToScreen(lx: number, ly: number, cnvRef: React.RefObject<HTMLDivE
 
 export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAnim, sel, selNodeId, cnvRef, onShowEdgePicker, onShowCrossEdgePicker }: Props) {
   const chartTimerRef = useRef<Record<string, number>>({});
+  const [hoveredEdgeIdx, setHoveredEdgeIdx] = useState<number | null>(null);
 
   const showChartPreview = useCallback((
     aData: RetentionPoint[], bx: number, ly: number,
@@ -229,16 +230,8 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
             <path d={d} fill="none" stroke="rgba(0,0,0,0)" strokeWidth={14} pointerEvents="stroke"
               style={{ cursor: 'pointer' }}
               onClick={e => { e.stopPropagation(); onShowEdgePicker(t, lx, ly); }}
-              onMouseEnter={hasAnnotation ? undefined : e => {
-                const g = (e.currentTarget as SVGElement).parentElement;
-                g?.querySelector('.edge-hint-sq')?.setAttribute('opacity', '1');
-                g?.querySelector('.edge-hint-tx')?.setAttribute('opacity', '1');
-              }}
-              onMouseLeave={hasAnnotation ? undefined : e => {
-                const g = (e.currentTarget as SVGElement).parentElement;
-                g?.querySelector('.edge-hint-sq')?.setAttribute('opacity', '0');
-                g?.querySelector('.edge-hint-tx')?.setAttribute('opacity', '0');
-              }}
+              onMouseEnter={hasAnnotation ? undefined : () => setHoveredEdgeIdx(ei)}
+              onMouseLeave={hasAnnotation ? undefined : () => setHoveredEdgeIdx(null)}
             />
 
             {/* Label pill */}
@@ -275,14 +268,17 @@ export function EdgeLayer({ allNodes, allEdges, crossEdges, width, height, doAni
               </>);
             })()}
 
-            {/* Hover hint (no annotations) */}
-            {!hasAnnotation && (<>
-              <rect className="edge-hint-sq" x={lx - 8} y={ly - 8} width={16} height={16} rx={2}
-                fill="#FEFCF8" stroke="#BCBBB7" strokeWidth={0.8} opacity={0}
-                style={{ transition: 'opacity 0.15s', cursor: 'pointer' }} pointerEvents="none" />
-              <text className="edge-hint-tx" x={lx} y={ly + 5} textAnchor="middle" fill="#BCBBB7"
-                fontSize={10} opacity={0} pointerEvents="none" style={{ transition: 'opacity 0.15s' }}>+</text>
-            </>)}
+            {/* 5-dot midpoint handle (no annotations) */}
+            {!hasAnnotation && (
+              <g className={`el-dot-handle${hoveredEdgeIdx === ei ? ' el-dot-handle--hover' : ''}`}
+                transform={`translate(${lx}, ${ly})`} pointerEvents="none">
+                <circle cx={0}  cy={0}  r={3.5} />
+                <circle cx={-9} cy={0}  r={3} />
+                <circle cx={9}  cy={0}  r={3} />
+                <circle cx={0}  cy={-9} r={3} />
+                <circle cx={0}  cy={9}  r={3} />
+              </g>
+            )}
           </g>
         );
       })}
