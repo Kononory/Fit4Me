@@ -41,7 +41,7 @@ html, body {
 }
 
 #flow-tab-list {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
+  flex: 1; overflow-y: auto; overflow-x: auto;
 }
 
 .flow-tab {
