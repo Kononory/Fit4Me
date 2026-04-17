@@ -804,7 +804,7 @@ svg#svgl.dimmed { opacity: 0.3; }
   color: var(--muted-foreground) !important;
   padding: 5px 6px !important; border-radius: 3px !important;
   height: auto !important;
-  flex: 0 0 auto !important;
+  flex: 1 !important;
   display: inline-flex !important; align-items: center !important; gap: 4px !important;
   transition: background 0.12s, color 0.12s, flex 0.15s !important;
 }
