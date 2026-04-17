@@ -8,10 +8,10 @@ interface Props {
 }
 
 export function GridBackground({ vpRef: _vpRef }: Props) {
-  const [size, setSize] = useState({ w: window.innerWidth - 148, h: window.innerHeight });
+  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth - 148, h: window.innerHeight });
+    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
