@@ -160,9 +160,16 @@ export function FlowTabs() {
           FLOWS
           <button
             className="sb-collapse-btn sb-collapse-btn-inline"
-            title="Collapse sidebar"
-            onClick={() => { setPeeking(false); setLeftSidebarCollapsed(true); }}
-          ><PanelLeftClose size={12} /></button>
+            title={leftSidebarCollapsed ? "Pin sidebar open" : "Collapse sidebar"}
+            onClick={() => {
+              if (leftSidebarCollapsed) {
+                setLeftSidebarCollapsed(false);
+              } else {
+                setPeeking(false);
+                setLeftSidebarCollapsed(true);
+              }
+            }}
+          >{leftSidebarCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}</button>
         </div>
         <div id="flow-tab-list">
           {flows.map(flow => (

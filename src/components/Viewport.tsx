@@ -21,7 +21,7 @@ function applyFreePositions(nodes: TreeNode[]) {
 }
 
 export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState, onSetPickerMode }: Props) {
-  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows, setOverlapCount } = useStore();
+  const { getActive, activeId, animateEdgesNext, triggerEdgeAnim, zoom, setZoom, flows, setOverlapCount, leftSidebarCollapsed } = useStore();
   const vpRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number } | null>(null);
 
@@ -110,6 +110,11 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
       <div
         id="vp"
         ref={vpRef}
+        style={{
+          marginLeft: leftSidebarCollapsed ? 40 : 148,
+          width: `calc(100% - ${leftSidebarCollapsed ? 40 : 148}px)`,
+          transition: 'margin-left 0.18s ease, width 0.18s ease',
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
