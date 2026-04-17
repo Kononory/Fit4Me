@@ -833,6 +833,11 @@ svg#svgl.dimmed { opacity: 0.3; }
 #evm-container {
   position: fixed; inset: 0; top: 48px; left: 156px;
   overflow: auto; background: var(--card);
+  transition: left 0.18s ease; /* Додаємо плавну анімацію */
+}
+
+body:has(#flow-tabs.collapsed) #evm-container {
+  left: 48px;
 }
 #evm-canvas {
   position: relative; min-width: 100%; min-height: 100%;
