@@ -181,8 +181,19 @@ html, body {
 
 /* ── Viewport & canvas ──────────────────────────────────────────── */
 #vp {
-  width: calc(100% - 148px); height: 100%; overflow: auto; margin-left: 148px;
+  width: calc(100% - 148px); 
+  height: 100%; 
+  overflow: auto; 
+  margin-left: 148px;
   background-color: var(--muted);
+  /* Додаємо плавну анімацію, щоб він їздив синхронно з сайдбаром */
+  transition: width 0.18s ease, margin-left 0.18s ease; 
+}
+
+/* МАГІЯ: Якщо десь на сторінці є згорнутий сайдбар, автоматично розтягуємо #vp */
+body:has(#flow-tabs.collapsed) #vp {
+  margin-left: 40px;
+  width: calc(100% - 40px);
 }
 
 /* ── Interactive grid (MagicUI style) ───────────────────────────── */
