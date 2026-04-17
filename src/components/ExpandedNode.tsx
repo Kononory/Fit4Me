@@ -270,7 +270,7 @@ function SubFlow({ root }: { root: TreeNode }) {
 
   const posVals = [...layout.values()];
   // Extra bottom padding so shape picker doesn't clip at canvas edge
-  const cw = posVals.length ? Math.max(...posVals.map(p => p.x + SNW)) + SPAD : 320;
+  const cw = posVals.length ? Math.max(...posVals.map(p => p.x + SNW)) + SPAD : SNW + 2 * SPAD;
   const ch = posVals.length ? Math.max(...posVals.map(p => p.cy + SNH / 2)) + SPAD + 52 : 260;
 
   const presetBar = (

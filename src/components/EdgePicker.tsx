@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import type { TreeNode, CrossEdge, RetentionPoint } from '../types';
 import { useStore } from '../store';
+import {
+  EP_MAIN_W, EP_MAIN_H, EP_STATUS_W, EP_STATUS_H, EP_CROSS_W, EP_CROSS_H, EP_ANALYTICS_W,
+  EP_CLAMP_X_MIN, EP_CLAMP_X_PAD, EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN, EP_ANALYTICS_Y_BOT,
+} from '../constants';
 
 // ── Shared positioning helpers ─────────────────────────────────────────────────
 
@@ -15,10 +19,10 @@ function findParent(tree: TreeNode, targetId: string): TreeNode | null {
 }
 
 function clampX(x: number, width: number) {
-  return Math.min(Math.max(x, 156), window.innerWidth - width - 8);
+  return Math.min(Math.max(x, EP_CLAMP_X_MIN), window.innerWidth - width - EP_CLAMP_X_PAD);
 }
 function clampY(y: number, height: number) {
-  return Math.max(y - height - 10, 38);
+  return Math.max(y - height - EP_CLAMP_Y_PAD, EP_CLAMP_Y_MIN);
 }
 
 // ── Main edge annotation picker ────────────────────────────────────────────────
@@ -78,9 +82,9 @@ export function EdgePicker({ pickerState, onClose, onSetMode }: Props) {
   if (!mode || mode === 'label-edit' || mode === 'cross-label-edit' || mode === 'analytics') return null;
 
   if (mode === 'main' && toNode) {
-    const pw = 180;
+    const pw = EP_MAIN_W;
     const x = clampX(sx - pw / 2, pw);
-    const y = clampY(sy, 40);
+    const y = clampY(sy, EP_MAIN_H);
     return ReactDOM.createPortal(
       <div id="edge-picker" ref={mainRef} style={{ left: x, top: y }}>
         <button className={'ep-btn' + (toNode.edgeLabel ? ' ep-btn-active' : '')}
@@ -104,9 +108,9 @@ export function EdgePicker({ pickerState, onClose, onSetMode }: Props) {
   }
 
   if (mode === 'status' && toNode) {
-    const pw = 160;
+    const pw = EP_STATUS_W;
     const x = clampX(sx - pw / 2, pw);
-    const y = clampY(sy, 36);
+    const y = clampY(sy, EP_STATUS_H);
     return ReactDOM.createPortal(
       <div id="edge-picker" className="ep-status" ref={mainRef} style={{ left: x, top: y }}>
         {EDGE_STATUS_OPTS.map(o => (
@@ -123,9 +127,9 @@ export function EdgePicker({ pickerState, onClose, onSetMode }: Props) {
   }
 
   if (mode === 'cross' && ce) {
-    const pw = 200;
+    const pw = EP_CROSS_W;
     const x = clampX(sx - pw / 2, pw);
-    const y = clampY(sy, 40);
+    const y = clampY(sy, EP_CROSS_H);
     const flow = getActive();
     return ReactDOM.createPortal(
       <div id="edge-picker" ref={mainRef} style={{ left: x, top: y }}>
@@ -189,7 +193,7 @@ export function EdgeLabelEdit({ pickerState, onClose }: LabelEditProps) {
       className="edge-label-input"
       defaultValue={defaultVal}
       placeholder="add note…"
-      style={{ left: sx - 50, top: Math.max(sy - 11, 38) }}
+      style={{ left: sx - 50, top: Math.max(sy - 11, EP_CLAMP_Y_MIN) }}
       onBlur={commit}
       onKeyDown={e => {
         e.stopPropagation();
@@ -258,9 +262,9 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
 
   if (mode !== 'analytics' || !toNode) return null;
 
-  const pw = 220;
-  const x = Math.min(Math.max(sx - pw / 2, 156), window.innerWidth - pw - 8);
-  const y = Math.max(Math.min(sy + 10, window.innerHeight - 300), 38);
+  const pw = EP_ANALYTICS_W;
+  const x = Math.min(Math.max(sx - pw / 2, EP_CLAMP_X_MIN), window.innerWidth - pw - EP_CLAMP_X_PAD);
+  const y = Math.max(Math.min(sy + EP_CLAMP_Y_PAD, window.innerHeight - EP_ANALYTICS_Y_BOT), EP_CLAMP_Y_MIN);
 
   return ReactDOM.createPortal(
     <div id="edge-analytics" style={{ left: x, top: y }}>

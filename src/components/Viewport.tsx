@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TreeNode, CrossEdge } from '../types';
 import { doLayout, flattenTree, collectEdges, detectOverlaps, PAD, RH } from '../layout';
 import { useStore } from '../store';
+import { SIDEBAR_W, SIDEBAR_COLLAPSED_W } from '../constants';
 import { Canvas } from './Canvas';
 import { GridBackground } from './GridBackground';
 import type { PickerState, PickerMode } from './EdgePicker';
@@ -111,8 +112,8 @@ export function Viewport({ onShowEdgePicker, onShowCrossEdgePicker, pickerState,
         id="vp"
         ref={vpRef}
         style={{
-          marginLeft: leftSidebarCollapsed ? 40 : 148,
-          width: `calc(100% - ${leftSidebarCollapsed ? 40 : 148}px)`,
+          marginLeft: leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W,
+          width: `calc(100% - ${leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W}px)`,
           transition: 'margin-left 0.18s ease, width 0.18s ease',
         }}
         onTouchStart={handleTouchStart}

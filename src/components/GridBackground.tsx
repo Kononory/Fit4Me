@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { InteractiveGridPattern } from './magicui/interactive-grid-pattern';
 import { useStore } from '../store';
+import { SIDEBAR_W, SIDEBAR_COLLAPSED_W } from '../constants';
 
 const CELL = 40;
 
@@ -10,7 +11,7 @@ interface Props {
 
 export function GridBackground({ vpRef: _vpRef }: Props) {
   const { leftSidebarCollapsed } = useStore();
-  const sidebarW = leftSidebarCollapsed ? 40 : 148;
+  const sidebarW = leftSidebarCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W;
   const [winSize, setWinSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
