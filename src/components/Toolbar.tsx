@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages } from 'lucide-react';
+import { RotateCcw, RotateCw, Lock, Unlock, KeyRound, Download, RefreshCw, Languages } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree, addChildNode } from '../tree';
@@ -127,19 +127,29 @@ export function Toolbar() {
   return (
     <div id="toolbar">
       {status && (
-        <span id="tb-status" style={{ color: status.ok ? '#6B9B5E' : '#AEADA8' }}>
+        <span id="tb-status" style={{ color: status.ok ? 'var(--teal)' : 'var(--muted-foreground)' }}>
           {status.msg}
         </span>
       )}
       <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}><RotateCcw size={14} /></button>
       <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}><RotateCw size={14} /></button>
       {activeLayer === 'nodes' && (
-        <button
-          id="tb-free"
-          title="Free positioning — drag nodes anywhere, snap to grid"
-          className={freeMode ? 'tb-active' : ''}
-          onClick={() => setFreeMode(!freeMode)}
-        ><Move size={14} /></button>
+        <div id="tb-free-group" role="group" aria-label="Free positioning mode">
+          <button
+            id="tb-free-lock"
+            title="Locked — tree layout only"
+            className={!freeMode ? 'tb-active' : ''}
+            aria-pressed={!freeMode}
+            onClick={() => setFreeMode(false)}
+          ><Lock size={14} /></button>
+          <button
+            id="tb-free-unlock"
+            title="Unlocked — free positioning enabled"
+            className={freeMode ? 'tb-active' : ''}
+            aria-pressed={freeMode}
+            onClick={() => setFreeMode(true)}
+          ><Unlock size={14} /></button>
+        </div>
       )}
       {activeLayer === 'nodes' && (
         <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>

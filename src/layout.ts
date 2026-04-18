@@ -2,7 +2,7 @@ import type { TreeNode, CrossEdge } from './types';
 
 export const NW  = 156; // node width
 export const NH  = 36;  // node height
-export const LW  = 184; // level width (horizontal spacing)
+export const LW  = 220; // level width (horizontal spacing)
 export const RH  = 40;  // row height (vertical spacing)
 export const PAD = 40;  // canvas padding
 

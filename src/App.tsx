@@ -8,10 +8,9 @@ import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
 import { TextEditPanel } from './components/TextEditPanel';
 import { EventsMap } from './components/EventsMap';
-import { HotkeysPanel } from './components/HotkeysPanel';
+import { HotkeysPopover } from './components/HotkeysPopover';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
-import { RetentionWidget } from './components/RetentionWidget';
 import type { TreeNode, CrossEdge } from './types';
 
 export function App() {
@@ -89,15 +88,8 @@ export function App() {
       )}
       {activeLayer === 'outline' && <TextEditPanel />}
       {activeLayer === 'events'  && <EventsMap />}
-      {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <ZoomControls />
-      {/* Floating ? button — bottom-right, left of retention marker */}
-      <button
-        id="hk-float-btn"
-        title="Keyboard shortcuts (Shift+?)"
-        className={hotkeysOpen ? 'tb-active' : ''}
-        onClick={() => setHotkeysOpen(!hotkeysOpen)}
-      >?</button>
+      <HotkeysPopover />
       <EdgePicker
         pickerState={pickerState}
         onClose={closePicker}
@@ -105,7 +97,6 @@ export function App() {
       />
       <EdgeLabelEdit pickerState={pickerState} onClose={closePicker} />
       <EdgeAnalytics pickerState={pickerState} onClose={closePicker} />
-      <RetentionWidget />
     </div>
   );
 }
