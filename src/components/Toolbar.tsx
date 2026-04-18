@@ -1,45 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, RotateCw, Lock, Unlock, KeyRound, Download, RefreshCw, Languages, Activity } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { RotateCcw, RotateCw, Lock, Unlock, KeyRound, Download, RefreshCw, Languages } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree, addChildNode } from '../tree';
 import { DEFAULT_TREE } from '../data';
 import { autoArrange, doLayout, flattenTree } from '../layout';
-import { buildChart } from '../retention';
-import type { RetentionPoint } from '../types';
 import {
   getPAT, getFigmaImportConfig, fetchPageStructure,
   parseFrameGroups, fetchBatchThumbnails, decodeRef,
 } from '../lib/figma';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 export function Toolbar() {
   const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer } = useStore();
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
-
-  // Retention popover content (keeps old UI, but no longer uses the bottom-right "/" marker).
-  const [retOpen, setRetOpen] = useState(false);
-  const chartRef = useRef<HTMLDivElement>(null);
-  const getRetentionData = useCallback((): RetentionPoint[] => {
-    return getActive().retentionData ?? [];
-  }, [getActive]);
-  const [retData, setRetData] = useState<RetentionPoint[]>(() => getRetentionData());
-
-  useEffect(() => {
-    if (!retOpen) return;
-    setRetData(getRetentionData());
-  }, [retOpen, activeId, getRetentionData]);
-
-  useEffect(() => {
-    const el = chartRef.current;
-    if (!el) return;
-    el.innerHTML = '';
-    el.appendChild(buildChart(retData.length > 0 ? retData : [
-      { s: 's1', pct: 100 }, { s: 's2', pct: 80 }, { s: 's3', pct: 60 }, { s: 's4', pct: 40 },
-    ]));
-  }, [retData]);
 
   // Show ↺ button only when a saved import config exists for the active flow
   const hasSyncConfig = !!getFigmaImportConfig(activeId);
@@ -159,92 +134,22 @@ export function Toolbar() {
       <button id="tb-undo" title="Undo (⌘Z)" disabled={!undoOk} onClick={undo}><RotateCcw size={14} /></button>
       <button id="tb-redo" title="Redo (⌘Y)" disabled={!redoOk} onClick={redo}><RotateCw size={14} /></button>
       {activeLayer === 'nodes' && (
-        <button
-          id="tb-free"
-          title={freeMode ? "Free positioning unlocked — drag nodes anywhere (snap to grid)" : "Free positioning locked"}
-          className={freeMode ? 'tb-active' : ''}
-          aria-pressed={freeMode}
-          onClick={() => setFreeMode(!freeMode)}
-        >{freeMode ? <Unlock size={14} /> : <Lock size={14} />}</button>
-      )}
-      {activeLayer === 'nodes' && (
-        <Popover open={retOpen} onOpenChange={setRetOpen}>
-          <PopoverTrigger
-            title="Retention funnel"
-            className={retOpen ? 'tb-active' : ''}
-          >
-            <Activity size={14} />
-          </PopoverTrigger>
-          <PopoverContent side="bottom" align="start" sideOffset={10} className="w-[280px] p-3">
-            <div ref={chartRef} />
-            <div className="ret-divider" />
-            <div className="ret-table">
-              {retData.map((pt, i) => (
-                <div key={i} className="ret-row">
-                  <input
-                    className="ret-inp ret-inp-lbl"
-                    value={pt.s}
-                    placeholder="label"
-                    onChange={e => {
-                      const next = retData.map((d, idx) => idx === i ? { ...d, s: e.target.value.trim() || d.s } : d);
-                      setRetData(next);
-                      const updated = flows.map(f => f.id === activeId ? { ...f, retentionData: next } : f);
-                      setFlows(updated);
-                    }}
-                  />
-                  <input
-                    className="ret-inp ret-inp-pct"
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    value={pt.pct}
-                    onChange={e => {
-                      const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
-                      const next = retData.map((d, idx) => idx === i ? { ...d, pct: v } : d);
-                      setRetData(next);
-                      const updated = flows.map(f => f.id === activeId ? { ...f, retentionData: next } : f);
-                      setFlows(updated);
-                    }}
-                  />
-                  <span className="ret-pct-unit">%</span>
-                  {retData.length > 2 && (
-                    <button
-                      className="ret-row-del"
-                      onClick={() => {
-                        const next = retData.filter((_, idx) => idx !== i);
-                        setRetData(next);
-                        const updated = flows.map(f => f.id === activeId ? { ...f, retentionData: next } : f);
-                        setFlows(updated);
-                      }}
-                    >×</button>
-                  )}
-                </div>
-              ))}
-              <button
-                className="ret-add-row"
-                onClick={() => {
-                  const last = retData[retData.length - 1];
-                  const next = [...retData, { s: `+${retData.length}`, pct: Math.max(0, (last?.pct ?? 10) - 5) }];
-                  setRetData(next);
-                  const updated = flows.map(f => f.id === activeId ? { ...f, retentionData: next } : f);
-                  setFlows(updated);
-                }}
-              >+ Add stage</button>
-            </div>
-            <button
-              className="ret-reset"
-              onClick={() => {
-                const next: RetentionPoint[] = [
-                  { s: 's1', pct: 100 }, { s: 's2', pct: 80 }, { s: 's3', pct: 60 }, { s: 's4', pct: 40 },
-                ];
-                setRetData(next);
-                const updated = flows.map(f => f.id === activeId ? { ...f, retentionData: next } : f);
-                setFlows(updated);
-              }}
-            >Reset</button>
-          </PopoverContent>
-        </Popover>
+        <div id="tb-free-group" role="group" aria-label="Free positioning mode">
+          <button
+            id="tb-free-lock"
+            title="Locked — tree layout only"
+            className={!freeMode ? 'tb-active' : ''}
+            aria-pressed={!freeMode}
+            onClick={() => setFreeMode(false)}
+          ><Lock size={14} /></button>
+          <button
+            id="tb-free-unlock"
+            title="Unlocked — free positioning enabled"
+            className={freeMode ? 'tb-active' : ''}
+            aria-pressed={freeMode}
+            onClick={() => setFreeMode(true)}
+          ><Unlock size={14} /></button>
+        </div>
       )}
       {activeLayer === 'nodes' && (
         <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>

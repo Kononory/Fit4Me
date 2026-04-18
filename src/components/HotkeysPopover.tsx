@@ -4,7 +4,6 @@ import { X } from "lucide-react"
 import { useStore } from "@/store"
 import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type Tab = "nodes" | "canvas" | "flow"
 
@@ -46,13 +45,13 @@ function ShortcutGrid({ items }: { items: { key: string; desc: string }[] }) {
   }, [items])
 
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-1 pt-2">
+    <div className="hk-grid">
       {[cols.a, cols.b].map((col, ci) => (
-        <div key={ci} className="flex flex-col gap-1">
+        <div key={ci} className="hk-col">
           {col.map((s) => (
-            <div key={s.key} className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-muted">
+            <div key={s.key} className="hk-row hk-row-compact">
               <Kbd className="shrink-0">{s.key}</Kbd>
-              <span className="text-[11px] text-muted-foreground">{s.desc}</span>
+              <span className="hk-desc">{s.desc}</span>
             </div>
           ))}
         </div>
@@ -79,38 +78,29 @@ export function HotkeysPopover() {
       >
         ?
       </PopoverTrigger>
-      <PopoverContent side="top" align="end" sideOffset={12} className="w-[520px] p-3">
-        <div className="flex items-center justify-between">
-          <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Keyboard shortcuts
+      <PopoverContent side="top" align="end" sideOffset={12} className="w-[540px] p-0">
+        <div id="hk-panel" style={{ position: "static" }}>
+          <div id="hk-header">
+            <span id="hk-title">Keyboard Shortcuts</span>
+            <button id="hk-close" onClick={() => setHotkeysOpen(false)} aria-label="Close shortcuts">
+              <X size={14} />
+            </button>
           </div>
-          <button
-            className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => setHotkeysOpen(false)}
-            aria-label="Close shortcuts"
-          >
-            <X data-icon="inline-start" />
-            Close
-          </button>
+          <div id="hk-tabs">
+            {(["nodes", "canvas", "flow"] as const).map((t) => (
+              <button
+                key={t}
+                className={`hk-tab${tab === t ? " hk-tab-active" : ""}`}
+                onClick={() => setTab(t)}
+              >
+                {t === "nodes" ? "Nodes" : t === "canvas" ? "Canvas" : "Flow"}
+              </button>
+            ))}
+          </div>
+          <div id="hk-list" style={{ maxHeight: 260 }}>
+            <ShortcutGrid items={SHORTCUTS[tab]} />
+          </div>
         </div>
-
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-2">
-          <TabsList variant="default">
-            <TabsTrigger value="nodes">Nodes</TabsTrigger>
-            <TabsTrigger value="canvas">Canvas</TabsTrigger>
-            <TabsTrigger value="flow">Flow</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="nodes">
-            <ShortcutGrid items={SHORTCUTS.nodes} />
-          </TabsContent>
-          <TabsContent value="canvas">
-            <ShortcutGrid items={SHORTCUTS.canvas} />
-          </TabsContent>
-          <TabsContent value="flow">
-            <ShortcutGrid items={SHORTCUTS.flow} />
-          </TabsContent>
-        </Tabs>
       </PopoverContent>
     </Popover>
   )

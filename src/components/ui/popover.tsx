@@ -29,7 +29,8 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-90 w-[320px] rounded-lg border border-border bg-card p-3 text-foreground shadow-lg outline-none",
+            // Use explicit high z-index so it floats above sidebars/pickers.
+            "z-[520] w-[320px] rounded-lg border border-border bg-card p-3 text-foreground shadow-lg outline-none",
             className
           )}
           {...props}

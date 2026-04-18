@@ -513,8 +513,29 @@ svg#svgl.dimmed { opacity: 0.3; }
 #tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }
 #tb-text.tb-active { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
 
-#tb-free { font-size: 14px; padding: 0 7px; }
-#tb-free.tb-active { background: var(--teal); color: var(--primary-foreground); border-color: var(--teal); }
+/* Free mode lock/unlock segmented toggle */
+#tb-free { display: none; }
+#tb-free-group {
+  display: inline-flex;
+  border: 1.5px solid var(--foreground);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#tb-free-group button {
+  font-size: 14px;
+  padding: 0 7px;
+  height: 28px;
+  border: none;
+  border-right: 1.5px solid var(--foreground);
+  background: var(--background);
+  color: var(--foreground);
+}
+#tb-free-group button:last-child { border-right: none; }
+#tb-free-group button:hover:not(:disabled) { background: var(--muted); }
+#tb-free-group button.tb-active {
+  background: var(--foreground);
+  color: var(--primary-foreground);
+}
 
 /* ── Floating ? button (bottom-right, beside ret-marker) ─────────── */
 #hk-float-btn {
@@ -528,6 +549,12 @@ svg#svgl.dimmed { opacity: 0.3; }
   transition: background 0.15s, color 0.15s; color: var(--foreground);
 }
 #hk-float-btn:hover, #hk-float-btn.tb-active { background: var(--foreground); color: var(--primary-foreground); }
+
+/* Hotkeys popover: keep hk styles but render in two columns */
+.hk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; padding: 6px 10px 10px; }
+.hk-col { display: flex; flex-direction: column; }
+.hk-row.hk-row-compact { padding: 5px 10px; border-radius: 6px; }
+.hk-row.hk-row-compact:hover { background: var(--card); }
 
 /* ── Zoom controls (bottom-left) ─────────────────────────────────── */
 #zoom-controls {
