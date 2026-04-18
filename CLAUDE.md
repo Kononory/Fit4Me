@@ -19,6 +19,8 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 
 ## Repo layout
 ```
+README.md         # Local dev + env vars + deployment notes
+.env.example      # Template for required/optional env vars
 src/
   components/   # UI — Canvas, NodeEl, EdgeLayer, EdgePicker, TextEditPanel, FlowTabs,
   #               Toolbar, RetentionWidget, Viewport, HotkeysPanel, ZoomControls
@@ -192,6 +194,7 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - [useCallback indirect state capture]: if a `useCallback` calls a plain component function that uses state, add that state to the callback's deps — plain functions aren't refs, the callback captures a stale version otherwise. Hit in `handleResync` missing `importMode`.
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.
+- [Dead-code deletion / shared util import]: verify “dead” modules by running `npm run typecheck` + `npm run build` after deletions — import graphs can miss shared utilities (e.g. `src/retention.ts` is used by edge analytics + retention UI).
 - [Free-position multi-drag delta]: Store `startNodeX/Y` in `drRef` at `dragBegin` (not cursor). Delta = `snapEndX - startNodeX`.
 - [Multi-select stale closure]: Pass `getMultiSel` callback to `useDrag`, not the Set — Set captured at `useCallback` time is stale by `dragEnd`.
 - [motion subpath import]: Package is `motion` but imports use `from 'motion/react'` — grep for `from 'motion'` returns nothing. Always grep `motion/react` to detect usage.

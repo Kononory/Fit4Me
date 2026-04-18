@@ -1,4 +1,3 @@
-import { RETENTION_DATA } from './data';
 import type { RetentionPoint } from './types';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -51,7 +50,7 @@ export function buildChart(data: RetentionPoint[], highlightFrom = 0): SVGSVGEle
 
   mkEl('line', { x1: ml, y1: cb, x2: ml + cw, y2: cb, stroke: '#DDDAD4', 'stroke-width': 0.8 }, svg);
 
-  // Separator line between prior chain and current edge
+  // Separator between prior-chain vs current-edge points.
   if (highlightFrom > 0 && highlightFrom < data.length) {
     const sepX = bxx(highlightFrom) - gap / 2;
     mkEl('line', { x1: sepX, y1: mt, x2: sepX, y2: cb, stroke: '#4A6A4A', 'stroke-width': 0.8, 'stroke-dasharray': '3 2' }, svg);
@@ -67,7 +66,8 @@ export function buildChart(data: RetentionPoint[], highlightFrom = 0): SVGSVGEle
     const isLast = i === data.length - 1;
 
     if (hH > 0.3) mkEl('rect', { x, y: hY, width: bw, height: hH, fill: isCurrent ? 'url(#rdh)' : 'url(#rdh-dim)' }, svg);
-    if (sH > 0.3) mkEl('rect', { x, y: sY, width: bw, height: sH,
+    if (sH > 0.3) mkEl('rect', {
+      x, y: sY, width: bw, height: sH,
       fill: isCurrent ? (isLast ? '#B52B1E' : '#2C4B8A') : '#353A50',
     }, svg);
 
@@ -92,142 +92,3 @@ export function buildChart(data: RetentionPoint[], highlightFrom = 0): SVGSVGEle
   return svg;
 }
 
-export function mountRetentionWidget(
-  getData: () => RetentionPoint[],
-  onDataChange: (data: RetentionPoint[]) => void,
-): { refresh: () => void } {
-  // ── Marker button (fixed, bottom-right) ──────────────────────────────────────
-  const marker = document.createElement('div');
-  marker.id = 'ret-marker';
-  marker.textContent = '/';
-  document.body.appendChild(marker);
-
-  // ── Popup ────────────────────────────────────────────────────────────────────
-  const popup = document.createElement('div');
-  popup.id = 'ret-popup';
-  document.body.appendChild(popup);
-
-  let hideTimer = 0;
-
-  marker.addEventListener('mouseenter', () => { clearTimeout(hideTimer); popup.style.display = 'block'; });
-  marker.addEventListener('mouseleave', () => { hideTimer = window.setTimeout(() => { popup.style.display = 'none'; }, 150); });
-  popup.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-  popup.addEventListener('mouseleave', () => { popup.style.display = 'none'; });
-
-  // ── Render popup content ─────────────────────────────────────────────────────
-  function renderPopup() {
-    popup.innerHTML = '';
-    const data = getData();
-
-    // Chart
-    const chartWrap = document.createElement('div');
-    chartWrap.appendChild(buildChart(data));
-    popup.appendChild(chartWrap);
-
-    // Summary
-    if (data.length >= 2) {
-      const last = data[data.length - 1];
-      const co = document.createElement('div');
-      co.className = 'ret-summary';
-      co.textContent = `${last.pct}% reach the final stage`;
-      popup.appendChild(co);
-    }
-
-    // Divider
-    const hr = document.createElement('div');
-    hr.className = 'ret-divider';
-    popup.appendChild(hr);
-
-    // Editable table
-    const table = document.createElement('div');
-    table.className = 'ret-table';
-
-    data.forEach((pt, i) => {
-      const row = document.createElement('div');
-      row.className = 'ret-row';
-
-      // Label input
-      const lblInp = document.createElement('input');
-      lblInp.className = 'ret-inp ret-inp-lbl';
-      lblInp.value = pt.s;
-      lblInp.placeholder = 'label';
-      lblInp.addEventListener('input', () => {
-        data[i] = { ...data[i], s: lblInp.value.trim() || pt.s };
-        onDataChange([...data]);
-        // Rebuild chart only (not full popup to avoid losing focus)
-        chartWrap.innerHTML = '';
-        chartWrap.appendChild(buildChart(getData()));
-      });
-      row.appendChild(lblInp);
-
-      // Percent input
-      const pctInp = document.createElement('input');
-      pctInp.className = 'ret-inp ret-inp-pct';
-      pctInp.type = 'number';
-      pctInp.min = '0';
-      pctInp.max = '100';
-      pctInp.step = '0.1';
-      pctInp.value = String(pt.pct);
-      pctInp.addEventListener('input', () => {
-        const v = Math.min(100, Math.max(0, parseFloat(pctInp.value) || 0));
-        data[i] = { ...data[i], pct: v };
-        onDataChange([...data]);
-        chartWrap.innerHTML = '';
-        chartWrap.appendChild(buildChart(getData()));
-      });
-      row.appendChild(pctInp);
-
-      const pctLabel = document.createElement('span');
-      pctLabel.className = 'ret-pct-unit';
-      pctLabel.textContent = '%';
-      row.appendChild(pctLabel);
-
-      // Delete row (keep at least 2)
-      if (data.length > 2) {
-        const delBtn = document.createElement('button');
-        delBtn.className = 'ret-row-del';
-        delBtn.textContent = '×';
-        delBtn.addEventListener('click', () => {
-          data.splice(i, 1);
-          onDataChange([...data]);
-          renderPopup();
-        });
-        row.appendChild(delBtn);
-      }
-
-      table.appendChild(row);
-    });
-
-    // Add row button
-    const addBtn = document.createElement('button');
-    addBtn.className = 'ret-add-row';
-    addBtn.textContent = '+ Add stage';
-    addBtn.addEventListener('click', () => {
-      const last = data[data.length - 1];
-      data.push({ s: `+${data.length}`, pct: Math.max(0, (last?.pct ?? 10) - 5) });
-      onDataChange([...data]);
-      renderPopup();
-    });
-    table.appendChild(addBtn);
-    popup.appendChild(table);
-
-    // Reset to defaults button
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'ret-reset';
-    resetBtn.textContent = 'Reset to defaults';
-    resetBtn.addEventListener('click', () => {
-      onDataChange([...RETENTION_DATA]);
-      renderPopup();
-    });
-    popup.appendChild(resetBtn);
-  }
-
-  // Re-render popup when it becomes visible
-  marker.addEventListener('mouseenter', renderPopup);
-
-  function refresh() {
-    // Keep marker state in sync — position is fixed, nothing to update
-  }
-
-  return { refresh };
-}
