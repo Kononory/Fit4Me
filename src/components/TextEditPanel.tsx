@@ -39,7 +39,6 @@ export function TextEditPanel() {
   const dimRef     = useRef<HTMLDivElement>(null);
   const errRef     = useRef<HTMLSpanElement>(null);
   const dimActive  = useRef(false);
-  const [showSteps, setShowSteps] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
 
   // ── Line-focus dim overlay ───────────────────────────────────────────────────
@@ -172,28 +171,19 @@ export function TextEditPanel() {
         <span id="text-edit-title">
           Edit outline — <Kbd>Shift+↵</Kbd> new block · <Kbd>Tab</Kbd> indent · <Kbd>-&gt;</Kbd> level down · <Kbd>Ctrl+↵</Kbd> apply · <Kbd>Esc</Kbd> cancel
         </span>
-        <button
-          className={`te-btn te-steps-toggle${showSteps ? ' te-steps-on' : ''}`}
-          onClick={() => setShowSteps(s => !s)}
-          title="Toggle path display"
-        >
-          steps
-        </button>
         <span id="text-edit-err" ref={errRef} />
       </div>
-      {showSteps && (
-        <div id="text-edit-steps">
-          {breadcrumbs.length === 0
-            ? <span className="te-step te-step-empty">— move cursor to a line —</span>
-            : breadcrumbs.map((crumb, i) => (
-                <span key={i} className={`te-step${i === breadcrumbs.length - 1 ? ' te-step-cur' : ''}`}>
-                  {i > 0 && <span className="te-step-sep">›</span>}
-                  {crumb}
-                </span>
-              ))
-          }
-        </div>
-      )}
+      <div id="text-edit-steps">
+        {breadcrumbs.length === 0
+          ? <span className="te-step te-step-empty">— move cursor to a line —</span>
+          : breadcrumbs.map((crumb, i) => (
+              <span key={i} className={`te-step${i === breadcrumbs.length - 1 ? ' te-step-cur' : ''}`}>
+                {i > 0 && <span className="te-step-sep">›</span>}
+                {crumb}
+              </span>
+            ))
+        }
+      </div>
       <div id="text-edit-ta-wrap">
         <textarea
           id="text-edit-ta"

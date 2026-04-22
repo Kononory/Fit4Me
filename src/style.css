@@ -410,73 +410,6 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .ft-modal-btn-create:hover { background: var(--background); color: var(--foreground); }
 
-/* ── Retention marker (fixed corner) ────────────────────────────── */
-#ret-marker {
-  position: fixed; z-index: 60;
-  right: 20px; bottom: 20px;
-  width: 26px; height: 26px;
-  background: var(--background); border: 1.5px solid var(--foreground); border-radius: 2px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  color: var(--foreground); font-family: 'LatteraMonoLL','Space Mono',monospace;
-}
-#ret-marker:hover { background: var(--foreground); color: var(--primary-foreground); }
-
-/* ── Retention popup ────────────────────────────────────────────── */
-#ret-popup {
-  position: fixed; z-index: 59;
-  right: 52px; bottom: 20px;
-  background: var(--background); border: 1.5px solid var(--foreground); border-radius: 2px;
-  padding: 12px 12px 10px; width: 280px;
-  display: none; pointer-events: auto;
-  max-height: 80vh; overflow-y: auto;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-}
-
-/* Summary line */
-.ret-summary {
-  font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 8px; font-weight: 700; color: var(--destructive);
-  margin-top: 6px; letter-spacing: 0.02em;
-}
-.ret-divider {
-  border: none; border-top: 1px solid var(--accent); margin: 10px 0 8px;
-}
-
-/* Editable table */
-.ret-table { display: flex; flex-direction: column; gap: 3px; }
-.ret-row {
-  display: flex; align-items: center; gap: 4px;
-}
-.ret-inp {
-  font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 9px; color: var(--foreground); background: var(--card);
-  border: 1px solid var(--border); border-radius: 2px;
-  padding: 2px 4px; outline: none;
-}
-.ret-inp:focus { border-color: var(--foreground); background: var(--background); }
-.ret-inp-lbl { width: 52px; }
-.ret-inp-pct { width: 42px; text-align: right; }
-.ret-pct-unit { font-size: 9px; color: var(--muted-foreground); flex-shrink: 0; }
-.ret-row-del {
-  background: none; border: none; color: var(--ring); cursor: pointer;
-  font-size: 12px; padding: 0 2px; line-height: 1;
-}
-.ret-row-del:hover { color: var(--destructive); }
-.ret-add-row {
-  margin-top: 4px; font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 9px; color: var(--secondary-foreground); background: none;
-  border: 1px dashed var(--border); border-radius: 2px; padding: 3px 6px;
-  cursor: pointer; text-align: left;
-}
-.ret-add-row:hover { border-color: var(--foreground); color: var(--foreground); }
-.ret-reset {
-  margin-top: 8px; font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 8px; color: var(--muted-foreground); background: none; border: none;
-  cursor: pointer; padding: 0; text-decoration: underline;
-}
-.ret-reset:hover { color: var(--secondary-foreground); }
 
 /* ── Edge label input ───────────────────────────────────────────── */
 .edge-label-input {
@@ -516,7 +449,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 #tb-free { font-size: 14px; padding: 0 7px; }
 #tb-free.tb-active { background: var(--teal); color: var(--primary-foreground); border-color: var(--teal); }
 
-/* ── Floating ? button (bottom-right, beside ret-marker) ─────────── */
+/* ── Floating ? button (bottom-right) ───────────────────────────── */
 #hk-float-btn {
   position: fixed; z-index: 60;
   right: 52px; bottom: 20px;
@@ -695,14 +628,7 @@ body:has(#flow-tabs.collapsed) #text-edit-panel {
 .te-btn-apply  { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
 .te-btn-apply:hover { background: var(--foreground); }
 
-/* Steps toggle button & breadcrumb bar */
-.te-steps-toggle {
-  font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 3px 8px; color: var(--muted-foreground);
-}
-.te-steps-toggle:hover { background: var(--accent); color: var(--foreground); border-color: var(--ring); }
-.te-steps-on { background: var(--foreground) !important; color: var(--card) !important; border-color: var(--foreground) !important; }
-
+/* Breadcrumb bar */
 #text-edit-steps {
   display: flex; align-items: center; flex-wrap: nowrap; gap: 0;
   padding: 5px 20px;

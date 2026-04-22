@@ -11,7 +11,6 @@ import { EventsMap } from './components/EventsMap';
 import { HotkeysPanel } from './components/HotkeysPanel';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
-import { RetentionWidget } from './components/RetentionWidget';
 import type { TreeNode, CrossEdge } from './types';
 
 export function App() {
@@ -105,7 +104,6 @@ export function App() {
       />
       <EdgeLabelEdit pickerState={pickerState} onClose={closePicker} />
       <EdgeAnalytics pickerState={pickerState} onClose={closePicker} />
-      <RetentionWidget />
     </div>
   );
 }
