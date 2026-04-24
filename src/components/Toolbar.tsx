@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown, Keyboard } from 'lucide-react';
 import { useStore } from '../store';
-import { saveFlowRemote } from '../storage';
 import { cloneTree, addChildNode } from '../tree';
 import { DEFAULT_TREE } from '../data';
 import { autoArrange, doLayout, flattenTree } from '../layout';
@@ -11,8 +10,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending } = useStore();
-  const [saving, setSaving] = useState(false);
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending, hotkeysOpen, setHotkeysOpen } = useStore();
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [figmaMenuOpen, setFigmaMenuOpen] = useState(false);
@@ -35,20 +33,6 @@ export function Toolbar() {
     const t = setTimeout(() => setStatus(null), 6000);
     return () => clearTimeout(t);
   }, [status]);
-
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    setStatus(null);
-    try {
-      const active = getActive();
-      await saveFlowRemote(active);
-      setStatus({ msg: 'Saved to cloud ✓', ok: true });
-    } catch (e) {
-      setStatus({ msg: `Saved locally · ${String(e)}`, ok: false });
-    } finally {
-      setSaving(false);
-    }
-  }, [getActive]);
 
   const handleReset = useCallback(() => {
     if (!confirm('Reset to default tree? Unsaved changes will be lost.')) return;
@@ -186,10 +170,14 @@ export function Toolbar() {
           ⚠ {overlapCount} crossing{overlapCount > 1 ? 's' : ''} · Fix
         </button>
       )}
-      <button id="tb-save" disabled={saving} onClick={handleSave}>
-        {saving ? 'Saving…' : 'Save'}{cloudSavePending && !saving && <span id="tb-autosave-dot" title="Auto-saving…" />}
-      </button>
+      {cloudSavePending && <span id="tb-autosave-dot" title="Auto-saving…" />}
       <button id="tb-reset" onClick={handleReset}>Reset</button>
+      <button
+        id="tb-hotkeys"
+        title="Keyboard shortcuts (Shift+?)"
+        className={hotkeysOpen ? 'tb-active' : ''}
+        onClick={() => setHotkeysOpen(!hotkeysOpen)}
+      ><Keyboard size={14} /></button>
     </div>
   );
 }

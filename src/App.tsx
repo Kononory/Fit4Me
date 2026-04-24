@@ -52,10 +52,15 @@ export function App() {
       if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
       if (ctrl && e.key === 'e') { e.preventDefault(); setActiveLayer(activeLayer === 'outline' ? 'nodes' : 'outline'); }
       if (e.shiftKey && e.key === '?' && activeLayer !== 'outline') { setHotkeysOpen(!hotkeysOpen); }
+      // ⌘1..⌘9 — switch flow tabs
+      if (ctrl && !e.shiftKey && e.key >= '1' && e.key <= '9') {
+        const idx = parseInt(e.key) - 1;
+        if (idx < flows.length) { e.preventDefault(); setActiveId(flows[idx].id); }
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [undo, redo, activeLayer, setActiveLayer, hotkeysOpen, setHotkeysOpen]);
+  }, [undo, redo, activeLayer, setActiveLayer, hotkeysOpen, setHotkeysOpen, flows, setActiveId]);
 
   // ── Edge picker state ─────────────────────────────────────────────────────
   const [pickerState, setPickerState] = useState<PickerState>(PICKER_INIT);
@@ -90,13 +95,6 @@ export function App() {
       {activeLayer === 'events'  && <EventsMap />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <ZoomControls />
-      {/* Floating ? button — bottom-right */}
-      <button
-        id="hk-float-btn"
-        title="Keyboard shortcuts (Shift+?)"
-        className={hotkeysOpen ? 'tb-active' : ''}
-        onClick={() => setHotkeysOpen(!hotkeysOpen)}
-      >?</button>
       <EdgePicker
         pickerState={pickerState}
         onClose={closePicker}

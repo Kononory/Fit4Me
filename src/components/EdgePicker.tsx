@@ -256,6 +256,17 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
     onClose();
   }, [toNode, pushUndo, updateActiveTree, getActive, onClose]);
 
+  const downloadCsv = useCallback(() => {
+    const rows = ['stage,percentage', ...data.map(d => `${d.s},${d.pct}`)].join('\n');
+    const blob = new Blob([rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${toNode?.label ?? 'analytics'}-funnel.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [data, toNode]);
+
   if (mode !== 'analytics' || !toNode) return null;
 
   const pw = 220;
@@ -284,7 +295,8 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
         <button className="ret-add-row" onClick={addRow}>+ Add stage</button>
       </div>
       <div className="ea-footer">
-        <button className="ret-reset ea-remove-btn" onClick={removeAnalytics}>× Remove analytics</button>
+        <button className="ret-reset ea-remove-btn" onClick={removeAnalytics}>× Remove</button>
+        <button className="ea-csv-btn" onClick={downloadCsv} title="Download as CSV">CSV ↓</button>
         <button className="ea-done-btn" onClick={onClose}>Done</button>
       </div>
     </div>,

@@ -317,32 +317,32 @@ svg#svgl.dimmed { opacity: 0.3; }
 #ghost .g-sub { font-size: 8px; opacity: 0.55; margin-top: 2px; display: none; }
 #ghost.has-target .g-sub { display: block; }
 
-/* ── Node handles (add child / add sibling) — solid circles ─────── */
+/* ── Node handles (add child / add sibling) — pill shapes ──────── */
 .nd-handle {
   position: absolute;
-  width: 12px; height: 12px;
-  border: none; border-radius: 50%;
+  border: none; border-radius: 4px;
   background: var(--foreground);
   cursor: pointer; opacity: 0;
-  transition: opacity 0.1s, transform 0.1s;
+  transition: opacity 0.1s, transform 0.1s, background 0.1s;
   z-index: 20; user-select: none;
 }
 .nd:hover .nd-handle { opacity: 1; }
-/* Right-center: add child — circle (connect / create child) */
+/* Always show handles on selected node, teal so they pop on dark bg */
+.s-active .nd-handle { opacity: 1; background: var(--teal); }
+/* Right-center: add child — vertical pill */
 .nd-handle-add-child {
-  right: -6px;
+  width: 8px; height: 14px;
+  right: -5px;
   top: 50%; transform: translateY(-50%);
 }
-.nd-handle-add-child:hover { transform: translateY(-50%) scale(1.25); }
-/* Bottom-center: add sibling — pill shape, muted color */
+.nd-handle-add-child:hover { transform: translateY(-50%) scale(1.2); }
+/* Bottom-center: add sibling — horizontal pill */
 .nd-handle-add-sib {
-  bottom: -6px;
-  left: 50%; transform: translateX(-50%);
-  border-radius: 3px;
   width: 14px; height: 8px;
-  background: var(--secondary-foreground);
+  bottom: -5px;
+  left: 50%; transform: translateX(-50%);
 }
-.nd-handle-add-sib:hover { transform: translateX(-50%) scale(1.2); background: var(--foreground); }
+.nd-handle-add-sib:hover { transform: translateX(-50%) scale(1.2); }
 
 /* ── Inline edit ────────────────────────────────────────────────── */
 .nd-input {
@@ -493,18 +493,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 #tb-free { font-size: 14px; padding: 0 7px; }
 #tb-free.tb-active { background: var(--teal); color: var(--primary-foreground); border-color: var(--teal); }
 
-/* ── Floating ? button (bottom-right) ───────────────────────────── */
-#hk-float-btn {
-  position: fixed; z-index: 60;
-  right: 52px; bottom: 20px;
-  width: 26px; height: 26px;
-  background: var(--background); border: 1.5px solid var(--foreground); border-radius: 2px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; cursor: pointer;
-  font-family: 'LatteraMonoLL','Space Mono',monospace;
-  transition: background 0.15s, color 0.15s; color: var(--foreground);
-}
-#hk-float-btn:hover, #hk-float-btn.tb-active { background: var(--foreground); color: var(--primary-foreground); }
+#tb-hotkeys.tb-active { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
 
 /* ── Zoom controls (bottom-left) ─────────────────────────────────── */
 #zoom-controls {
@@ -747,6 +736,13 @@ body:has(#flow-tabs.collapsed) #text-edit-panel {
   font-family: 'LatteraMonoLL','Space Mono',monospace;
 }
 .ea-remove-btn:hover { color: var(--destructive); }
+.ea-csv-btn {
+  background: none; border: 1px solid var(--border); border-radius: 3px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 8px;
+  color: var(--muted-foreground); padding: 3px 7px; cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.ea-csv-btn:hover { border-color: var(--foreground); color: var(--foreground); }
 .ea-done-btn {
   background: var(--foreground); color: var(--background); border: none; border-radius: 4px;
   font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 9px; font-weight: 700;
