@@ -113,9 +113,26 @@ api/
 - `getMultiSel()` callback (not the Set directly) is passed to `useDrag` to avoid stale closures
 
 ## Git
-- Active dev branch: `claude/add-text-steps-display-MPzeW`
+- Active dev branch: `claude/cleanup-components-simplify-editor-aEIra`
 - Deploy branch: `main`
 - Push with: `git push origin main`
+
+## Periodic refactoring sessions
+Every few feature sessions, one session should be dedicated to a full refactoring pass. Trigger when:
+- Dead code accumulates (unused files, orphaned API endpoints, stale imports)
+- TypeScript check (`tsc --noEmit`) exits non-zero
+- Build warnings appear (chunk size, deprecated options)
+- UX audit reveals 5+ friction points
+
+Refactoring session checklist:
+1. Run `tsc --noEmit` — fix all type errors
+2. Run `npm run build` — fix all build warnings
+3. Grep for `TODO / FIXME / HACK` — resolve or document
+4. Search for orphaned API endpoints (in `api/` but never called from `src/`)
+5. Search for dead files (imported nowhere, no entry point reference)
+6. Run UX audit: check all interactive elements have affordance (cursor, tooltip, label)
+7. Check all env variable names are consistently cased across `api/` files
+8. Update CLAUDE.md with any new patterns found
 
 ## Token efficiency report (on every new feature task)
 At the start of each implementation plan, include a one-line estimate:

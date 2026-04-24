@@ -11,7 +11,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending } = useStore();
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -186,7 +186,9 @@ export function Toolbar() {
           ⚠ {overlapCount} crossing{overlapCount > 1 ? 's' : ''} · Fix
         </button>
       )}
-      <button id="tb-save" disabled={saving} onClick={handleSave}>{saving ? 'Saving…' : 'Save'}</button>
+      <button id="tb-save" disabled={saving} onClick={handleSave}>
+        {saving ? 'Saving…' : 'Save'}{cloudSavePending && !saving && <span id="tb-autosave-dot" title="Auto-saving…" />}
+      </button>
       <button id="tb-reset" onClick={handleReset}>Reset</button>
     </div>
   );

@@ -90,7 +90,7 @@ export function App() {
       {activeLayer === 'events'  && <EventsMap />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <ZoomControls />
-      {/* Floating ? button — bottom-right, left of retention marker */}
+      {/* Floating ? button — bottom-right */}
       <button
         id="hk-float-btn"
         title="Keyboard shortcuts (Shift+?)"

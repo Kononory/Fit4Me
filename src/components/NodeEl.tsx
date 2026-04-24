@@ -171,7 +171,7 @@ export function NodeEl({ node: n, state, multiSel, onDragBegin, onSelect, onTogg
               autoFocus
               value={linkVal}
               onChange={e => setLinkVal(e.target.value)}
-              placeholder="Figma URL or fileKey||nodeId"
+              placeholder="Paste Figma frame URL"
               onKeyDown={e => {
                 e.stopPropagation();
                 if (e.key === 'Enter') {

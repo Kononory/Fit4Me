@@ -161,10 +161,15 @@ html, body {
 
 #toolbar button#tb-reset {
   background: transparent; color: var(--muted-foreground); border-color: var(--ring);
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left-width: 0;
+  box-shadow: -1px 0 0 0 var(--border);
 }
 
 #toolbar button#tb-reset:hover {
   background: var(--foreground); color: var(--card); border-color: var(--foreground);
+  box-shadow: none;
 }
 
 #toolbar button#tb-overlap {
@@ -177,6 +182,17 @@ html, body {
 
 #tb-status {
   font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+#tb-autosave-dot {
+  display: inline-block; width: 5px; height: 5px;
+  background: var(--teal); border-radius: 50%;
+  margin-left: 5px; vertical-align: middle;
+  animation: autosave-pulse 1.2s ease-in-out infinite;
+}
+@keyframes autosave-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 /* ── Viewport & canvas ──────────────────────────────────────────── */
@@ -312,18 +328,21 @@ svg#svgl.dimmed { opacity: 0.3; }
   z-index: 20; user-select: none;
 }
 .nd:hover .nd-handle { opacity: 1; }
-/* Right-center: add child */
+/* Right-center: add child — circle (connect / create child) */
 .nd-handle-add-child {
   right: -6px;
   top: 50%; transform: translateY(-50%);
 }
 .nd-handle-add-child:hover { transform: translateY(-50%) scale(1.25); }
-/* Bottom-center: add sibling */
+/* Bottom-center: add sibling — pill shape, muted color */
 .nd-handle-add-sib {
   bottom: -6px;
   left: 50%; transform: translateX(-50%);
+  border-radius: 3px;
+  width: 14px; height: 8px;
+  background: var(--secondary-foreground);
 }
-.nd-handle-add-sib:hover { transform: translateX(-50%) scale(1.25); }
+.nd-handle-add-sib:hover { transform: translateX(-50%) scale(1.2); background: var(--foreground); }
 
 /* ── Inline edit ────────────────────────────────────────────────── */
 .nd-input {
@@ -508,8 +527,10 @@ svg#svgl.dimmed { opacity: 0.3; }
   min-width: 36px; text-align: center; cursor: pointer;
   border-left: 1px solid var(--input); border-right: 1px solid var(--input);
   padding: 0 2px; line-height: 26px;
+  text-decoration: underline dotted var(--ring);
+  text-underline-offset: 2px;
 }
-#zoom-label:hover { color: var(--foreground); }
+#zoom-label:hover { color: var(--foreground); text-decoration-color: var(--foreground); }
 
 /* ── Marquee selection rectangle ─────────────────────────────────── */
 #marquee {

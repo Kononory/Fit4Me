@@ -10,9 +10,13 @@ const cloudSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 export function scheduleCloudSave(flow: Flow) {
   const existing = cloudSaveTimers.get(flow.id);
   if (existing) clearTimeout(existing);
+  useStore.getState().setCloudSavePending(true);
   cloudSaveTimers.set(flow.id, setTimeout(() => {
-    saveFlowRemote(flow);
+    saveFlowRemote(flow).finally(() => {
+      if (cloudSaveTimers.size === 0) useStore.getState().setCloudSavePending(false);
+    });
     cloudSaveTimers.delete(flow.id);
+    if (cloudSaveTimers.size === 0) useStore.getState().setCloudSavePending(false);
   }, 2000));
 }
 
@@ -87,6 +91,8 @@ interface AppStore {
   setEvmZoom: (zoom: number) => void;
   freeMode: boolean;
   setFreeMode: (v: boolean) => void;
+  cloudSavePending: boolean;
+  setCloudSavePending: (v: boolean) => void;
   hotkeysOpen: boolean;
   setHotkeysOpen: (v: boolean) => void;
   figmaTokenOpen: boolean;
@@ -223,6 +229,8 @@ export const useStore = create<AppStore>((set, get) => {
     setEvmZoom: (evmZoom) => set({ evmZoom: Math.min(3, Math.max(0.25, evmZoom)) }),
     freeMode: false,
     setFreeMode: (freeMode) => set({ freeMode }),
+    cloudSavePending: false,
+    setCloudSavePending: (cloudSavePending) => set({ cloudSavePending }),
     hotkeysOpen: false,
     setHotkeysOpen: (hotkeysOpen) => set({ hotkeysOpen }),
     figmaTokenOpen: false,
