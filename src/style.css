@@ -423,6 +423,31 @@ svg#svgl.dimmed { opacity: 0.3; }
 }
 .edge-label-input::placeholder { color: var(--ring); }
 
+/* ── Figma dropdown ─────────────────────────────────────────────── */
+#tb-figma-wrap { position: relative; }
+
+#tb-figma-toggle { display: flex; align-items: center; gap: 5px; }
+
+#tb-figma-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 4px; min-width: 120px; z-index: 200;
+}
+
+.tb-figma-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  background: transparent; color: var(--foreground);
+  border: none; border-radius: 2px;
+  padding: 6px 10px; cursor: pointer; text-align: left;
+  transition: background 0.12s;
+}
+.tb-figma-item:hover:not(:disabled) { background: var(--accent); }
+.tb-figma-item:disabled { opacity: 0.4; cursor: default; }
+
 /* ── Toolbar undo/redo buttons ──────────────────────────────────── */
 #tb-undo, #tb-redo {
   font-size: 15px; padding: 0 7px; line-height: 1;

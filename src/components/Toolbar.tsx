@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown } from 'lucide-react';
 import { useStore } from '../store';
 import { saveFlowRemote } from '../storage';
 import { cloneTree, addChildNode } from '../tree';
@@ -15,6 +15,17 @@ export function Toolbar() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [figmaMenuOpen, setFigmaMenuOpen] = useState(false);
+  const figmaMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!figmaMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!figmaMenuRef.current?.contains(e.target as Node)) setFigmaMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [figmaMenuOpen]);
 
   // Show ↺ button only when a saved import config exists for the active flow
   const hasSyncConfig = !!getFigmaImportConfig(activeId);
@@ -142,23 +153,33 @@ export function Toolbar() {
         ><Move size={14} /></button>
       )}
       {activeLayer === 'nodes' && (
-        <button id="tb-figma" title="Figma token settings" onClick={() => setFigmaTokenOpen(true)}><KeyRound size={14} /></button>
-      )}
-      {activeLayer === 'nodes' && (
-        <button id="tb-figma-import" title="Import screens from Figma page" onClick={() => setFigmaImportOpen(true)}><Download size={14} /></button>
-      )}
-      {activeLayer === 'nodes' && (
-        <button id="tb-locale-check" title="Locale check — paste any Figma frame URL" onClick={() => setLocaleCheckOpen(true)}><Languages size={14} /></button>
-      )}
-      {activeLayer === 'nodes' && hasSyncConfig && (
-        <button
-          id="tb-figma-resync"
-          title="Re-sync screens from Figma (last page)"
-          disabled={syncing}
-          onClick={handleResync}
-        >
-          <RefreshCw size={14} className={syncing ? 'fig-spin' : ''} />
-        </button>
+        <div id="tb-figma-wrap" ref={figmaMenuRef}>
+          <button
+            id="tb-figma-toggle"
+            className={figmaMenuOpen ? 'tb-active' : ''}
+            onClick={() => setFigmaMenuOpen(v => !v)}
+          >
+            Figma <ChevronDown size={10} />
+          </button>
+          {figmaMenuOpen && (
+            <div id="tb-figma-menu">
+              <button className="tb-figma-item" onClick={() => { setFigmaTokenOpen(true); setFigmaMenuOpen(false); }}>
+                <KeyRound size={12} /> Token
+              </button>
+              <button className="tb-figma-item" onClick={() => { setFigmaImportOpen(true); setFigmaMenuOpen(false); }}>
+                <Download size={12} /> Import
+              </button>
+              {hasSyncConfig && (
+                <button className="tb-figma-item" disabled={syncing} onClick={() => { handleResync(); setFigmaMenuOpen(false); }}>
+                  <RefreshCw size={12} className={syncing ? 'fig-spin' : ''} /> Resync
+                </button>
+              )}
+              <button className="tb-figma-item" onClick={() => { setLocaleCheckOpen(true); setFigmaMenuOpen(false); }}>
+                <Languages size={12} /> Locale
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {activeLayer === 'nodes' && overlapCount > 0 && (
         <button id="tb-overlap" title="Edge crossings detected — click to auto-arrange" onClick={handleAutoArrange}>
