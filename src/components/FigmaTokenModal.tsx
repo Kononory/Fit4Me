@@ -17,10 +17,11 @@ export function FigmaTokenModal() {
     setTimeout(close, 700);
   };
 
+  const saveAndClose = () => { setPAT(val); close(); };
   const clear = () => { setPAT(''); setVal(''); setSaved(false); };
 
   return (
-    <div className="fig-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+    <div className="fig-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) saveAndClose(); }}>
       <div className="fig-modal-card" onClick={e => e.stopPropagation()}>
         <div className="fig-modal-header">
           <span className="fig-modal-title">Figma Access Token</span>
@@ -38,7 +39,8 @@ export function FigmaTokenModal() {
             onChange={e => { setVal(e.target.value); setSaved(false); }}
             placeholder="figd_..."
             autoFocus
-            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); }}
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') saveAndClose(); }}
+            onBlur={() => { if (val.trim()) setPAT(val); }}
           />
           <button className="fig-preview-icon-btn" onClick={() => setShow(s => !s)} title={show ? 'Hide' : 'Show'}>
             {show ? <EyeOff size={14} /> : <Eye size={14} />}

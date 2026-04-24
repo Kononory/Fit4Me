@@ -246,6 +246,8 @@ svg#svgl.dimmed { opacity: 0.3; }
   cursor: grab; user-select: none; z-index: 2;
 }
 .nd:active { cursor: grabbing; }
+.nd:hover { z-index: 4; }
+.s-active { z-index: 4; }
 .sub { font-size: 8.5px; opacity: 0.48; margin-top: 1px; }
 
 /* Type variants */
@@ -729,6 +731,30 @@ body:has(#flow-tabs.collapsed) #text-edit-panel {
 .ea-close:hover { color: var(--destructive); }
 .ea-body { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
 .ea-row { display: flex; align-items: center; gap: 4px; }
+
+/* Inputs inside analytics rows */
+.ea-inp {
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: var(--foreground); background: var(--card);
+  border: 1px solid var(--border); border-radius: 2px;
+  padding: 2px 4px; outline: none;
+}
+.ea-inp:focus { border-color: var(--foreground); background: var(--background); }
+.ea-inp-lbl { width: 52px; }
+.ea-inp-pct { width: 42px; text-align: right; }
+.ea-pct-unit { font-size: 9px; color: var(--muted-foreground); flex-shrink: 0; }
+.ea-row-del {
+  background: none; border: none; color: var(--ring); cursor: pointer;
+  font-size: 12px; padding: 0 2px; line-height: 1;
+}
+.ea-row-del:hover { color: var(--destructive); }
+.ea-add-row {
+  margin-top: 4px; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; color: var(--secondary-foreground); background: none;
+  border: 1px dashed var(--border); border-radius: 2px; padding: 3px 6px;
+  cursor: pointer; text-align: left; width: 100%;
+}
+.ea-add-row:hover { border-color: var(--foreground); color: var(--foreground); }
 .ea-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 6px; }
 .ea-remove-btn {
   margin-top: 0; font-size: 8px; color: var(--muted-foreground);
@@ -737,6 +763,7 @@ body:has(#flow-tabs.collapsed) #text-edit-panel {
 }
 .ea-remove-btn:hover { color: var(--destructive); }
 .ea-csv-btn {
+  display: inline-block;
   background: none; border: 1px solid var(--border); border-radius: 3px;
   font-family: 'LatteraMonoLL','Space Mono',monospace; font-size: 8px;
   color: var(--muted-foreground); padding: 3px 7px; cursor: pointer;

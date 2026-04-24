@@ -256,16 +256,23 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
     onClose();
   }, [toNode, pushUndo, updateActiveTree, getActive, onClose]);
 
-  const downloadCsv = useCallback(() => {
-    const rows = ['stage,percentage', ...data.map(d => `${d.s},${d.pct}`)].join('\n');
-    const blob = new Blob([rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${toNode?.label ?? 'analytics'}-funnel.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [data, toNode]);
+  const uploadCsv = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = (reader.result as string).trim().split('\n');
+      const parsed: RetentionPoint[] = [];
+      for (const line of lines) {
+        const [s, pctStr] = line.split(',').map(p => p.trim());
+        const pct = parseFloat(pctStr);
+        if (s && !isNaN(pct)) parsed.push({ s, pct: Math.min(100, Math.max(0, pct)) });
+      }
+      if (parsed.length >= 2) { setData(parsed); syncData(parsed); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [syncData]);
 
   if (mode !== 'analytics' || !toNode) return null;
 
@@ -282,21 +289,24 @@ export function EdgeAnalytics({ pickerState, onClose }: AnalyticsProps) {
       <div className="ea-body">
         {data.map((pt, i) => (
           <div key={i} className="ea-row">
-            <input className="ret-inp ret-inp-lbl" value={pt.s} placeholder="label"
+            <input className="ea-inp ea-inp-lbl" value={pt.s} placeholder="label"
               onChange={e => updateRow(i, { s: e.target.value || pt.s })} />
-            <input className="ret-inp ret-inp-pct" type="number" min={0} max={100} step={0.1} value={pt.pct}
+            <input className="ea-inp ea-inp-pct" type="number" min={0} max={100} step={0.1} value={pt.pct}
               onChange={e => updateRow(i, { pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })} />
-            <span className="ret-pct-unit">%</span>
+            <span className="ea-pct-unit">%</span>
             {data.length > 2 && (
-              <button className="ret-row-del" onClick={() => deleteRow(i)}>×</button>
+              <button className="ea-row-del" onClick={() => deleteRow(i)}>×</button>
             )}
           </div>
         ))}
-        <button className="ret-add-row" onClick={addRow}>+ Add stage</button>
+        <button className="ea-add-row" onClick={addRow}>+ Add stage</button>
       </div>
       <div className="ea-footer">
-        <button className="ret-reset ea-remove-btn" onClick={removeAnalytics}>× Remove</button>
-        <button className="ea-csv-btn" onClick={downloadCsv} title="Download as CSV">CSV ↓</button>
+        <button className="ea-remove-btn" onClick={removeAnalytics}>× Remove</button>
+        <label className="ea-csv-btn" title="Import from CSV">
+          CSV ↑
+          <input type="file" accept=".csv" style={{ display: 'none' }} onChange={uploadCsv} />
+        </label>
         <button className="ea-done-btn" onClick={onClose}>Done</button>
       </div>
     </div>,
