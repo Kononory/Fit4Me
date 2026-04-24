@@ -14,7 +14,7 @@ interface FigmaFile {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { fileKey, token } = req.query as Record<string, string>;
-  const figmaToken = process.env['fit4me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
+  const figmaToken = process.env['Fit4Me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
   if (!fileKey || !figmaToken)
     return res.status(400).json({ error: 'Missing params: fileKey, token' });
 

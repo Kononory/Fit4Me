@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { fileKey, nodeId, token, locales } = req.body ?? {};
-  const figmaToken = process.env['fit4me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
+  const figmaToken = process.env['Fit4Me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
   if (!fileKey || !nodeId || !figmaToken || !Array.isArray(locales) || locales.length === 0)
     return res.status(400).json({ error: 'Missing params' });
 
