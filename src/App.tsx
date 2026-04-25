@@ -11,7 +11,6 @@ import { EventsMap } from './components/EventsMap';
 import { HotkeysPanel } from './components/HotkeysPanel';
 import { AuthModal } from './components/AuthModal';
 import { ClaimModal } from './components/ClaimModal';
-import { ShareModal } from './components/ShareModal';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
 import type { TreeNode, CrossEdge, Flow } from './types';
@@ -26,7 +25,6 @@ export function App() {
     user, setUser, setAuthLoading, authModalOpen,
     sharedToken, sharedPermission,
     setSharedToken, setSharedPermission,
-    shareModalOpen, setShareModalOpen,
   } = useStore();
 
   const [claimFlows, setClaimFlows] = useState<Flow[] | null>(null);
@@ -176,7 +174,6 @@ export function App() {
       <EdgeAnalytics pickerState={pickerState} onClose={closePicker} />
       {authModalOpen && <AuthModal />}
       {claimFlows && <ClaimModal localFlows={claimFlows} onDone={handleClaimDone} />}
-      {shareModalOpen && <ShareModal onClose={() => setShareModalOpen(false)} />}
     </div>
   );
 }

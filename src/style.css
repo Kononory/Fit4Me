@@ -659,13 +659,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 .sh-create-view:hover:not(:disabled) { background: #E8F2E6; border-color: #8cba87; }
 .sh-create-edit:hover:not(:disabled) { background: #EEEAFF; border-color: #9B8FD4; }
 
-/* Toolbar: share button + shared mode badge */
-#tb-share {
-  background: none; border: 1.5px solid var(--border);
-  border-radius: 3px; padding: 4px 7px; cursor: pointer;
-  color: var(--muted-foreground);
-}
-#tb-share:hover { color: var(--foreground); background: var(--accent); }
+/* Toolbar: shared mode badge */
 #tb-shared-badge {
   display: flex; align-items: center; gap: 5px;
   font-size: 10px; font-weight: 600; padding: 3px 8px;

@@ -12,9 +12,9 @@ interface ShareLink {
   last_accessed_at: string | null;
 }
 
-export function ShareModal({ onClose }: { onClose: () => void }) {
-  const { getActive } = useStore();
-  const flow = getActive();
+export function ShareModal({ flowId, onClose }: { flowId: string; onClose: () => void }) {
+  const { flows } = useStore();
+  const flow = flows.find(f => f.id === flowId) ?? flows[0];
   const [shares, setShares] = useState<ShareLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState<'view' | 'edit' | null>(null);

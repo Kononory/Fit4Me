@@ -5,6 +5,7 @@ import { parseOutline, treeToOutline, BLANK_OUTLINE } from '../parser';
 import { useStore } from '../store';
 import { deleteFlowRemote, saveFlowRemote } from '../storage';
 import { encodeFlow } from '../utils';
+import { ShareModal } from './ShareModal';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 function genId() { return `flow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
@@ -21,13 +22,14 @@ function downloadFlowAsOutline(flow: Flow) {
 type ModalState = null | 'new-choice' | 'new-text';
 
 export function FlowTabs() {
-  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen, activeLayer, setActiveLayer, leftSidebarCollapsed, setLeftSidebarCollapsed } = useStore();
+  const { flows, activeId, setFlows, setActiveId, setSel, setSelNodeId, setFigmaImportOpen, activeLayer, setActiveLayer, leftSidebarCollapsed, setLeftSidebarCollapsed, user } = useStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [textInput, setTextInput] = useState('');
   const [parseErr, setParseErr] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState('');
+  const [shareFlowId, setShareFlowId] = useState<string | null>(null);
   const [peeking, setPeeking] = useState(false);
   const peekTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,11 +69,16 @@ export function FlowTabs() {
   }, [flows, renameVal, setFlows]);
 
   const handleShare = useCallback((flow: Flow) => {
+    if (user) {
+      setShareFlowId(flow.id);
+      return;
+    }
+    // Fallback for anonymous users: encode flow in URL hash
     const url = `${location.origin}${location.pathname}#share=${encodeFlow(flow)}`;
     navigator.clipboard.writeText(url).catch(() => prompt('Copy share link:', url));
     setCopiedId(flow.id);
     setTimeout(() => setCopiedId(null), 1800);
-  }, []);
+  }, [user]);
 
   const addFlow = useCallback((flow: Flow) => {
     const updated = [...flows, flow];
@@ -267,6 +274,12 @@ export function FlowTabs() {
             </div>
           </div>
         </div>
+      )}
+      {shareFlowId && (
+        <ShareModal
+          flowId={shareFlowId}
+          onClose={() => setShareFlowId(null)}
+        />
       )}
     </>
   );

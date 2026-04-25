@@ -125,8 +125,6 @@ interface AppStore {
   sharedPermission: 'view' | 'edit' | null;
   setSharedToken: (t: string | null) => void;
   setSharedPermission: (p: 'view' | 'edit' | null) => void;
-  shareModalOpen: boolean;
-  setShareModalOpen: (v: boolean) => void;
 
   // ── Auth ───────────────────────────────────────────────────────────
   user: User | null;
@@ -279,8 +277,6 @@ export const useStore = create<AppStore>((set, get) => {
     sharedPermission: null,
     setSharedToken: (sharedToken) => set({ sharedToken }),
     setSharedPermission: (sharedPermission) => set({ sharedPermission }),
-    shareModalOpen: false,
-    setShareModalOpen: (shareModalOpen) => set({ shareModalOpen }),
 
     // ── Auth ─────────────────────────────────────────────────────────
     user: null,
