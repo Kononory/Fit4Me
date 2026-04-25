@@ -159,41 +159,46 @@ html, body {
   opacity: 0.45; cursor: default;
 }
 
-#toolbar button#tb-reset {
-  background: transparent; color: var(--muted-foreground); border-color: var(--ring);
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left-width: 0;
-  box-shadow: -1px 0 0 0 var(--border);
-}
-
-#toolbar button#tb-reset:hover {
-  background: var(--foreground); color: var(--card); border-color: var(--foreground);
-  box-shadow: none;
-}
-
-#toolbar button#tb-overlap {
-  background: #FDF4E7; color: var(--yellow); border-color: #DEB87A;
-  font-size: 11px; padding: 0 8px; white-space: nowrap;
-}
-#toolbar button#tb-overlap:hover {
-  background: var(--yellow); color: var(--primary-foreground); border-color: var(--yellow);
-}
-
 #tb-status {
   font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
 }
 
-#tb-autosave-dot {
-  display: inline-block; width: 5px; height: 5px;
-  background: var(--teal); border-radius: 50%;
-  margin-left: 5px; vertical-align: middle;
+/* ── ⋯ more menu ─────────────────────────────────────────────────── */
+#tb-more-wrap { position: relative; }
+#tb-more { position: relative; padding: 0 7px; }
+#tb-more-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal);
   animation: autosave-pulse 1.2s ease-in-out infinite;
 }
 @keyframes autosave-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+#tb-more-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 4px; min-width: 148px; z-index: 200;
+}
+.tb-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  background: transparent; color: var(--foreground);
+  border: none; border-radius: 2px;
+  padding: 6px 10px; cursor: pointer; text-align: left; width: 100%;
+  transition: background 0.12s;
+}
+.tb-menu-item:hover:not(:disabled) { background: var(--accent); }
+.tb-menu-item:disabled { opacity: 0.4; cursor: default; }
+.tb-menu-warn { color: var(--yellow); }
+.tb-menu-warn:hover:not(:disabled) { background: #FDF4E7; }
+.tb-menu-signout { color: var(--destructive); }
+.tb-menu-signout:hover:not(:disabled) { background: #FCECEA; }
+.tb-menu-sep { height: 1px; background: var(--border); margin: 3px 4px; }
 
 /* ── Viewport & canvas ──────────────────────────────────────────── */
 #vp {
@@ -256,8 +261,7 @@ svg#svgl.dimmed { opacity: 0.3; }
 .t-tab  { font-weight: 700; }
 
 /* Branch selection states */
-.s-active  { background: var(--foreground) !important; color: var(--card) !important; border-color: var(--foreground) !important; border-style: solid !important; }
-.s-active .sub { opacity: 0.32; }
+.s-active  { outline: 2px solid var(--teal); outline-offset: 2px; }
 .s-partial { border-color: var(--muted-foreground) !important; color: var(--muted-foreground) !important; background: var(--card) !important; }
 .s-dim     { opacity: 0.28 !important; }
 .s-multi   { outline: 1.5px dashed var(--teal); outline-offset: 2px; }
@@ -329,8 +333,9 @@ svg#svgl.dimmed { opacity: 0.3; }
   z-index: 20; user-select: none;
 }
 .nd:hover .nd-handle { opacity: 1; }
-/* Always show handles on selected node, teal so they pop on dark bg */
-.s-active .nd-handle { opacity: 1; background: var(--teal); }
+.s-active .nd-handle { background: var(--foreground); animation: nd-handle-pulse 2s ease-in-out infinite; }
+.s-active .nd-handle:hover { animation-play-state: paused; opacity: 1; }
+@keyframes nd-handle-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 /* Right-center: add child — vertical pill */
 .nd-handle-add-child {
   width: 8px; height: 14px;
@@ -445,30 +450,6 @@ svg#svgl.dimmed { opacity: 0.3; }
 .edge-label-input::placeholder { color: var(--ring); }
 
 /* ── Figma dropdown ─────────────────────────────────────────────── */
-#tb-figma-wrap { position: relative; }
-
-#tb-figma-toggle { display: flex; align-items: center; gap: 5px; }
-
-#tb-figma-menu {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  background: var(--card); border: 1.5px solid var(--border); border-radius: 3px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 4px; min-width: 120px; z-index: 200;
-}
-
-.tb-figma-item {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'LatteraMonoLL','Space Mono',monospace;
-  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
-  background: transparent; color: var(--foreground);
-  border: none; border-radius: 2px;
-  padding: 6px 10px; cursor: pointer; text-align: left;
-  transition: background 0.12s;
-}
-.tb-figma-item:hover:not(:disabled) { background: var(--accent); }
-.tb-figma-item:disabled { opacity: 0.4; cursor: default; }
-
 /* ── Toolbar undo/redo buttons ──────────────────────────────────── */
 #tb-undo, #tb-redo {
   font-size: 15px; padding: 0 7px; line-height: 1;
@@ -491,33 +472,6 @@ svg#svgl.dimmed { opacity: 0.3; }
 /* ── Toolbar special buttons ─────────────────────────────────────── */
 #tb-text { font-size: 15px; padding: 0 8px; letter-spacing: -0.5px; }
 #tb-text.tb-active { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
-
-#tb-free { font-size: 14px; padding: 0 7px; }
-#tb-free.tb-active { background: var(--teal); color: var(--primary-foreground); border-color: var(--teal); }
-
-#tb-hotkeys.tb-active { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
-
-/* ── Auth toolbar buttons ─────────────────────────────────────────── */
-#tb-signin {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; padding: 0 10px;
-  background: var(--foreground); color: var(--card); border-color: var(--foreground);
-}
-#tb-signin:hover { opacity: 0.85; }
-
-#tb-user {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; padding: 0 8px;
-}
-#tb-user:hover { background: #FCECEA; border-color: var(--destructive); color: var(--destructive); }
-#tb-user:hover #tb-user-avatar { background: var(--destructive); }
-
-#tb-user-avatar {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--teal); color: var(--primary-foreground);
-  font-size: 9px; font-weight: 600; flex-shrink: 0;
-}
 
 /* ── Auth modal ───────────────────────────────────────────────────── */
 .auth-backdrop {
