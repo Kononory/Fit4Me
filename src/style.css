@@ -595,6 +595,91 @@ svg#svgl.dimmed { opacity: 0.3; }
   padding: 4px 8px;
 }
 
+/* ── Share modal (sh-) ───────────────────────────────────────────── */
+.sh-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35);
+}
+.sh-card {
+  background: var(--background); border: 1.5px solid var(--border);
+  border-radius: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  width: 380px; max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column;
+  font-family: 'LatteraMonoLL','Space Mono',monospace;
+}
+.sh-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--foreground);
+}
+.sh-header span { flex: 1; }
+.sh-close {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--muted-foreground); border-radius: 3px;
+}
+.sh-close:hover { background: var(--accent); color: var(--foreground); }
+.sh-body { padding: 12px 16px; min-height: 60px; }
+.sh-empty { font-size: 11px; color: var(--muted-foreground); text-align: center; padding: 12px 0; }
+.sh-list { display: flex; flex-direction: column; gap: 6px; }
+.sh-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--muted); border-radius: 4px; padding: 6px 8px;
+}
+.sh-badge {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600; padding: 2px 6px;
+  border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.sh-badge-view { background: #E8F2E6; color: #3a7a34; }
+.sh-badge-edit { background: #EEEAFF; color: #5a4fb8; }
+.sh-token { flex: 1; font-size: 10px; color: var(--muted-foreground); }
+.sh-count { font-size: 10px; color: var(--muted-foreground); white-space: nowrap; }
+.sh-copy, .sh-revoke {
+  background: none; border: none; cursor: pointer; padding: 3px 5px;
+  border-radius: 3px; color: var(--muted-foreground); line-height: 1;
+}
+.sh-copy:hover { background: var(--accent); color: var(--foreground); }
+.sh-revoke:hover { background: #FCECEA; color: var(--destructive); }
+.sh-footer {
+  display: flex; gap: 8px; padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.sh-create {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 11px; font-family: 'LatteraMonoLL','Space Mono',monospace;
+  padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--background);
+  color: var(--foreground); font-weight: 500;
+  transition: background 0.12s;
+}
+.sh-create:hover:not(:disabled) { background: var(--accent); }
+.sh-create:disabled { opacity: 0.5; cursor: not-allowed; }
+.sh-create-view:hover:not(:disabled) { background: #E8F2E6; border-color: #8cba87; }
+.sh-create-edit:hover:not(:disabled) { background: #EEEAFF; border-color: #9B8FD4; }
+
+/* Toolbar: share button + shared mode badge */
+#tb-share {
+  background: none; border: 1.5px solid var(--border);
+  border-radius: 3px; padding: 4px 7px; cursor: pointer;
+  color: var(--muted-foreground);
+}
+#tb-share:hover { color: var(--foreground); background: var(--accent); }
+#tb-shared-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; padding: 3px 8px;
+  border-radius: 3px; letter-spacing: 0.03em;
+  background: var(--muted); color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+
+/* View-only shared mode: hide all edit handles */
+[data-shared="view"] .nd-handle-add-child,
+[data-shared="view"] .nd-handle-add-sib {
+  display: none !important;
+}
+
 /* ── Zoom controls (bottom-left) ─────────────────────────────────── */
 #zoom-controls {
   position: fixed; z-index: 60;

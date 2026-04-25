@@ -3,19 +3,24 @@ import type { Flow, TreeNode, DragState } from './types';
 import type { User } from './lib/supabase';
 import { cloneTree } from './tree';
 import { DEFAULT_TREE } from './data';
-import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveFlowRemote } from './storage';
+import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveFlowRemote, saveSharedFlow } from './storage';
 
 // ── Debounced cloud save ───────────────────────────────────────────────────────
 const cloudSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function scheduleCloudSave(flow: Flow) {
-  // Skip cloud save for anonymous users
-  if (!useStore.getState().user) return;
+  const state = useStore.getState();
+  const isSharedEdit = state.sharedToken && state.sharedPermission === 'edit';
+  if (!state.user && !isSharedEdit) return;
   const existing = cloudSaveTimers.get(flow.id);
   if (existing) clearTimeout(existing);
-  useStore.getState().setCloudSavePending(true);
+  state.setCloudSavePending(true);
   cloudSaveTimers.set(flow.id, setTimeout(() => {
-    saveFlowRemote(flow).finally(() => {
+    const token = useStore.getState().sharedToken;
+    const savePromise = token
+      ? saveSharedFlow(token, flow)
+      : saveFlowRemote(flow).then(() => {});
+    savePromise.finally(() => {
       if (cloudSaveTimers.size === 0) useStore.getState().setCloudSavePending(false);
     });
     cloudSaveTimers.delete(flow.id);
@@ -114,6 +119,14 @@ interface AppStore {
   setRightSidebarCollapsed: (v: boolean) => void;
   overlapCount: number;
   setOverlapCount: (n: number) => void;
+
+  // ── Shared mode ────────────────────────────────────────────────────
+  sharedToken: string | null;
+  sharedPermission: 'view' | 'edit' | null;
+  setSharedToken: (t: string | null) => void;
+  setSharedPermission: (p: 'view' | 'edit' | null) => void;
+  shareModalOpen: boolean;
+  setShareModalOpen: (v: boolean) => void;
 
   // ── Auth ───────────────────────────────────────────────────────────
   user: User | null;
@@ -260,6 +273,14 @@ export const useStore = create<AppStore>((set, get) => {
     setRightSidebarCollapsed: (v) => { writeLS(LS_RIGHT_COLLAPSED, v); set({ rightSidebarCollapsed: v }); },
     overlapCount: 0,
     setOverlapCount: (overlapCount) => set({ overlapCount }),
+
+    // ── Shared mode ──────────────────────────────────────────────────
+    sharedToken: null,
+    sharedPermission: null,
+    setSharedToken: (sharedToken) => set({ sharedToken }),
+    setSharedPermission: (sharedPermission) => set({ sharedPermission }),
+    shareModalOpen: false,
+    setShareModalOpen: (shareModalOpen) => set({ shareModalOpen }),
 
     // ── Auth ─────────────────────────────────────────────────────────
     user: null,

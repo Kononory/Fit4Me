@@ -16,7 +16,7 @@ CREATE POLICY "owner_all" ON flowchart_trees
 -- ── Step 3: Share tokens table ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS flow_shares (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  flow_id     UUID NOT NULL REFERENCES flowchart_trees(id) ON DELETE CASCADE,
+  flow_id     TEXT NOT NULL REFERENCES flowchart_trees(id) ON DELETE CASCADE,
   token       TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(24), 'base64url'),
   permission  TEXT NOT NULL CHECK (permission IN ('view', 'edit')),
   created_by  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

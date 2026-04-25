@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown, Keyboard, LogIn, LogOut } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown, Keyboard, LogIn, LogOut, Share2, Eye, Edit3 } from 'lucide-react';
 import { useStore } from '../store';
 import { supabase } from '../lib/supabase';
 import { cloneTree, addChildNode } from '../tree';
@@ -11,7 +11,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending, hotkeysOpen, setHotkeysOpen, user, setAuthModalOpen } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending, hotkeysOpen, setHotkeysOpen, user, setAuthModalOpen, sharedToken, sharedPermission, setShareModalOpen } = useStore();
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [figmaMenuOpen, setFigmaMenuOpen] = useState(false);
@@ -172,8 +172,22 @@ export function Toolbar() {
         </button>
       )}
       {cloudSavePending && <span id="tb-autosave-dot" title="Auto-saving…" />}
-      <button id="tb-reset" onClick={handleReset}>Reset</button>
-      {supabase && (
+      {sharedToken ? (
+        <span id="tb-shared-badge" title="You are viewing a shared flow">
+          {sharedPermission === 'edit' ? <Edit3 size={11} /> : <Eye size={11} />}
+          {sharedPermission === 'edit' ? 'Shared · editing' : 'Shared · view only'}
+        </span>
+      ) : (
+        <>
+          <button id="tb-reset" onClick={handleReset}>Reset</button>
+          {supabase && user && (
+            <button id="tb-share" title="Share this flow" onClick={() => setShareModalOpen(true)}>
+              <Share2 size={13} />
+            </button>
+          )}
+        </>
+      )}
+      {!sharedToken && supabase && (
         user ? (
           <button
             id="tb-user"

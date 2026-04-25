@@ -115,6 +115,34 @@ export async function listFlowsRemote(): Promise<FlowMeta[] | null> {
   } catch { return null; }
 }
 
+// ── Shared flow: load by token (anonymous access) ────────────────────────────
+
+export type SharedFlow = Flow & { permission: 'view' | 'edit' };
+
+export async function loadSharedFlow(token: string): Promise<SharedFlow | null> {
+  try {
+    const res = await fetch(`/api/shared?token=${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    return await res.json() as SharedFlow;
+  } catch { return null; }
+}
+
+export async function saveSharedFlow(token: string, flow: Flow): Promise<void> {
+  try {
+    await fetch(`/api/shared?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tree:           cloneTree(flow.tree),
+        crossEdges:     flow.crossEdges     ?? [],
+        retentionData:  flow.retentionData  ?? [],
+        eventEdges:     flow.eventEdges     ?? [],
+        eventPositions: flow.eventPositions ?? {},
+      }),
+    });
+  } catch { /* silent */ }
+}
+
 // ── Remote: claim local flows into authenticated account ──────────────────────
 
 export async function claimFlowsRemote(flows: Flow[]): Promise<boolean> {

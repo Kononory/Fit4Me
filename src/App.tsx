@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useStore, flushCloudSaves } from './store';
 import { ZoomControls } from './components/ZoomControls';
 import { decodeSharedFlow } from './utils';
-import { saveFlowRemote, loadFlowsRemote } from './storage';
+import { saveFlowRemote, loadFlowsRemote, loadSharedFlow } from './storage';
 import { Toolbar } from './components/Toolbar';
 import { FlowTabs } from './components/FlowTabs';
 import { Viewport } from './components/Viewport';
@@ -11,6 +11,7 @@ import { EventsMap } from './components/EventsMap';
 import { HotkeysPanel } from './components/HotkeysPanel';
 import { AuthModal } from './components/AuthModal';
 import { ClaimModal } from './components/ClaimModal';
+import { ShareModal } from './components/ShareModal';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
 import type { TreeNode, CrossEdge, Flow } from './types';
@@ -23,6 +24,9 @@ export function App() {
     hotkeysOpen, setHotkeysOpen,
     undo, redo,
     user, setUser, setAuthLoading, authModalOpen,
+    sharedToken, sharedPermission,
+    setSharedToken, setSharedPermission,
+    shareModalOpen, setShareModalOpen,
   } = useStore();
 
   const [claimFlows, setClaimFlows] = useState<Flow[] | null>(null);
@@ -42,7 +46,8 @@ export function App() {
       setUser(newUser);
 
       if (newUser && !prevUser) {
-        // Just signed in — check for local flows worth claiming
+        // Just signed in — check for local flows worth claiming (skip in shared mode)
+        if (useStore.getState().sharedToken) return;
         const local = useStore.getState().flows;
         const isDefaultEmpty = local.length === 1 && local[0].id === 'default'
           && !local[0].tree.c?.length;
@@ -66,7 +71,7 @@ export function App() {
 
   // ── Cloud-first load on mount (authenticated users only) ─────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!user || sharedToken) return; // skip if in shared mode
     loadFlowsRemote().then(remote => {
       if (remote && remote.length > 0) setFlows(remote);
     });
@@ -76,33 +81,53 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle shared flow from URL hash ─────────────────────────────────────
+  // ── Handle shared flow: ?s=TOKEN query param ─────────────────────────────
   useEffect(() => {
-    const shared = decodeSharedFlow();
-    if (shared && !flows.find(f => f.id === shared.id)) {
-      const updated = [...flows, shared];
+    const token = new URLSearchParams(window.location.search).get('s');
+    if (token) {
+      loadSharedFlow(token).then(shared => {
+        if (!shared) return;
+        const { permission, ...flow } = shared;
+        setFlows([flow]);
+        setActiveId(flow.id);
+        setSharedToken(token);
+        setSharedPermission(permission);
+        // Strip ?s= from URL without navigation
+        const url = new URL(window.location.href);
+        url.searchParams.delete('s');
+        window.history.replaceState({}, '', url.toString());
+      });
+      return; // skip legacy hash handling if ?s= is present
+    }
+    // ── Legacy: #share=BASE64 URL hash ───────────────────────────────────────
+    const legacyShared = decodeSharedFlow();
+    if (legacyShared && !flows.find(f => f.id === legacyShared.id)) {
+      const updated = [...flows, legacyShared];
       setFlows(updated);
-      setActiveId(shared.id);
-      if (user) saveFlowRemote(shared);
+      setActiveId(legacyShared.id);
+      if (user) saveFlowRemote(legacyShared);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Global keyboard shortcuts ─────────────────────────────────────────────
   useEffect(() => {
+    const viewOnly = sharedPermission === 'view';
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
-      if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
-      if (ctrl && e.key === 'e') { e.preventDefault(); setActiveLayer(activeLayer === 'outline' ? 'nodes' : 'outline'); }
+      if (!viewOnly) {
+        if (ctrl && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
+        if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+        if (ctrl && e.key === 'e') { e.preventDefault(); setActiveLayer(activeLayer === 'outline' ? 'nodes' : 'outline'); }
+      }
       if (e.shiftKey && e.key === '?' && activeLayer !== 'outline') { setHotkeysOpen(!hotkeysOpen); }
-      if (ctrl && !e.shiftKey && e.key >= '1' && e.key <= '9') {
+      if (!sharedToken && ctrl && !e.shiftKey && e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key) - 1;
         if (idx < flows.length) { e.preventDefault(); setActiveId(flows[idx].id); }
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [undo, redo, activeLayer, setActiveLayer, hotkeysOpen, setHotkeysOpen, flows, setActiveId]);
+  }, [undo, redo, activeLayer, setActiveLayer, hotkeysOpen, setHotkeysOpen, flows, setActiveId, sharedToken, sharedPermission]);
 
   // ── Edge picker state ─────────────────────────────────────────────────────
   const [pickerState, setPickerState] = useState<PickerState>(PICKER_INIT);
@@ -127,8 +152,8 @@ export function App() {
   }, [setFlows]);
 
   return (
-    <div id="app">
-      <FlowTabs />
+    <div id="app" data-shared={sharedPermission ?? undefined}>
+      {!sharedToken && <FlowTabs />}
       <Toolbar />
       {activeLayer !== 'events' && (
         <Viewport
@@ -138,8 +163,8 @@ export function App() {
           onSetPickerMode={setPickerMode}
         />
       )}
-      {activeLayer === 'outline' && <TextEditPanel />}
-      {activeLayer === 'events'  && <EventsMap />}
+      {activeLayer === 'outline' && !sharedToken && <TextEditPanel />}
+      {activeLayer === 'events'  && !sharedToken && <EventsMap />}
       {hotkeysOpen && <HotkeysPanel onClose={() => setHotkeysOpen(false)} />}
       <ZoomControls />
       <EdgePicker
@@ -151,6 +176,7 @@ export function App() {
       <EdgeAnalytics pickerState={pickerState} onClose={closePicker} />
       {authModalOpen && <AuthModal />}
       {claimFlows && <ClaimModal localFlows={claimFlows} onDone={handleClaimDone} />}
+      {shareModalOpen && <ShareModal onClose={() => setShareModalOpen(false)} />}
     </div>
   );
 }
