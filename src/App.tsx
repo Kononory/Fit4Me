@@ -9,9 +9,12 @@ import { Viewport } from './components/Viewport';
 import { TextEditPanel } from './components/TextEditPanel';
 import { EventsMap } from './components/EventsMap';
 import { HotkeysPanel } from './components/HotkeysPanel';
+import { AuthModal } from './components/AuthModal';
+import { ClaimModal } from './components/ClaimModal';
 import { EdgePicker, EdgeLabelEdit, EdgeAnalytics, PICKER_INIT } from './components/EdgePicker';
 import type { PickerState, PickerMode } from './components/EdgePicker';
-import type { TreeNode, CrossEdge } from './types';
+import type { TreeNode, CrossEdge, Flow } from './types';
+import { supabase } from './lib/supabase';
 
 export function App() {
   const {
@@ -19,19 +22,59 @@ export function App() {
     activeLayer, setActiveLayer,
     hotkeysOpen, setHotkeysOpen,
     undo, redo,
+    user, setUser, setAuthLoading, authModalOpen,
   } = useStore();
 
-  // ── Cloud-first load on mount ─────────────────────────────────────────────
+  const [claimFlows, setClaimFlows] = useState<Flow[] | null>(null);
+
+  // ── Auth init: restore session + subscribe to changes ────────────────────
   useEffect(() => {
+    if (!supabase) { setAuthLoading(false); return; }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const newUser = session?.user ?? null;
+      const prevUser = useStore.getState().user;
+      setUser(newUser);
+
+      if (newUser && !prevUser) {
+        // Just signed in — check for local flows worth claiming
+        const local = useStore.getState().flows;
+        const isDefaultEmpty = local.length === 1 && local[0].id === 'default'
+          && !local[0].tree.c?.length;
+        if (!isDefaultEmpty) {
+          setClaimFlows(local);
+        } else {
+          loadFlowsRemote().then(remote => {
+            if (remote && remote.length > 0) setFlows(remote);
+          });
+        }
+      }
+
+      if (!newUser && prevUser) {
+        // Signed out — reset to empty local state
+        setFlows([{ id: 'default', name: 'Fit4Me', tree: { id: 'root', label: 'Flow', c: [] } }]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Cloud-first load on mount (authenticated users only) ─────────────────
+  useEffect(() => {
+    if (!user) return;
     loadFlowsRemote().then(remote => {
       if (remote && remote.length > 0) setFlows(remote);
     });
 
-    // Flush any pending debounced saves before tab closes
     const handleUnload = () => flushCloudSaves(flows);
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handle shared flow from URL hash ─────────────────────────────────────
   useEffect(() => {
@@ -40,7 +83,7 @@ export function App() {
       const updated = [...flows, shared];
       setFlows(updated);
       setActiveId(shared.id);
-      saveFlowRemote(shared);
+      if (user) saveFlowRemote(shared);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -52,7 +95,6 @@ export function App() {
       if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
       if (ctrl && e.key === 'e') { e.preventDefault(); setActiveLayer(activeLayer === 'outline' ? 'nodes' : 'outline'); }
       if (e.shiftKey && e.key === '?' && activeLayer !== 'outline') { setHotkeysOpen(!hotkeysOpen); }
-      // ⌘1..⌘9 — switch flow tabs
       if (ctrl && !e.shiftKey && e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key) - 1;
         if (idx < flows.length) { e.preventDefault(); setActiveId(flows[idx].id); }
@@ -79,6 +121,11 @@ export function App() {
     setPickerState({ mode: 'cross' as PickerMode, toNode: null, ce, lx: _lx, ly: _ly, sx, sy });
   }, []);
 
+  const handleClaimDone = useCallback((cloudFlows: Flow[] | null) => {
+    setClaimFlows(null);
+    if (cloudFlows && cloudFlows.length > 0) setFlows(cloudFlows);
+  }, [setFlows]);
+
   return (
     <div id="app">
       <FlowTabs />
@@ -102,6 +149,8 @@ export function App() {
       />
       <EdgeLabelEdit pickerState={pickerState} onClose={closePicker} />
       <EdgeAnalytics pickerState={pickerState} onClose={closePicker} />
+      {authModalOpen && <AuthModal />}
+      {claimFlows && <ClaimModal localFlows={claimFlows} onDone={handleClaimDone} />}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { fileKey, nodeIds, token } = req.query as Record<string, string>;
-  const figmaToken = process.env['Fit4Me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';
+  const { fileKey, nodeIds } = req.query as Record<string, string>;
+  const figmaToken = req.headers['x-figma-token'] as string | undefined
+    ?? process.env['Fit4Me_FIGMA_TOKEN_API_KEY'] ?? '';
   if (!fileKey || !nodeIds || !figmaToken)
-    return res.status(400).json({ error: 'Missing params: fileKey, nodeIds, token' });
+    return res.status(400).json({ error: 'Missing params: fileKey, nodeIds, or Figma token' });
 
   const url = `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds)}&format=png&scale=2`;
   let r: Response;

@@ -1,5 +1,6 @@
 import type { Flow, FlowMeta } from './types';
 import { cloneTree } from './tree';
+import { getAuthHeaders } from './lib/supabase';
 
 // ── Legacy migration: figmaRef → screens[0] ───────────────────────────────────
 // Nodes stored before the screens unification have figmaRef: string.
@@ -58,18 +59,20 @@ export function clearLocal(): void {
 
 export async function saveFlowRemote(flow: Flow): Promise<string | null> {
   try {
+    const auth = await getAuthHeaders();
+    if (!('Authorization' in auth)) return null; // anonymous — skip
     const res = await fetch('/api/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({
-        flowId:       flow.id,
-        name:         flow.name,
-        tree:         cloneTree(flow.tree),
+        flowId:         flow.id,
+        name:           flow.name,
+        tree:           cloneTree(flow.tree),
         crossEdges:     flow.crossEdges     ?? [],
         retentionData:  flow.retentionData  ?? [],
         eventEdges:     flow.eventEdges     ?? [],
         eventPositions: flow.eventPositions ?? {},
-        savedAt:      new Date().toISOString(),
+        savedAt:        new Date().toISOString(),
       }),
     });
     if (res.ok) return null;
@@ -82,7 +85,9 @@ export async function saveFlowRemote(flow: Flow): Promise<string | null> {
 
 export async function loadFlowsRemote(): Promise<Flow[] | null> {
   try {
-    const res = await fetch('/api/load');
+    const auth = await getAuthHeaders();
+    if (!('Authorization' in auth)) return null; // anonymous — skip
+    const res = await fetch('/api/load', { headers: auth });
     if (!res.ok) return null;
     return migrateFlows(await res.json() as Flow[]);
   } catch { return null; }
@@ -92,7 +97,9 @@ export async function loadFlowsRemote(): Promise<Flow[] | null> {
 
 export async function deleteFlowRemote(id: string): Promise<void> {
   try {
-    await fetch(`/api/delete?flowId=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const auth = await getAuthHeaders();
+    if (!('Authorization' in auth)) return; // anonymous — skip
+    await fetch(`/api/delete?flowId=${encodeURIComponent(id)}`, { method: 'DELETE', headers: auth });
   } catch { /* silent */ }
 }
 
@@ -100,8 +107,33 @@ export async function deleteFlowRemote(id: string): Promise<void> {
 
 export async function listFlowsRemote(): Promise<FlowMeta[] | null> {
   try {
-    const res = await fetch('/api/flows');
+    const auth = await getAuthHeaders();
+    if (!('Authorization' in auth)) return null; // anonymous — skip
+    const res = await fetch('/api/flows', { headers: auth });
     if (!res.ok) return null;
     return await res.json() as FlowMeta[];
   } catch { return null; }
+}
+
+// ── Remote: claim local flows into authenticated account ──────────────────────
+
+export async function claimFlowsRemote(flows: Flow[]): Promise<boolean> {
+  try {
+    const auth = await getAuthHeaders();
+    if (!('Authorization' in auth)) return false;
+    const res = await fetch('/api/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...auth },
+      body: JSON.stringify({ flows: flows.map(f => ({
+        flowId:         f.id,
+        name:           f.name,
+        tree:           cloneTree(f.tree),
+        crossEdges:     f.crossEdges     ?? [],
+        retentionData:  f.retentionData  ?? [],
+        eventEdges:     f.eventEdges     ?? [],
+        eventPositions: f.eventPositions ?? {},
+      })) }),
+    });
+    return res.ok;
+  } catch { return false; }
 }

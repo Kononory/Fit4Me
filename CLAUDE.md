@@ -12,10 +12,25 @@ Fit4Me is a canvas-based flowchart / mind-map tool built for personal productivi
 
 ## Storage pattern
 - **Local** (`localStorage`) — written on every change, instant, machine-specific
-- **Cloud** (Supabase via `/api/*`) — debounced 2s after each change via `scheduleCloudSave()` in `store.ts`
-- **Load order** — app mount calls `loadFlowsRemote()` first; cloud wins over localStorage
+- **Cloud** (Supabase via `/api/*`) — debounced 2s after each change via `scheduleCloudSave()` in `store.ts`; skipped if `store.user === null`
+- **Load order** — on auth, `loadFlowsRemote()` loads user's own flows; anonymous users stay localStorage-only
 - **Tab close** — `flushCloudSaves()` fires all pending debounced saves on `beforeunload`
 - Never call `saveFlowRemote` directly for auto-saves — always go through `scheduleCloudSave(flow)`
+
+## Auth pattern (Supabase magic link)
+- `src/lib/supabase.ts` — singleton client (null when `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` not set); exports `getAuthHeaders()` for frontend fetch calls
+- `api/_auth.ts` — `requireAuth(req, res)` verifies JWT → `{ userId }`; `sizeGuard()` 5MB cap; `cors()` preflight handler
+- All `/api/load|save|delete|flows|claim|figma-analyze|locale-check` handlers call `requireAuth` first
+- Figma PAT: frontend sends as `X-Figma-Token` header (not query param) → api handlers read `req.headers['x-figma-token']`
+- `store.ts` fields: `user: User|null`, `authLoading: boolean`, `authModalOpen: boolean`
+- `App.tsx` — `supabase.auth.getSession()` on mount; `onAuthStateChange` handles SIGNED_IN (trigger claim check) and SIGNED_OUT (reset flows)
+- `AuthModal.tsx` — magic link form; `auth-` CSS prefix
+- `ClaimModal.tsx` — shown after sign-in when localStorage has non-empty flows; calls `POST /api/claim`
+- `api/claim.ts` — upserts array of flows with `user_id = auth.userId`
+- SQL migration: `supabase/migrations/001_add_auth.sql` — adds `user_id` column, RLS, `flow_shares` table
+- `vercel.json` — security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`
+- Env vars needed: `VITE_SUPABASE_URL` (build), `VITE_SUPABASE_ANON_KEY` (build); existing `Fit4Me_SUPABASE_*` stay server-side
+- Supabase Dashboard checklist: enable Email Auth, set OTP expiry 3600s, Auth rate limits, run `001_add_auth.sql`, then `UPDATE flowchart_trees SET user_id='<your-uid>' WHERE user_id IS NULL`
 
 ## Repo layout
 ```
@@ -206,6 +221,8 @@ See `docs/semantic-zoom.md` — only read when modifying long-press expand, Expa
 - **`e.currentTarget` in setTimeout**: capture as `const targetEl = e.currentTarget as HTMLElement` before the 270ms tap timer — `currentTarget` is null inside the callback otherwise.
 
 ## Known pitfalls
+- [supabase null guard in JSX]: `{supabase && (...)}` narrows to non-null in JSX but not inside arrow functions — use `supabase!.auth.signOut()` for callbacks inside the guarded block.
+- [vite/client types missing]: `import.meta.env` only works when `"types": ["vite/client"]` is in `tsconfig.json` compilerOptions.
 - [useCallback indirect state capture]: if a `useCallback` calls a plain component function that uses state, add that state to the callback's deps — plain functions aren't refs, the callback captures a stale version otherwise. Hit in `handleResync` missing `importMode`.
 - [CSS zoom + drag]: `getBoundingClientRect()` returns scaled coords — always divide by `zoom` in `useDrag`.
 - [Duplicate CSS on merge]: Grep for selector before adding styles — edit in place, don't append a second block.

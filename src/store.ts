@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Flow, TreeNode, DragState } from './types';
+import type { User } from './lib/supabase';
 import { cloneTree } from './tree';
 import { DEFAULT_TREE } from './data';
 import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveFlowRemote } from './storage';
@@ -8,6 +9,8 @@ import { saveFlowsLocal, loadFlowsLocal, saveActiveLocal, loadActiveLocal, saveF
 const cloudSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function scheduleCloudSave(flow: Flow) {
+  // Skip cloud save for anonymous users
+  if (!useStore.getState().user) return;
   const existing = cloudSaveTimers.get(flow.id);
   if (existing) clearTimeout(existing);
   useStore.getState().setCloudSavePending(true);
@@ -111,6 +114,14 @@ interface AppStore {
   setRightSidebarCollapsed: (v: boolean) => void;
   overlapCount: number;
   setOverlapCount: (n: number) => void;
+
+  // ── Auth ───────────────────────────────────────────────────────────
+  user: User | null;
+  authLoading: boolean;
+  authModalOpen: boolean;
+  setUser: (u: User | null) => void;
+  setAuthLoading: (v: boolean) => void;
+  setAuthModalOpen: (v: boolean) => void;
 }
 
 const LS_LEFT_COLLAPSED  = 'fit4me.leftSidebarCollapsed';
@@ -249,5 +260,13 @@ export const useStore = create<AppStore>((set, get) => {
     setRightSidebarCollapsed: (v) => { writeLS(LS_RIGHT_COLLAPSED, v); set({ rightSidebarCollapsed: v }); },
     overlapCount: 0,
     setOverlapCount: (overlapCount) => set({ overlapCount }),
+
+    // ── Auth ─────────────────────────────────────────────────────────
+    user: null,
+    authLoading: true,
+    authModalOpen: false,
+    setUser: (user) => set({ user }),
+    setAuthLoading: (authLoading) => set({ authLoading }),
+    setAuthModalOpen: (authModalOpen) => set({ authModalOpen }),
   };
 });

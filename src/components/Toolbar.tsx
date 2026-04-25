@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown, Keyboard } from 'lucide-react';
+import { RotateCcw, RotateCw, Move, KeyRound, Download, RefreshCw, Languages, ChevronDown, Keyboard, LogIn, LogOut } from 'lucide-react';
 import { useStore } from '../store';
+import { supabase } from '../lib/supabase';
 import { cloneTree, addChildNode } from '../tree';
 import { DEFAULT_TREE } from '../data';
 import { autoArrange, doLayout, flattenTree } from '../layout';
@@ -10,7 +11,7 @@ import {
 } from '../lib/figma';
 
 export function Toolbar() {
-  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending, hotkeysOpen, setHotkeysOpen } = useStore();
+  const { flows, activeId, setFlows, undo, redo, canUndo, canRedo, getActive, updateActiveTree, pushUndo, triggerEdgeAnim, freeMode, setFreeMode, setFigmaTokenOpen, setFigmaImportOpen, setLocaleCheckOpen, overlapCount, activeLayer, cloudSavePending, hotkeysOpen, setHotkeysOpen, user, setAuthModalOpen } = useStore();
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [figmaMenuOpen, setFigmaMenuOpen] = useState(false);
@@ -172,6 +173,22 @@ export function Toolbar() {
       )}
       {cloudSavePending && <span id="tb-autosave-dot" title="Auto-saving…" />}
       <button id="tb-reset" onClick={handleReset}>Reset</button>
+      {supabase && (
+        user ? (
+          <button
+            id="tb-user"
+            title={`Signed in as ${user.email} — click to sign out`}
+            onClick={() => supabase!.auth.signOut()}
+          >
+            <span id="tb-user-avatar">{user.email?.[0]?.toUpperCase() ?? '?'}</span>
+            <LogOut size={11} />
+          </button>
+        ) : (
+          <button id="tb-signin" onClick={() => setAuthModalOpen(true)}>
+            <LogIn size={13} /> Sign in
+          </button>
+        )
+      )}
       <button
         id="tb-hotkeys"
         title="Keyboard shortcuts (Shift+?)"

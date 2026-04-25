@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { LocaleStatus, LocaleResult, TextNodeResult, LocaleCheckResponse } from '../src/lib/locale-types';
+import { requireAuth, sizeGuard, cors } from './_auth';
 
 // Average character width as fraction of font size, by locale script
 const CHAR_RATIO: Record<string, number> = {
@@ -68,7 +69,11 @@ function collectElements(
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!sizeGuard(req, res)) return;
+  const auth = await requireAuth(req, res);
+  if (!auth) return;
 
   const { fileKey, nodeId, token, locales } = req.body ?? {};
   const figmaToken = process.env['Fit4Me_FIGMA_TOKEN_API_KEY'] ?? token ?? '';

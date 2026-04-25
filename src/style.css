@@ -497,6 +497,104 @@ svg#svgl.dimmed { opacity: 0.3; }
 
 #tb-hotkeys.tb-active { background: var(--foreground); color: var(--card); border-color: var(--foreground); }
 
+/* ── Auth toolbar buttons ─────────────────────────────────────────── */
+#tb-signin {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 0 10px;
+  background: var(--foreground); color: var(--card); border-color: var(--foreground);
+}
+#tb-signin:hover { opacity: 0.85; }
+
+#tb-user {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 0 8px;
+}
+#tb-user:hover { background: #FCECEA; border-color: var(--destructive); color: var(--destructive); }
+#tb-user:hover #tb-user-avatar { background: var(--destructive); }
+
+#tb-user-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--teal); color: var(--primary-foreground);
+  font-size: 9px; font-weight: 600; flex-shrink: 0;
+}
+
+/* ── Auth modal ───────────────────────────────────────────────────── */
+.auth-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px; width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.auth-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.auth-title {
+  font-size: 13px; font-weight: 600; color: var(--foreground);
+}
+.auth-hint {
+  font-size: 11px; color: var(--muted-foreground); line-height: 1.5; margin: 0;
+}
+.auth-input-row {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 0 10px; background: var(--background);
+}
+.auth-input-row:focus-within { border-color: var(--foreground); }
+.auth-input-icon { color: var(--ring); flex-shrink: 0; }
+.auth-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: inherit; font-size: 12px; color: var(--foreground);
+  padding: 8px 0;
+}
+.auth-error {
+  font-size: 11px; color: var(--destructive); margin: 0;
+}
+.auth-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.auth-btn-cancel {
+  font-family: inherit; font-size: 11px; cursor: pointer;
+  padding: 5px 12px; border-radius: 4px;
+  background: transparent; color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 5px;
+}
+.auth-btn-cancel:hover { background: var(--accent); color: var(--foreground); }
+.auth-btn-send {
+  font-family: inherit; font-size: 11px; cursor: pointer;
+  padding: 5px 14px; border-radius: 4px;
+  background: var(--foreground); color: var(--card); border: 1px solid var(--foreground);
+  display: flex; align-items: center; gap: 6px;
+}
+.auth-btn-send:hover { opacity: 0.85; }
+.auth-btn-send:disabled { opacity: 0.45; cursor: default; }
+.auth-sent-icon {
+  display: flex; justify-content: center; color: var(--muted-foreground);
+  padding: 4px 0;
+}
+.auth-sent-title {
+  font-size: 13px; font-weight: 600; color: var(--foreground); text-align: center; margin: 0;
+}
+.auth-spin { animation: fig-spin 1s linear infinite; }
+
+/* ── Claim modal ──────────────────────────────────────────────────── */
+.claim-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 140px; overflow-y: auto;
+}
+.claim-item {
+  font-size: 11px; color: var(--foreground);
+  background: var(--muted); border-radius: 3px;
+  padding: 4px 8px;
+}
+
 /* ── Zoom controls (bottom-left) ─────────────────────────────────── */
 #zoom-controls {
   position: fixed; z-index: 60;

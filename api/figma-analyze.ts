@@ -1,9 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAuth, sizeGuard, cors } from './_auth';
 
 interface RawFrame { id: string; name: string; }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (cors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!sizeGuard(req, res)) return;
+  const auth = await requireAuth(req, res);
+  if (!auth) return;
 
   const { frames } = req.body ?? {};
   if (!Array.isArray(frames) || frames.length === 0)

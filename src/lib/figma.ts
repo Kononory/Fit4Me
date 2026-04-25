@@ -88,8 +88,8 @@ export async function fetchPreviewUrl(fileKey: string, nodeId: string): Promise<
   const token = getPAT();
   if (!token) throw new Error('no_pat');
 
-  const params = new URLSearchParams({ fileKey, nodeId, token });
-  const res = await fetch(`/api/figma?${params}`);
+  const params = new URLSearchParams({ fileKey, nodeId });
+  const res = await fetch(`/api/figma?${params}`, { headers: { 'X-Figma-Token': token } });
   const body = await res.json() as { url?: string; error?: string };
   if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
 
@@ -106,8 +106,8 @@ export async function fetchFrameElements(fileKey: string, nodeId: string): Promi
   const token = getPAT();
   if (!token) throw new Error('no_pat');
 
-  const params = new URLSearchParams({ fileKey, nodeId, token });
-  const res = await fetch(`/api/figma-nodes?${params}`);
+  const params = new URLSearchParams({ fileKey, nodeId });
+  const res = await fetch(`/api/figma-nodes?${params}`, { headers: { 'X-Figma-Token': token } });
   const body = await res.json() as FrameData & { error?: string };
   if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
 
@@ -169,8 +169,8 @@ export function parseSectionGroups(sections: SectionResult[], fileKey: string): 
 export async function fetchPageStructure(fileKey: string): Promise<PageResult[]> {
   const token = getPAT();
   if (!token) throw new Error('no_pat');
-  const params = new URLSearchParams({ fileKey, token });
-  const res = await fetch(`/api/figma-page?${params}`);
+  const params = new URLSearchParams({ fileKey });
+  const res = await fetch(`/api/figma-page?${params}`, { headers: { 'X-Figma-Token': token } });
   const body = await res.json() as { pages?: PageResult[]; error?: string };
   if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
   return body.pages ?? [];
@@ -184,8 +184,8 @@ export async function fetchBatchThumbnails(fileKey: string, nodeIds: string[]): 
   if (!nodeIds.length) return new Map();
   const token = getPAT();
   if (!token) throw new Error('no_pat');
-  const params = new URLSearchParams({ fileKey, nodeIds: nodeIds.join(','), token });
-  const res = await fetch(`/api/figma-batch?${params}`);
+  const params = new URLSearchParams({ fileKey, nodeIds: nodeIds.join(',') });
+  const res = await fetch(`/api/figma-batch?${params}`, { headers: { 'X-Figma-Token': token } });
   const body = await res.json() as { urls?: Record<string, string>; error?: string };
   if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
   const result = new Map<string, string>();
